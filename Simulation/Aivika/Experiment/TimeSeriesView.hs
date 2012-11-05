@@ -263,5 +263,6 @@ header st index =
 -- | Get the TOC item.
 timeSeriesTOCHtml :: TimeSeriesViewState -> Int -> HtmlWriter ()
 timeSeriesTOCHtml st index =
+  writeHtmlListItem $
   writeHtmlLink ("#id" ++ show index) $
   writeHtmlText (timeSeriesTitle $ timeSeriesView st)
