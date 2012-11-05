@@ -37,6 +37,7 @@ import Graphics.Rendering.Chart
 
 import Simulation.Aivika.Experiment
 import Simulation.Aivika.Experiment.HtmlWriter
+import Simulation.Aivika.Experiment.Utils
 
 import Simulation.Aivika.Dynamics
 import Simulation.Aivika.Dynamics.Simulation
@@ -202,7 +203,7 @@ simulateTimeSeries st expdata =
                return $
                  toPlot $
                  plotLines $
-                 plot_lines_values ^= filterPlotValues (zip (elems ts) (elems xs)) $
+                 plot_lines_values ^= filterPlotLinesValues (zip (elems ts) (elems xs)) $
                  plot_lines_title ^= providerName provider $
                  defaultPlotLines
           let ps' = flip map (zip ps protolabels) $ \(p, label) ->
@@ -219,13 +220,10 @@ simulateTimeSeries st expdata =
                  putStr "Generated " >> putStrLn file
      
 -- | Remove the NaN and inifity values.     
-filterPlotValues :: [(Double, Double)] -> [[(Double, Double)]]
-filterPlotValues zs = 
-  let loop (z@(t, x) : zs) acc1 acc2
-        | isNaN x || isInfinite x = loop zs [] ((reverse acc1) : acc2)
-        | otherwise               = loop zs (z : acc1) acc2
-      loop [] acc1 acc2 = reverse ((reverse acc1) : acc2)
-  in filter (not . null) (loop zs [] [])
+filterPlotLinesValues :: [(Double, Double)] -> [[(Double, Double)]]
+filterPlotLinesValues = 
+  filter (not . null) .
+  divideBy (\(t, x) -> isNaN x || isInfinite x)
 
 -- | Get the HTML code.     
 timeSeriesHtml :: TimeSeriesViewState -> Int -> HtmlWriter ()     
