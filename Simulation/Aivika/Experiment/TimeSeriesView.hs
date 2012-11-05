@@ -217,7 +217,7 @@ simulateTimeSeries st expdata =
           liftIO $ 
             do renderableToPNGFile (toRenderable chart) width height file
                when (experimentVerbose $ timeSeriesExperiment st) $
-                 putStr "Generated " >> putStrLn file
+                 putStr "Generated file " >> putStrLn file
      
 -- | Remove the NaN and inifity values.     
 filterPlotLinesValues :: [(Double, Double)] -> [[(Double, Double)]]
