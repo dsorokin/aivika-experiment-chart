@@ -37,7 +37,7 @@ import Graphics.Rendering.Chart
 
 import Simulation.Aivika.Experiment
 import Simulation.Aivika.Experiment.HtmlWriter
-import Simulation.Aivika.Experiment.Utils
+import Simulation.Aivika.Experiment.Utils (divideBy)
 
 import Simulation.Aivika.Dynamics
 import Simulation.Aivika.Dynamics.Simulation
