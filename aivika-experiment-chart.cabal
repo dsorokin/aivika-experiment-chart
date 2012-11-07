@@ -20,11 +20,14 @@ cabal-version:   >= 1.2.0
 build-type:      Simple
 tested-with:     GHC == 7.4.1
 
-extra-source-files:  examples/MachRep1.hs
+extra-source-files:  examples/MachRep3.hs
+                     examples/ChemicalReaction.hs
+                     examples/BassDiffusion.hs
 
 library
 
     exposed-modules: Simulation.Aivika.Experiment.TimeSeriesView
+                     Simulation.Aivika.Experiment.DeviationChartView
                      Simulation.Aivika.Experiment.Chart
 
     build-depends:   base >= 3 && < 6,
