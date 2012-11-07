@@ -11,7 +11,8 @@
 --
 
 module Simulation.Aivika.Experiment.Chart
-       (colourisePlotLines) where
+       (colourisePlotLines,
+        colourisePlotFillBetween) where
 
 import Data.Colour
 import Data.Colour.Names
@@ -35,3 +36,7 @@ colourisePlotLines =
   (plot_lines_style .> line_color ^= opaque darkviolet) :
   colourisePlotLines
 
+-- | Colourise the plot areas that are filling between 
+-- any two lines.
+colourisePlotFillBetween :: [PlotFillBetween x y -> PlotFillBetween x y]
+colourisePlotFillBetween = repeat id

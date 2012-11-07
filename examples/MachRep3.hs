@@ -31,6 +31,7 @@ import Simulation.Aivika.Experiment
 import Simulation.Aivika.Experiment.LastValueView
 import Simulation.Aivika.Experiment.TableView
 import Simulation.Aivika.Experiment.TimeSeriesView
+import Simulation.Aivika.Experiment.DeviationChartView
 
 specs = Specs { spcStartTime = 0.0,
                 spcStopTime = 1000.0,
@@ -51,7 +52,10 @@ experiment =
          tableDescription = "Table description",
          tableSeries = ["x"] }, 
        outputView $ defaultTimeSeriesView {
-         timeSeries = [Left "t", Right "x"] } ] }
+         timeSeries = [Left "t", Right "x"] }, 
+       outputView $ defaultDeviationChartView {
+         -- deviationChartSeries = [Left "t", Right "x"] } ] }
+         deviationChartSeries = [Left "t"] } ] }
 
 upRate = 1.0 / 1.0       -- reciprocal of mean up time
 repairRate = 1.0 / 0.5   -- reciprocal of mean repair time
