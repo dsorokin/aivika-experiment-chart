@@ -24,8 +24,6 @@ import Data.Maybe
 import Data.Either
 import Data.Array
 
-import Data.Colour
-import Data.Colour.Names
 import Data.Accessor
 
 import System.IO
@@ -38,6 +36,7 @@ import Graphics.Rendering.Chart
 import Simulation.Aivika.Experiment
 import Simulation.Aivika.Experiment.HtmlWriter
 import Simulation.Aivika.Experiment.Utils (divideBy)
+import Simulation.Aivika.Experiment.Chart (colourisePlotLines)
 
 import Simulation.Aivika.Dynamics
 import Simulation.Aivika.Dynamics.Simulation
@@ -111,23 +110,8 @@ defaultTimeSeriesView =
                    timeSeriesFileName    = UniqueFileName "$TITLE - $RUN_INDEX" ".png",
                    timeSeriesPredicate   = return True,
                    timeSeries            = [], 
-                   timeSeriesPlotLines   = defaultTimeSeriesPlotLines,
+                   timeSeriesPlotLines   = colourisePlotLines,
                    timeSeriesLayout      = id }
-  
-defaultTimeSeriesPlotLines :: [PlotLines x y -> PlotLines x y]
-defaultTimeSeriesPlotLines =
-  (plot_lines_style .> line_color ^= opaque blue) :
-  (plot_lines_style .> line_color ^= opaque green) :
-  (plot_lines_style .> line_color ^= opaque red) :
-  (plot_lines_style .> line_color ^= opaque black) :
-  (plot_lines_style .> line_color ^= opaque grey) :
-  (plot_lines_style .> line_color ^= opaque purple) :
-  (plot_lines_style .> line_color ^= opaque violet) :
-  (plot_lines_style .> line_color ^= opaque darkblue) :
-  (plot_lines_style .> line_color ^= opaque darkgreen) :
-  (plot_lines_style .> line_color ^= opaque darkgrey) :
-  (plot_lines_style .> line_color ^= opaque darkviolet) :
-  defaultTimeSeriesPlotLines
 
 instance View TimeSeriesView where
   
