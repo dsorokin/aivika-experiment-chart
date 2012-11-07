@@ -180,7 +180,7 @@ simulateDeviationChart st expdata =
            case providerToDouble provider of
              Nothing -> error $
                         "Cannot represent series " ++
-                        (providerName provider) ++ 
+                        providerName provider ++ 
                         " as double values: simulateDeviationChart"
              Just input -> input
          names = flip map joinedproviders $ \protoprovider ->
@@ -197,14 +197,14 @@ simulateDeviationChart st expdata =
          do results <- newDeviationChartResults names exp
             writeIORef (deviationChartResults st) $ Just results
        Just results ->
-         when (names /= (deviationChartNames results)) $
+         when (names /= deviationChartNames results) $
          error "Series with different names are returned for different runs: simulateDeviationChart"
      results <- liftIO $ fmap fromJust $ readIORef (deviationChartResults st)
      let stats = deviationChartStats results
      t0 <- starttime
      enqueue (experimentQueue expdata) t0 $
        do let h = filterSignalM (const predicate) $
-                  (experimentSignalInIntegTimes expdata)
+                  experimentSignalInIntegTimes expdata
           -- we must subscribe through the event queue;
           -- otherwise, we will loose a signal in the start time,
           -- because the handleSignal_ function checks the event queue
@@ -302,7 +302,7 @@ header :: DeviationChartViewState -> Int -> HtmlWriter ()
 header st index =
   do writeHtmlHeader3WithId ("id" ++ show index) $ 
        writeHtmlText (deviationChartTitle $ deviationChartView st)
-     let description = (deviationChartDescription $ deviationChartView st)
+     let description = deviationChartDescription $ deviationChartView st
      unless (null description) $
        writeHtmlParagraph $ 
        writeHtmlText description

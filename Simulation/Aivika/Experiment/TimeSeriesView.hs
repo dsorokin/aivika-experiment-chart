@@ -157,7 +157,7 @@ simulateTimeSeries st expdata =
            case providerToDouble provider of
              Nothing -> error $
                         "Cannot represent series " ++
-                        (providerName provider) ++ 
+                        providerName provider ++ 
                         " as double values: simulateTimeSeries"
              Just input -> input
          n = experimentRunCount $ timeSeriesExperiment st
@@ -173,13 +173,13 @@ simulateTimeSeries st expdata =
            then timeSeriesTitle $ timeSeriesView st
            else replace "$RUN_INDEX" (show i) $
                 replace "$RUN_COUNT" (show n) $
-                replace "$TITLE" (timeSeriesTitle $ timeSeriesView st) $
+                replace "$TITLE" (timeSeriesTitle $ timeSeriesView st)
                 (timeSeriesRunTitle $ timeSeriesView st)
      hs <- forM (zip providers input) $ \(provider, input) ->
        newSignalHistoryThrough (experimentQueue expdata) $
        mapSignalM (const input) $
        filterSignalM (const predicate) $
-       (experimentMixedSignal expdata [provider])
+       experimentMixedSignal expdata [provider]
      return $
        do ps <- forM (zip3 hs providers plotLines) $ \(h, provider, plotLines) ->
             do (ts, xs) <- readSignalHistory h 
@@ -238,7 +238,7 @@ header :: TimeSeriesViewState -> Int -> HtmlWriter ()
 header st index =
   do writeHtmlHeader3WithId ("id" ++ show index) $ 
        writeHtmlText (timeSeriesTitle $ timeSeriesView st)
-     let description = (timeSeriesDescription $ timeSeriesView st)
+     let description = timeSeriesDescription $ timeSeriesView st
      unless (null description) $
        writeHtmlParagraph $ 
        writeHtmlText description
