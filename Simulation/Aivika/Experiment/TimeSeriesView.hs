@@ -42,7 +42,6 @@ import Simulation.Aivika.Dynamics
 import Simulation.Aivika.Dynamics.Simulation
 import Simulation.Aivika.Dynamics.Signal
 import Simulation.Aivika.Dynamics.EventQueue
-import Simulation.Aivika.Dynamics.Base
 
 -- | Defines the 'View' that saves the time series charts
 -- in the PNG files.
