@@ -134,9 +134,9 @@ data DeviationChartViewState =
 
 -- | The deviation chart item.
 data DeviationChartResults =
-  DeviationChartResults { deviationChartTimes  :: IOArray Int Double,
-                          deviationChartLabels :: [Either String String],
-                          deviationChartStats  :: [IOArray Int (SamplingStats Double)] }
+  DeviationChartResults { deviationChartTimes :: IOArray Int Double,
+                          deviationChartNames :: [Either String String],
+                          deviationChartStats :: [IOArray Int (SamplingStats Double)] }
   
 -- | Create a new state of the view.
 newDeviationChart :: DeviationChartView -> Experiment -> FilePath -> IO DeviationChartViewState
@@ -155,22 +155,26 @@ newDeviationChart view exp dir =
        
 -- | Create new chart results.
 newDeviationChartResults :: [Either String String] -> Experiment -> IO DeviationChartResults
-newDeviationChartResults labels exp =
+newDeviationChartResults names exp =
   do let specs = experimentSpecs exp
          bnds  = integIterationBnds specs
      times <- liftIO $ newListArray bnds (integTimes specs)
-     stats <- forM labels $ \_ -> 
+     stats <- forM names $ \_ -> 
        liftIO $ newArray bnds emptySamplingStats
-     return DeviationChartResults { deviationChartTimes  = times,
-                                    deviationChartLabels = labels,
-                                    deviationChartStats  = stats }
+     return DeviationChartResults { deviationChartTimes = times,
+                                    deviationChartNames = names,
+                                    deviationChartStats = stats }
        
 -- | Plot the time series chart during the simulation.
 simulateDeviationChart :: DeviationChartViewState -> ExperimentData -> Dynamics (Dynamics ())
 simulateDeviationChart st expdata =
   do let protolabels = deviationChartSeries $ deviationChartView st
-         labels = flip map protolabels $ either id id
-         providers = experimentSeriesProviders expdata labels
+         protoproviders = flip map protolabels $ \protolabel ->
+           case protolabel of
+             Left label  -> map Left $ experimentSeriesProviders expdata [label]
+             Right label -> map Right $ experimentSeriesProviders expdata [label]
+         joinedproviders = join protoproviders
+         providers = flip map joinedproviders $ either id id         
          input =
            flip map providers $ \provider ->
            case providerToDouble provider of
@@ -179,10 +183,10 @@ simulateDeviationChart st expdata =
                         (providerName provider) ++ 
                         " as double values: simulateDeviationChart"
              Just input -> input
-         eitherlabels = join $ flip map protolabels $ \protolabel ->
-           case protolabel of
-             Left _  -> flip map providers $ Left . providerName
-             Right _ -> flip map providers $ Right . providerName
+         names = flip map joinedproviders $ \protoprovider ->
+           case protoprovider of
+             Left provider  -> Left $ providerName provider
+             Right provider -> Right $ providerName provider
          predicate = deviationChartPredicate $ deviationChartView st
          exp = deviationChartExperiment st
          lock = deviationChartLock st
@@ -190,11 +194,11 @@ simulateDeviationChart st expdata =
      case results of
        Nothing ->
          liftIO $
-         do results <- newDeviationChartResults eitherlabels exp
+         do results <- newDeviationChartResults names exp
             writeIORef (deviationChartResults st) $ Just results
        Just results ->
-         when (eitherlabels /= (deviationChartLabels results)) $
-         error "Series with different labels are returned for different runs: simulateDeviationChart"
+         when (names /= (deviationChartNames results)) $
+         error "Series with different names are returned for different runs: simulateDeviationChart"
      results <- liftIO $ fmap fromJust $ readIORef (deviationChartResults st)
      let stats = deviationChartStats results
      t0 <- starttime
@@ -226,10 +230,10 @@ finaliseDeviationChart st =
      case results of
        Nothing -> return ()
        Just results ->
-         do let times  = deviationChartTimes results
-                labels = deviationChartLabels results
-                stats  = deviationChartStats results
-            ps1 <- forM (zip3 labels stats plotLines) $ \(label, stats, plotLines) ->
+         do let times = deviationChartTimes results
+                names = deviationChartNames results
+                stats = deviationChartStats results
+            ps1 <- forM (zip3 names stats plotLines) $ \(name, stats, plotLines) ->
               do xs <- getAssocs stats
                  zs <- forM xs $ \(i, stats) ->
                    do t <- readArray times i
@@ -237,12 +241,12 @@ finaliseDeviationChart st =
                  let p = toPlot $
                          plotLines $
                          plot_lines_values ^= filterPlotLinesValues zs $
-                         plot_lines_title ^= either id id label $
+                         plot_lines_title ^= either id id name $
                          defaultPlotLines
-                 case label of
+                 case name of
                    Left _  -> return $ Left p
                    Right _ -> return $ Right p
-            ps2 <- forM (zip3 labels stats plotFillBetween) $ \(label, stats, plotFillBetween) ->
+            ps2 <- forM (zip3 names stats plotFillBetween) $ \(name, stats, plotFillBetween) ->
               do xs <- getAssocs stats
                  zs <- forM xs $ \(i, stats) ->
                    do t <- readArray times i
@@ -252,14 +256,15 @@ finaliseDeviationChart st =
                  let p = toPlot $
                          plotFillBetween $
                          plot_fillbetween_values ^= filterPlotFillBetweenValues zs $
-                         plot_fillbetween_title ^= either id id label $
+                         plot_fillbetween_title ^= either id id name $
                          defaultPlotFillBetween
-                 case label of
+                 case name of
                    Left _  -> return $ Left p
                    Right _ -> return $ Right p
-            let chart = plotLayout $
+            let ps = join $ flip map (zip ps1 ps2) $ \(p1, p2) -> [p2, p1]
+                chart = plotLayout $
                         layout1_title ^= title $
-                        layout1_plots ^= ps2 ++ ps1 $
+                        layout1_plots ^= ps $
                         defaultLayout1
             file <- resolveFileName 
                     (Just $ deviationChartDir st)
