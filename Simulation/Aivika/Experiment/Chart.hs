@@ -39,4 +39,16 @@ colourisePlotLines =
 -- | Colourise the plot areas that are filling between 
 -- any two lines.
 colourisePlotFillBetween :: [PlotFillBetween x y -> PlotFillBetween x y]
-colourisePlotFillBetween = repeat id
+colourisePlotFillBetween =
+  (plot_fillbetween_style ^= solidFillStyle (withOpacity blue 0.4)) :
+  (plot_fillbetween_style ^= solidFillStyle (withOpacity green 0.4)) :
+  (plot_fillbetween_style ^= solidFillStyle (withOpacity red 0.4)) :
+  (plot_fillbetween_style ^= solidFillStyle (withOpacity black 0.4)) :
+  (plot_fillbetween_style ^= solidFillStyle (withOpacity grey 0.4)) :
+  (plot_fillbetween_style ^= solidFillStyle (withOpacity purple 0.4)) :
+  (plot_fillbetween_style ^= solidFillStyle (withOpacity violet 0.4)) :
+  (plot_fillbetween_style ^= solidFillStyle (withOpacity darkblue 0.4)) :
+  (plot_fillbetween_style ^= solidFillStyle (withOpacity darkgreen 0.4)) :
+  (plot_fillbetween_style ^= solidFillStyle (withOpacity darkgrey 0.4)) :
+  (plot_fillbetween_style ^= solidFillStyle (withOpacity darkviolet 0.4)) :
+  colourisePlotFillBetween
