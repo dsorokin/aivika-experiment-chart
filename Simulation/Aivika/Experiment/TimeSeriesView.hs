@@ -236,7 +236,7 @@ timeSeriesHtmlMultiple st index =
 
 header :: TimeSeriesViewState -> Int -> HtmlWriter ()
 header st index =
-  do writeHtmlHeader3WithId ("#id" ++ show index) $ 
+  do writeHtmlHeader3WithId ("id" ++ show index) $ 
        writeHtmlText (timeSeriesTitle $ timeSeriesView st)
      let description = (timeSeriesDescription $ timeSeriesView st)
      unless (null description) $

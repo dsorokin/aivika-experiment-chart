@@ -295,7 +295,7 @@ deviationChartHtml st index =
 
 header :: DeviationChartViewState -> Int -> HtmlWriter ()
 header st index =
-  do writeHtmlHeader3WithId ("#id" ++ show index) $ 
+  do writeHtmlHeader3WithId ("id" ++ show index) $ 
        writeHtmlText (deviationChartTitle $ deviationChartView st)
      let description = (deviationChartDescription $ deviationChartView st)
      unless (null description) $
