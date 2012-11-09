@@ -164,7 +164,7 @@ simulateFinalHistogram st expdata =
                         providerName provider ++ 
                         " as double values: simulateFinalHistogram"
              Just input -> input
-         names = flip map providers providerName
+         names = map providerName providers
          predicate = finalHistogramPredicate $ finalHistogramView st
          exp = finalHistogramExperiment st
          lock = finalHistogramLock st
