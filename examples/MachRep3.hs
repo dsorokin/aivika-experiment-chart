@@ -81,10 +81,6 @@ experiment =
        outputView $ defaultFinalHistogramView {
          finalHistogramTitle  = "Final Histogram (Scott)",
          finalHistogram = histogram binScott,
-         finalHistogramSeries = ["x"] },
-       outputView $ defaultFinalHistogramView {
-         finalHistogramTitle  = "Final Histogram (FreedmanDiaconis)",
-         finalHistogram = histogram binFreedmanDiaconis,
          finalHistogramSeries = ["x"] } ] }
 
 upRate = 1.0 / 1.0       -- reciprocal of mean up time
