@@ -91,6 +91,10 @@ data DeviationChartView =
                        -- by the rule of 3-sigma, while the former 
                        -- is used for plotting the trends of the 
                        -- random processes.
+                       deviationChartBottomAxis :: LayoutAxis Double ->
+                                                   LayoutAxis Double,
+                       -- ^ A transformation of the bottom axis, 
+                       -- after title @time@ is added.
                        deviationChartLayout :: Layout1 Double Double ->
                                                Layout1 Double Double
                        -- ^ A transformation of the plot layout, 
@@ -109,6 +113,7 @@ defaultDeviationChartView =
                        deviationChartSeries      = [], 
                        deviationChartPlotLines   = colourisePlotLines,
                        deviationChartPlotFillBetween = colourisePlotFillBetween,
+                       deviationChartBottomAxis  = id,
                        deviationChartLayout      = id }
 
 instance View DeviationChartView where
@@ -225,6 +230,7 @@ finaliseDeviationChart st =
          height = deviationChartHeight $ deviationChartView st
          plotLines = deviationChartPlotLines $ deviationChartView st
          plotFillBetween = deviationChartPlotFillBetween $ deviationChartView st
+         plotBottomAxis = deviationChartBottomAxis $ deviationChartView st
          plotLayout = deviationChartLayout $ deviationChartView st
      results <- readIORef $ deviationChartResults st
      case results of
@@ -262,7 +268,11 @@ finaliseDeviationChart st =
                    Left _  -> return $ Left p
                    Right _ -> return $ Right p
             let ps = join $ flip map (zip ps1 ps2) $ \(p1, p2) -> [p2, p1]
+                axis = plotBottomAxis $
+                       laxis_title ^= "time" $
+                       defaultLayoutAxis
                 chart = plotLayout $
+                        layout1_bottom_axis ^= axis $
                         layout1_title ^= title $
                         layout1_plots ^= ps $
                         defaultLayout1

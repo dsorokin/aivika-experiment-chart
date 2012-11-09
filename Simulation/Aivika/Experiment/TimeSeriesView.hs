@@ -92,6 +92,10 @@ data TimeSeriesView =
                    --
                    -- Here you can define a colour or style of
                    -- of the plot lines.
+                   timeSeriesBottomAxis :: LayoutAxis Double ->
+                                           LayoutAxis Double,
+                   -- ^ A transformation of the bottom axis, 
+                   -- after title @time@ is added.
                    timeSeriesLayout :: Layout1 Double Double ->
                                        Layout1 Double Double
                    -- ^ A transformation of the plot layout, 
@@ -110,6 +114,7 @@ defaultTimeSeriesView =
                    timeSeriesPredicate   = return True,
                    timeSeries            = [], 
                    timeSeriesPlotLines   = colourisePlotLines,
+                   timeSeriesBottomAxis  = id,
                    timeSeriesLayout      = id }
 
 instance View TimeSeriesView where
@@ -165,6 +170,7 @@ simulateTimeSeries st expdata =
          height = timeSeriesHeight $ timeSeriesView st
          predicate = timeSeriesPredicate $ timeSeriesView st
          plotLines = timeSeriesPlotLines $ timeSeriesView st
+         plotBottomAxis = timeSeriesBottomAxis $ timeSeriesView st
          plotLayout = timeSeriesLayout $ timeSeriesView st
      i <- liftSimulation simulationIndex
      let file = fromJust $ M.lookup (i - 1) (timeSeriesMap st)
@@ -193,7 +199,11 @@ simulateTimeSeries st expdata =
                 case label of
                   Left _  -> Left p
                   Right _ -> Right p
-          let chart = plotLayout $
+              axis  = plotBottomAxis $
+                      laxis_title ^= "time" $
+                      defaultLayoutAxis
+              chart = plotLayout $
+                      layout1_bottom_axis ^= axis $
                       layout1_title ^= title $
                       layout1_plots ^= ps' $
                       defaultLayout1
