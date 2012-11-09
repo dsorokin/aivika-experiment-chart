@@ -170,7 +170,7 @@ newDeviationChartResults names exp =
                                     deviationChartNames = names,
                                     deviationChartStats = stats }
        
--- | Plot the time series chart during the simulation.
+-- | Simulate the specified series.
 simulateDeviationChart :: DeviationChartViewState -> ExperimentData -> Dynamics (Dynamics ())
 simulateDeviationChart st expdata =
   do let protolabels = deviationChartSeries $ deviationChartView st
@@ -222,7 +222,7 @@ simulateDeviationChart st expdata =
                     writeArray stats i $ addSamplingStats x y
      return $ return ()
      
--- | Plot the time series after the simulation is complete.
+-- | Plot the deviation chart after the simulation is complete.
 finaliseDeviationChart :: DeviationChartViewState -> IO ()
 finaliseDeviationChart st =
   do let title = deviationChartTitle $ deviationChartView st
