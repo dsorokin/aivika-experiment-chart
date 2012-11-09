@@ -28,6 +28,7 @@ import Simulation.Aivika.Dynamics.Resource
 import Simulation.Aivika.Dynamics.Process
 
 import Simulation.Aivika.Experiment
+import Simulation.Aivika.Experiment.Histogram
 import Simulation.Aivika.Experiment.LastValueView
 import Simulation.Aivika.Experiment.TableView
 import Simulation.Aivika.Experiment.TimeSeriesView
@@ -43,25 +44,48 @@ experiment :: Experiment
 experiment =
   defaultExperiment {
     experimentSpecs = specs,
-    experimentRunCount = 10,
+    experimentRunCount = 200,
     experimentDescription = "Experiment Description",
     experimentGenerators =
-      [outputView $ defaultLastValueView {
-          lastValueDescription = "Last Value description",
-          lastValueSeries = ["x"] },
-       outputView $ defaultTableView {
-         tableDescription = "Table description",
-         tableSeries = ["x"] }, 
-       outputView $ defaultTimeSeriesView {
-         timeSeries = [Left "t", Right "x"] }, 
-       outputView $ defaultDeviationChartView {
+      [outputView $ defaultDeviationChartView {
          deviationChartSeries = [Left "t", Right "x"] },
        outputView $ defaultFinalHistogramView {
-         finalHistogramSeries = ["x"] },
-       outputView $ defaultFinalHistogramView {
+         finalHistogramTitle  = "Final Histogram (Default)",
          finalHistogramSeries = ["x", "x"] },
        outputView $ defaultFinalHistogramView {
-         finalHistogramSeries = ["t", "t"] } ] }
+         finalHistogramTitle  = "Final Histogram (Default)",
+         finalHistogramSeries = ["t", "t"] },
+       outputView $ defaultFinalHistogramView {
+         finalHistogramTitle  = "Final Histogram (Default)",
+         finalHistogramSeries = ["x"] },
+       outputView $ defaultFinalHistogramView {
+         finalHistogramTitle  = "Final Histogram (Bin Size = 0.001)",
+         finalHistogram = histogramBinSize 0.001,
+         finalHistogramSeries = ["x"] },
+       outputView $ defaultFinalHistogramView {
+         finalHistogramTitle  = "Final Histogram (Bin Num = 10)",
+         finalHistogram = histogramNumBins 10,
+         finalHistogramSeries = ["x"] },
+       outputView $ defaultFinalHistogramView {
+         finalHistogramTitle  = "Final Histogram (Sturges)",
+         finalHistogram = histogram binSturges,
+         finalHistogramSeries = ["x"] },
+       outputView $ defaultFinalHistogramView {
+         finalHistogramTitle  = "Final Histogram (Doane)",
+         finalHistogram = histogram binDoane,
+         finalHistogramSeries = ["x"] },
+       outputView $ defaultFinalHistogramView {
+         finalHistogramTitle  = "Final Histogram (Sqrt)",
+         finalHistogram = histogram binSqrt,
+         finalHistogramSeries = ["x"] },
+       outputView $ defaultFinalHistogramView {
+         finalHistogramTitle  = "Final Histogram (Scott)",
+         finalHistogram = histogram binScott,
+         finalHistogramSeries = ["x"] },
+       outputView $ defaultFinalHistogramView {
+         finalHistogramTitle  = "Final Histogram (FreedmanDiaconis)",
+         finalHistogram = histogram binFreedmanDiaconis,
+         finalHistogramSeries = ["x"] } ] }
 
 upRate = 1.0 / 1.0       -- reciprocal of mean up time
 repairRate = 1.0 / 0.5   -- reciprocal of mean repair time
