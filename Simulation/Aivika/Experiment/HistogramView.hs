@@ -143,6 +143,7 @@ newHistogram view exp dir =
        M.fromList [("$TITLE", histogramTitle view),
                    ("$RUN_INDEX", show $ i + 1),
                    ("$RUN_COUNT", show n)]
+     forM_ fs $ flip writeFile []  -- reserve the file names
      let m = M.fromList $ zip [0..(n - 1)] fs
      return HistogramViewState { histogramView       = view,
                                  histogramExperiment = exp,
