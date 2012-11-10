@@ -9,11 +9,7 @@
 --
 -- The module defines 'HistogramView' that saves the histogram
 -- in the PNG files by all integration time points for each 
--- simulation run.
---
--- Use 'FinalHistogramView' if you need a histogram
--- calculated only in final time points for all runs
--- simultaneously.
+-- simulation run separately.
 --
 
 module Simulation.Aivika.Experiment.HistogramView
@@ -51,11 +47,7 @@ import Simulation.Aivika.Dynamics.EventQueue
 
 -- | Defines the 'View' that saves the histogram in 
 -- the PNG files by all integration time points for 
--- each simulation run.
---
--- Use 'FinalHistogramView' if you need a histogram
--- calculated only in final time points for all runs
--- simultaneously.
+-- each simulation run separately.
 data HistogramView =
   HistogramView { histogramTitle       :: String,
                   -- ^ This is a title used in HTML and histogram.

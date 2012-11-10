@@ -8,11 +8,8 @@
 -- Tested with: GHC 7.4.1
 --
 -- The module defines 'FinalHistogramView' that draws a histogram
--- of the specified series by final time points for different 
+-- by the specified series in final time points collected from different 
 -- simulation runs.
---
--- Use 'HistogramView' if you need histograms calculated by all
--- integration time points for every simulation run separately.
 --
 
 module Simulation.Aivika.Experiment.FinalHistogramView
@@ -52,10 +49,9 @@ import Simulation.Aivika.Dynamics.EventQueue
 import Simulation.Aivika.Dynamics.Base (starttime, integIterationBnds, integTimes, integIteration)
 
 -- | Defines the 'View' that saves the histogram
--- in the PNG file.
---
--- Use 'HistogramView' if you need histograms calculated by all
--- integration time points for every simulation run separately.
+-- in the PNG file by the specified series in
+-- final time points collected from different
+-- simulation runs.
 data FinalHistogramView =
   FinalHistogramView { finalHistogramTitle       :: String,
                        -- ^ This is a title used in HTML and histogram.
