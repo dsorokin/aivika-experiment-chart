@@ -294,8 +294,7 @@ filterPlotLinesValues =
 -- | Remove the NaN and inifity values.     
 filterPlotFillBetweenValues :: [(Double, (Double, Double))] -> [(Double, (Double, Double))]
 filterPlotFillBetweenValues = 
-  join . filter (not . null) .
-  divideBy (\(t, (x1, x2)) -> isNaN x1 || isInfinite x1 || isNaN x2 || isInfinite x2)
+  filter $ \(t, (x1, x2)) -> not $ isNaN x1 || isInfinite x1 || isNaN x2 || isInfinite x2
 
 -- | Get the HTML code.     
 deviationChartHtml :: DeviationChartViewState -> Int -> HtmlWriter ()
