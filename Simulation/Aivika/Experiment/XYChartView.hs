@@ -23,6 +23,7 @@ import Data.IORef
 import Data.Maybe
 import Data.Either
 import Data.Array
+import Data.Monoid
 
 import Data.Accessor
 
@@ -200,7 +201,8 @@ simulateXYChart st expdata =
        newSignalHistoryThrough (experimentQueue expdata) $
        mapSignalM (const $ liftM2 (,) x y) $
        filterSignalM (const predicate) $
-       experimentMixedSignal expdata [provider]
+       experimentMixedSignal expdata [provider] <>
+       experimentMixedSignal expdata [xprovider]
      return $
        do ps <- forM (zip3 hs yproviders plotLines) $ \(h, provider, plotLines) ->
             do (ts, zs) <- readSignalHistory h 
