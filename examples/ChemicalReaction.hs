@@ -9,6 +9,7 @@ import Simulation.Aivika.Experiment
 import Simulation.Aivika.Experiment.LastValueView
 import Simulation.Aivika.Experiment.TableView
 import Simulation.Aivika.Experiment.TimeSeriesView
+import Simulation.Aivika.Experiment.XYChartView
 
 specs = Specs { spcStartTime = 0, 
                 spcStopTime = 13, 
@@ -28,7 +29,16 @@ experiment =
          tableDescription = "Table description",
          tableSeries = ["t", "a", "b", "c"] }, 
        outputView $ defaultTimeSeriesView {
-         timeSeries = [Left "a", Left "b", Left "c"] } ] }
+         timeSeries = [Left "a", Left "b", Left "c"] },
+       outputView $ defaultXYChartView {
+         xyChartXSeries = Just "a",
+         xyChartYSeries = [Left "b", Right "c"] },
+       outputView $ defaultXYChartView {
+         xyChartXSeries = Just "b",
+         xyChartYSeries = [Right "a", Right "c"] },
+       outputView $ defaultXYChartView {
+         xyChartXSeries = Just "c",
+         xyChartYSeries = [Right "a", Left "b"] } ] }
 
 model :: Simulation ExperimentData
 model =

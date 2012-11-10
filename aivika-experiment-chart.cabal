@@ -27,6 +27,7 @@ extra-source-files:  examples/MachRep3.hs
 library
 
     exposed-modules: Simulation.Aivika.Experiment.TimeSeriesView
+                     Simulation.Aivika.Experiment.XYChartView
                      Simulation.Aivika.Experiment.DeviationChartView
                      Simulation.Aivika.Experiment.FinalHistogramView
                      Simulation.Aivika.Experiment.HistogramView
