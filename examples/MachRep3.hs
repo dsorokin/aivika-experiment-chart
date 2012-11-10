@@ -60,27 +60,27 @@ experiment =
          finalHistogramSeries = ["x"] },
        outputView $ defaultFinalHistogramView {
          finalHistogramTitle  = "Final Histogram (Bin Size = 0.001)",
-         finalHistogram = histogramBinSize 0.001,
+         finalHistogramBuild  = histogramBinSize 0.001,
          finalHistogramSeries = ["x"] },
        outputView $ defaultFinalHistogramView {
          finalHistogramTitle  = "Final Histogram (Bin Num = 10)",
-         finalHistogram = histogramNumBins 10,
+         finalHistogramBuild  = histogramNumBins 10,
          finalHistogramSeries = ["x"] },
        outputView $ defaultFinalHistogramView {
          finalHistogramTitle  = "Final Histogram (Sturges)",
-         finalHistogram = histogram binSturges,
+         finalHistogramBuild  = histogram binSturges,
          finalHistogramSeries = ["x"] },
        outputView $ defaultFinalHistogramView {
          finalHistogramTitle  = "Final Histogram (Doane)",
-         finalHistogram = histogram binDoane,
+         finalHistogramBuild  = histogram binDoane,
          finalHistogramSeries = ["x"] },
        outputView $ defaultFinalHistogramView {
          finalHistogramTitle  = "Final Histogram (Sqrt)",
-         finalHistogram = histogram binSqrt,
+         finalHistogramBuild  = histogram binSqrt,
          finalHistogramSeries = ["x"] },
        outputView $ defaultFinalHistogramView {
          finalHistogramTitle  = "Final Histogram (Scott)",
-         finalHistogram = histogram binScott,
+         finalHistogramBuild  = histogram binScott,
          finalHistogramSeries = ["x"] } ] }
 
 upRate = 1.0 / 1.0       -- reciprocal of mean up time

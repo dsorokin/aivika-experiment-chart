@@ -10,6 +10,10 @@
 -- The module defines 'FinalHistogramView' that draws a histogram
 -- of the specified series by final time points for different 
 -- simulation runs.
+--
+-- Use 'HistogramView' if you need histograms calculated by all
+-- integration time points for every simulation run separately.
+--
 
 module Simulation.Aivika.Experiment.FinalHistogramView
        (FinalHistogramView(..), 
@@ -49,15 +53,18 @@ import Simulation.Aivika.Dynamics.Base (starttime, integIterationBnds, integTime
 
 -- | Defines the 'View' that saves the histogram
 -- in the PNG file.
+--
+-- Use 'HistogramView' if you need histograms calculated by all
+-- integration time points for every simulation run separately.
 data FinalHistogramView =
   FinalHistogramView { finalHistogramTitle       :: String,
-                       -- ^ This is a title used in HTML and chart.
+                       -- ^ This is a title used in HTML and histogram.
                        finalHistogramDescription :: String,
                        -- ^ This is a description in the HTML.
                        finalHistogramWidth       :: Int,
-                       -- ^ The width of the chart.
+                       -- ^ The width of the histogram.
                        finalHistogramHeight      :: Int,
-                       -- ^ The height of the chart.
+                       -- ^ The height of the histogram.
                        finalHistogramFileName    :: FileName,
                        -- ^ It defines the file name for the PNG file. 
                        -- It may include special variable @$TITLE@.
@@ -70,7 +77,7 @@ data FinalHistogramView =
                        finalHistogramPredicate   :: Dynamics Bool,
                        -- ^ It specifies the predicate that defines
                        -- when we count data when plotting the histogram.
-                       finalHistogram            :: [[Double]] -> Histogram, 
+                       finalHistogramBuild       :: [[Double]] -> Histogram, 
                        -- ^ Builds a histogram by the specified list of 
                        -- data series.
                        finalHistogramSeries      :: [String],
@@ -98,7 +105,7 @@ defaultFinalHistogramView =
                        finalHistogramHeight      = 480,
                        finalHistogramFileName    = UniqueFileName "$TITLE" ".png",
                        finalHistogramPredicate   = return True,
-                       finalHistogram            = histogram binSturges,
+                       finalHistogramBuild       = histogram binSturges,
                        finalHistogramSeries      = [], 
                        finalHistogramPlotBars    = colourisePlotBars,
                        finalHistogramLayout      = id }
@@ -199,7 +206,7 @@ finaliseFinalHistogram st =
   do let title = finalHistogramTitle $ finalHistogramView st
          width = finalHistogramWidth $ finalHistogramView st
          height = finalHistogramHeight $ finalHistogramView st
-         histogram = finalHistogram $ finalHistogramView st
+         histogram = finalHistogramBuild $ finalHistogramView st
          bars = finalHistogramPlotBars $ finalHistogramView st
          layout = finalHistogramLayout $ finalHistogramView st
      results <- readIORef $ finalHistogramResults st
@@ -209,7 +216,8 @@ finaliseFinalHistogram st =
          do let names  = finalHistogramNames results
                 values = finalHistogramValues results
             xs <- forM values readIORef
-            let zs = histogramToBars . filterHistogram . histogram $ xs
+            let zs = histogramToBars . filterHistogram . histogram $ 
+                     map filterData xs
                 p  = plotBars $
                      bars $
                      plot_bars_values ^= zs $
@@ -229,11 +237,13 @@ finaliseFinalHistogram st =
             writeIORef (finalHistogramFile st) $ Just file
      
 -- | Remove the NaN and inifity values.     
-filterHistogram :: [(Double, [Int])] -> [(Double, [Int])]
-filterHistogram = 
-  concat . filter (not . null) .
-  divideBy (\(x, n) -> isNaN x || isInfinite x)
-  
+filterData :: [Double] -> [Double]
+filterData = filter (\x -> not $ isNaN x || isInfinite x)
+     
+-- | Remove the NaN and inifity values.     
+filterHistogram :: [(Double, a)] -> [(Double, a)]
+filterHistogram = filter (\(x, _) -> not $ isNaN x || isInfinite x)
+
 -- | Convert a histogram to the bars.
 histogramToBars :: [(Double, [Int])] -> [(Double, [Double])]
 histogramToBars = map $ \(x, ns) -> (x, map fromIntegral ns)
