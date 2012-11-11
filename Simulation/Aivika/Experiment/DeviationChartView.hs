@@ -72,7 +72,7 @@ data DeviationChartView =
                        -- when we count data when plotting the chart.
                        deviationChartSeries      :: [Either String String],
                        -- ^ It contains the labels of data plotted
-                       -- in the chart.
+                       -- on the chart.
                        deviationChartPlotLines :: [PlotLines Double Double ->
                                                    PlotLines Double Double],
                        -- ^ Probably, an infinite sequence of plot 

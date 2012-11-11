@@ -78,7 +78,7 @@ data FinalHistogramView =
                        -- data series.
                        finalHistogramSeries      :: [String],
                        -- ^ It contains the labels of data plotted
-                       -- in the histogram.
+                       -- on the histogram.
                        finalHistogramPlotBars :: PlotBars Double Double ->
                                                  PlotBars Double Double,
                        -- ^ A transformation based on which the plot bar

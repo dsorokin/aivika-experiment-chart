@@ -80,7 +80,7 @@ data TimeSeriesView =
                    -- when we plot data in the chart.
                    timeSeries      :: [Either String String],
                    -- ^ It contains the labels of data plotted
-                   -- in the chart.
+                   -- on the chart.
                    timeSeriesPlotLines :: [PlotLines Double Double ->
                                            PlotLines Double Double],
                    -- ^ Probably, an infinite sequence of plot 

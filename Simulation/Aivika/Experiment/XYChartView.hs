@@ -83,7 +83,7 @@ data XYChartView =
                 -- ^ This is a label of the X series.
                 xyChartYSeries      :: [Either String String],
                 -- ^ It contains the labels of Y series plotted
-                -- in the XY chart.
+                -- on the XY chart.
                 xyChartPlotLines :: [PlotLines Double Double ->
                                      PlotLines Double Double],
                 -- ^ Probably, an infinite sequence of plot 
