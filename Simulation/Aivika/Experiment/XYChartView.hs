@@ -201,11 +201,15 @@ simulateXYChart st expdata =
                 replace "$TITLE" (xyChartTitle $ xyChartView st)
                 (xyChartRunTitle $ xyChartView st)
      hs <- forM (zip yproviders ys) $ \(provider, y) ->
-       newSignalHistoryThrough (experimentQueue expdata) $
-       mapSignalM (const $ liftM2 (,) x y) $
-       filterSignalM (const predicate) $
-       experimentMixedSignal expdata [provider] <>
-       experimentMixedSignal expdata [xprovider]
+       let transform () =
+             do p <- predicate
+                if p 
+                  then liftM2 (,) x y
+                  else return (1/0, 1/0)  -- such values will be ignored then
+       in newSignalHistoryThrough (experimentQueue expdata) $
+          mapSignalM transform $
+          experimentMixedSignal expdata [provider] <>
+          experimentMixedSignal expdata [xprovider]
      return $
        do ps <- forM (zip3 hs yproviders plotLines) $ \(h, provider, plotLines) ->
             do (ts, zs) <- readSignalHistory h 

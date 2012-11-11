@@ -44,7 +44,14 @@ experiment =
          xyChartYSeries = [Right "a", Right "c"] },
        outputView $ defaultXYChartView {
          xyChartXSeries = Just "c",
-         xyChartYSeries = [Right "a", Left "b"] } ] }
+         xyChartYSeries = [Right "a", Left "b"] },
+       outputView $ defaultXYChartView {
+         xyChartTitle = "Functions a=a(c) and b=b(c) for t <= 2 or t >= 3",
+         xyChartXSeries = Just "c",
+         xyChartYSeries = [Right "a", Left "b"],
+         xyChartPredicate = 
+           do t <- time
+              return (t <= 2 || t >= 3) } ] }
 
 model :: Simulation ExperimentData
 model =
