@@ -146,9 +146,7 @@ data DeviationChartResults =
 -- | Create a new state of the view.
 newDeviationChart :: DeviationChartView -> Experiment -> FilePath -> IO DeviationChartViewState
 newDeviationChart view exp dir =
-  do let specs = experimentSpecs exp
-         bnds  = integIterationBnds specs
-     f <- newIORef Nothing
+  do f <- newIORef Nothing
      l <- newMVar () 
      r <- newIORef Nothing
      return DeviationChartViewState { deviationChartView       = view,

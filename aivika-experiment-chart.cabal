@@ -28,9 +28,10 @@ library
 
     exposed-modules: Simulation.Aivika.Experiment.TimeSeriesView
                      Simulation.Aivika.Experiment.XYChartView
+                     Simulation.Aivika.Experiment.FinalXYChartView
                      Simulation.Aivika.Experiment.DeviationChartView
-                     Simulation.Aivika.Experiment.FinalHistogramView
                      Simulation.Aivika.Experiment.HistogramView
+                     Simulation.Aivika.Experiment.FinalHistogramView
                      Simulation.Aivika.Experiment.Chart
 
     build-depends:   base >= 3 && < 6,

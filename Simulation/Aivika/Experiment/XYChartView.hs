@@ -81,6 +81,9 @@ data XYChartView =
                 -- when we plot data in the chart.
                 xyChartXSeries     :: Maybe String,
                 -- ^ This is a label of the X series.
+                --
+                -- You must define it, because it is 'Nothing' 
+                -- by default.
                 xyChartYSeries      :: [Either String String],
                 -- ^ It contains the labels of Y series plotted
                 -- on the XY chart.

@@ -34,6 +34,7 @@ import Simulation.Aivika.Experiment.TableView
 import Simulation.Aivika.Experiment.TimeSeriesView
 import Simulation.Aivika.Experiment.DeviationChartView
 import Simulation.Aivika.Experiment.FinalHistogramView
+import Simulation.Aivika.Experiment.FinalXYChartView
 
 specs = Specs { spcStartTime = 0.0,
                 spcStopTime = 1000.0,
@@ -49,6 +50,13 @@ experiment =
     experimentGenerators =
       [outputView $ defaultDeviationChartView {
          deviationChartSeries = [Left "t", Right "x"] },
+       outputView $ defaultFinalXYChartView {
+         finalXYChartTitle   = "The proportion up time for simulation runs < 50 and > 100", 
+         finalXYChartXSeries = Just "n",
+         finalXYChartYSeries = [Right "x"], 
+         finalXYChartPredicate =
+           do i <- liftSimulation $ simulationIndex
+              return $ (i < 50) || (i > 100) },
        outputView $ defaultFinalHistogramView {
          finalHistogramTitle  = "Final Histogram (Default)",
          finalHistogramSeries = ["x", "x"] },
@@ -144,6 +152,7 @@ model =
               
      experimentDataInStartTime queue $
        [("x", seriesEntity "The proportion of up time" result),
-        ("t", seriesEntity "Total up time" totalUpTime)]
+        ("t", seriesEntity "Total up time" totalUpTime),
+        ("n", seriesEntity "Simulation run" simulationIndex)]
 
 main = runExperiment experiment model
