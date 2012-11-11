@@ -67,9 +67,6 @@ data DeviationChartView =
                        -- @
                        --   deviationChartFileName = UniqueFileName \"$TITLE\", \".png\"
                        -- @
-                       deviationChartPredicate   :: Dynamics Bool,
-                       -- ^ It specifies the predicate that defines
-                       -- when we count data when plotting the chart.
                        deviationChartSeries      :: [Either String String],
                        -- ^ It contains the labels of data plotted
                        -- on the chart.
@@ -109,7 +106,6 @@ defaultDeviationChartView =
                        deviationChartWidth       = 640,
                        deviationChartHeight      = 480,
                        deviationChartFileName    = UniqueFileName "$TITLE" ".png",
-                       deviationChartPredicate   = return True,
                        deviationChartSeries      = [], 
                        deviationChartPlotLines   = colourisePlotLines,
                        deviationChartPlotFillBetween = colourisePlotFillBetween,
@@ -190,7 +186,6 @@ simulateDeviationChart st expdata =
            case protoprovider of
              Left provider  -> Left $ providerName provider
              Right provider -> Right $ providerName provider
-         predicate = deviationChartPredicate $ deviationChartView st
          exp = deviationChartExperiment st
          lock = deviationChartLock st
      results <- liftIO $ readIORef (deviationChartResults st)
@@ -206,8 +201,7 @@ simulateDeviationChart st expdata =
      let stats = deviationChartStats results
      t0 <- starttime
      enqueue (experimentQueue expdata) t0 $
-       do let h = filterSignalM (const predicate) $
-                  experimentSignalInIntegTimes expdata
+       do let h = experimentSignalInIntegTimes expdata
           -- we must subscribe through the event queue;
           -- otherwise, we will loose a signal in the start time,
           -- because the handleSignal_ function checks the event queue
