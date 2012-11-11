@@ -183,10 +183,12 @@ simulateTimeSeries st expdata =
                 replace "$TITLE" (timeSeriesTitle $ timeSeriesView st)
                 (timeSeriesRunTitle $ timeSeriesView st)
      hs <- forM (zip providers input) $ \(provider, input) ->
-       newSignalHistoryThrough (experimentQueue expdata) $
-       mapSignalM (const input) $
-       filterSignalM (const predicate) $
-       experimentMixedSignal expdata [provider]
+       let transform () =
+             do x <- predicate
+                if x then input else return (1/0)  -- the infinite values will be ignored then
+       in newSignalHistoryThrough (experimentQueue expdata) $
+          mapSignalM transform $
+          experimentMixedSignal expdata [provider]
      return $
        do ps <- forM (zip3 hs providers plotLines) $ \(h, provider, plotLines) ->
             do (ts, xs) <- readSignalHistory h 

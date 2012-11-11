@@ -30,6 +30,12 @@ experiment =
          tableSeries = ["t", "a", "b", "c"] }, 
        outputView $ defaultTimeSeriesView {
          timeSeries = [Left "a", Left "b", Left "c"] },
+       outputView $ defaultTimeSeriesView {
+         timeSeriesTitle = "Variables a, b and c for t <= 5 or t >= 7",
+         timeSeries = [Left "a", Left "b", Left "c"],
+         timeSeriesPredicate =
+           do t <- time
+              return (t <= 5 || t >= 7) },
        outputView $ defaultXYChartView {
          xyChartXSeries = Just "a",
          xyChartYSeries = [Left "b", Right "c"] },
