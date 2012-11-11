@@ -49,45 +49,45 @@ experiment =
     experimentDescription = "Experiment Description",
     experimentGenerators =
       [outputView $ defaultDeviationChartView {
-         deviationChartSeries = [Left "t", Right "x"] },
+          deviationChartSeries = [Left "t", Right "x"] },
        outputView $ defaultFinalXYChartView {
-         finalXYChartTitle   = "The proportion up time for simulation runs < 50 and > 100", 
+         finalXYChartPlotTitle = "The proportion up time for simulation runs < 50 and > 100", 
          finalXYChartXSeries = Just "n",
          finalXYChartYSeries = [Right "x"], 
          finalXYChartPredicate =
            do i <- liftSimulation $ simulationIndex
               return $ (i < 50) || (i > 100) },
        outputView $ defaultFinalHistogramView {
-         finalHistogramTitle  = "Final Histogram (Default)",
+         finalHistogramPlotTitle  = "Final Histogram (Default)",
          finalHistogramSeries = ["x", "x"] },
        outputView $ defaultFinalHistogramView {
-         finalHistogramTitle  = "Final Histogram (Default)",
+         finalHistogramPlotTitle  = "Final Histogram (Default)",
          finalHistogramSeries = ["t", "t"] },
        outputView $ defaultFinalHistogramView {
-         finalHistogramTitle  = "Final Histogram (Default)",
+         finalHistogramPlotTitle  = "Final Histogram (Default)",
          finalHistogramSeries = ["x"] },
        outputView $ defaultFinalHistogramView {
-         finalHistogramTitle  = "Final Histogram (Bin Size = 0.001)",
+         finalHistogramPlotTitle  = "Final Histogram (Bin Size = 0.001)",
          finalHistogramBuild  = histogramBinSize 0.001,
          finalHistogramSeries = ["x"] },
        outputView $ defaultFinalHistogramView {
-         finalHistogramTitle  = "Final Histogram (Bin Num = 10)",
+         finalHistogramPlotTitle  = "Final Histogram (Bin Num = 10)",
          finalHistogramBuild  = histogramNumBins 10,
          finalHistogramSeries = ["x"] },
        outputView $ defaultFinalHistogramView {
-         finalHistogramTitle  = "Final Histogram (Sturges)",
+         finalHistogramPlotTitle  = "Final Histogram (Sturges)",
          finalHistogramBuild  = histogram binSturges,
          finalHistogramSeries = ["x"] },
        outputView $ defaultFinalHistogramView {
-         finalHistogramTitle  = "Final Histogram (Doane)",
+         finalHistogramPlotTitle  = "Final Histogram (Doane)",
          finalHistogramBuild  = histogram binDoane,
          finalHistogramSeries = ["x"] },
        outputView $ defaultFinalHistogramView {
-         finalHistogramTitle  = "Final Histogram (Sqrt)",
+         finalHistogramPlotTitle  = "Final Histogram (Sqrt)",
          finalHistogramBuild  = histogram binSqrt,
          finalHistogramSeries = ["x"] },
        outputView $ defaultFinalHistogramView {
-         finalHistogramTitle  = "Final Histogram (Scott)",
+         finalHistogramPlotTitle  = "Final Histogram (Scott)",
          finalHistogramBuild  = histogram binScott,
          finalHistogramSeries = ["x"] } ] }
 

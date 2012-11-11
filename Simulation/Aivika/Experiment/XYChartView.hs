@@ -48,22 +48,9 @@ import Simulation.Aivika.Dynamics.EventQueue
 -- in the PNG files.
 data XYChartView =
   XYChartView { xyChartTitle       :: String,
-                -- ^ This is a title used in the chart.
-                xyChartRunTitle    :: String,
-                -- ^ The run title for the view. It is used 
-                -- when simulating multiple runs and it may 
-                -- include special variables @$RUN_INDEX@, 
-                -- @$RUN_COUNT@ and @$TITLE@.
-                --
-                -- An example is 
-                --
-                -- @
-                --   xyChartRunTitle = \"$TITLE / Run $RUN_INDEX of $RUN_COUNT\"
-                -- @
-                xyChartHeader      :: String,
-                -- ^ This is a header in HTML.
+                -- ^ This is a title used in HTML.
                 xyChartDescription :: String,
-                -- ^ This is a description in HTML.
+                -- ^ This is a description used in HTML.
                 xyChartWidth       :: Int,
                 -- ^ The width of the chart.
                 xyChartHeight      :: Int,
@@ -89,21 +76,42 @@ data XYChartView =
                 xyChartYSeries      :: [Either String String],
                 -- ^ It contains the labels of Y series plotted
                 -- on the XY chart.
+                xyChartPlotTitle :: String,
+                -- ^ This is a title used in the chart when
+                -- simulating a single run. It may include 
+                -- special variable @$TITLE@.
+                --
+                -- An example is
+                --
+                -- @
+                --   xyChartPlotTitle = \"$TITLE\"
+                -- @
+                xyChartRunPlotTitle :: String,
+                -- ^ The run title for the chart. It is used 
+                -- when simulating multiple runs and it may 
+                -- include special variables @$RUN_INDEX@, 
+                -- @$RUN_COUNT@ and @$PLOT_TITLE@.
+                --
+                -- An example is 
+                --
+                -- @
+                --   xyChartRunPlotTitle = \"$PLOT_TITLE / Run $RUN_INDEX of $RUN_COUNT\"
+                -- @
                 xyChartPlotLines :: [PlotLines Double Double ->
                                      PlotLines Double Double],
                 -- ^ Probably, an infinite sequence of plot 
                 -- transformations based on which the plot
                 -- is constructed for each Y series. Generally,
-                -- it must not coincide with a sequence of 
+                -- it may not coincide with a sequence of 
                 -- Y labels as one label may denote a whole list 
                 -- or an array of data providers.
                 --
                 -- Here you can define a colour or style of
-                -- of the plot lines.
+                -- the plot lines.
                 xyChartBottomAxis :: LayoutAxis Double ->
                                      LayoutAxis Double,
                 -- ^ A transformation of the bottom axis, 
-                -- after X's title is added.
+                -- after the X title is added.
                 xyChartLayout :: Layout1 Double Double ->
                                  Layout1 Double Double
                 -- ^ A transformation of the plot layout, 
@@ -114,8 +122,6 @@ data XYChartView =
 defaultXYChartView :: XYChartView
 defaultXYChartView = 
   XYChartView { xyChartTitle       = "XY Chart",
-                xyChartRunTitle    = "$TITLE / Run $RUN_INDEX of $RUN_COUNT",
-                xyChartHeader      = "XY Chart",
                 xyChartDescription = [],
                 xyChartWidth       = 640,
                 xyChartHeight      = 480,
@@ -123,6 +129,8 @@ defaultXYChartView =
                 xyChartPredicate   = return True,
                 xyChartXSeries     = Nothing, 
                 xyChartYSeries     = [],
+                xyChartPlotTitle   = "$TITLE",
+                xyChartRunPlotTitle  = "$PLOT_TITLE / Run $RUN_INDEX of $RUN_COUNT",
                 xyChartPlotLines   = colourisePlotLines,
                 xyChartBottomAxis  = id,
                 xyChartLayout      = id }
@@ -196,13 +204,17 @@ simulateXYChart st expdata =
          plotLayout = xyChartLayout $ xyChartView st
      i <- liftSimulation simulationIndex
      let file = fromJust $ M.lookup (i - 1) (xyChartMap st)
-         title =
+         title = xyChartTitle $ xyChartView st
+         plotTitle = 
+           replace "$TITLE" title
+           (xyChartPlotTitle $ xyChartView st)
+         runPlotTitle =
            if n == 1
-           then xyChartTitle $ xyChartView st
+           then plotTitle
            else replace "$RUN_INDEX" (show i) $
                 replace "$RUN_COUNT" (show n) $
-                replace "$TITLE" (xyChartTitle $ xyChartView st)
-                (xyChartRunTitle $ xyChartView st)
+                replace "$PLOT_TITLE" plotTitle $
+                (xyChartRunPlotTitle $ xyChartView st)
      hs <- forM (zip yproviders ys) $ \(provider, y) ->
        let transform () =
              do p <- predicate
@@ -231,7 +243,7 @@ simulateXYChart st expdata =
                       defaultLayoutAxis
               chart = plotLayout $
                       layout1_bottom_axis ^= axis $
-                      layout1_title ^= title $
+                      layout1_title ^= runPlotTitle $
                       layout1_plots ^= ps' $
                       defaultLayout1
           liftIO $ 
@@ -274,7 +286,7 @@ xyChartHtmlMultiple st index =
 header :: XYChartViewState -> Int -> HtmlWriter ()
 header st index =
   do writeHtmlHeader3WithId ("id" ++ show index) $ 
-       writeHtmlText (xyChartHeader $ xyChartView st)
+       writeHtmlText (xyChartTitle $ xyChartView st)
      let description = xyChartDescription $ xyChartView st
      unless (null description) $
        writeHtmlParagraph $ 
@@ -285,4 +297,4 @@ xyChartTOCHtml :: XYChartViewState -> Int -> HtmlWriter ()
 xyChartTOCHtml st index =
   writeHtmlListItem $
   writeHtmlLink ("#id" ++ show index) $
-  writeHtmlText (xyChartHeader $ xyChartView st)
+  writeHtmlText (xyChartTitle $ xyChartView st)

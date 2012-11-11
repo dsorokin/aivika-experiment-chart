@@ -20,6 +20,7 @@ experiment :: Experiment
 experiment =
   defaultExperiment {
     experimentSpecs = specs,
+    experimentRunCount = 1,
     experimentDescription = "Experiment Description",
     experimentGenerators =
       [outputView $ defaultLastValueView {
@@ -31,7 +32,7 @@ experiment =
        outputView $ defaultTimeSeriesView {
          timeSeries = [Left "a", Left "b", Left "c"] },
        outputView $ defaultTimeSeriesView {
-         timeSeriesTitle = "Variables a, b and c for t <= 5 or t >= 7",
+         timeSeriesPlotTitle = "Variables a, b and c for t <= 5 or t >= 7",
          timeSeries = [Left "a", Left "b", Left "c"],
          timeSeriesPredicate =
            do t <- time
@@ -46,7 +47,7 @@ experiment =
          xyChartXSeries = Just "c",
          xyChartYSeries = [Right "a", Left "b"] },
        outputView $ defaultXYChartView {
-         xyChartTitle = "Functions a=a(c) and b=b(c) for t <= 2 or t >= 3",
+         xyChartPlotTitle = "Functions a=a(c) and b=b(c) for t <= 2 or t >= 3",
          xyChartXSeries = Just "c",
          xyChartYSeries = [Right "a", Left "b"],
          xyChartPredicate = 

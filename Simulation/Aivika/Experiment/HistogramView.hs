@@ -50,22 +50,9 @@ import Simulation.Aivika.Dynamics.EventQueue
 -- each simulation run separately.
 data HistogramView =
   HistogramView { histogramTitle       :: String,
-                  -- ^ This is a title used in the histogram.
-                  histogramRunTitle    :: String,
-                  -- ^ The run title for the view. It is used 
-                  -- when simulating multiple runs and it may 
-                  -- include special variables @$RUN_INDEX@, 
-                  -- @$RUN_COUNT@ and @$TITLE@.
-                  --
-                  -- An example is 
-                  --
-                  -- @
-                  --   histogramRunTitle = \"$TITLE / Run $RUN_INDEX of $RUN_COUNT\"
-                  -- @
-                  histogramHeader      :: String,
-                  -- ^ This is a header in HTML.
+                  -- ^ This is a title used in HTML.
                   histogramDescription :: String,
-                  -- ^ This is a description in HTML.
+                  -- ^ This is a description used in HTML.
                   histogramWidth       :: Int,
                   -- ^ The width of the histogram.
                   histogramHeight      :: Int,
@@ -89,13 +76,34 @@ data HistogramView =
                   histogramSeries      :: [String],
                   -- ^ It contains the labels of data for which
                   -- the histogram is plotted.
+                  histogramPlotTitle   :: String,
+                  -- ^ This is a title used in the histogram when
+                  -- simulating a single run. It may include 
+                  -- special variable @$TITLE@.
+                  --
+                  -- An example is
+                  --
+                  -- @
+                  --   histogramPlotTitle = \"$TITLE\"
+                  -- @
+                  histogramRunPlotTitle :: String,
+                  -- ^ The run title for the histogram. It is used 
+                  -- when simulating multiple runs and it may 
+                  -- include special variables @$RUN_INDEX@, 
+                  -- @$RUN_COUNT@ and @$PLOT_TITLE@.
+                  --
+                  -- An example is 
+                  --
+                  -- @
+                  --   histogramRunPlotTitle = \"$PLOT_TITLE / Run $RUN_INDEX of $RUN_COUNT\"
+                  -- @
                   histogramPlotBars :: PlotBars Double Double ->
                                        PlotBars Double Double,
                   -- ^ A transformation based on which the plot bar
                   -- is constructed for the series. 
                   --
                   -- Here you can define a colour or style of
-                  -- of the plot bars.
+                  -- the plot bars.
                   histogramLayout :: Layout1 Double Double ->
                                      Layout1 Double Double
                   -- ^ A transformation of the plot layout, 
@@ -106,8 +114,6 @@ data HistogramView =
 defaultHistogramView :: HistogramView
 defaultHistogramView = 
   HistogramView { histogramTitle       = "Histogram",
-                  histogramRunTitle    = "$TITLE / Run $RUN_INDEX of $RUN_COUNT",
-                  histogramHeader      = "Histogram",
                   histogramDescription = [],
                   histogramWidth       = 640,
                   histogramHeight      = 480,
@@ -115,6 +121,8 @@ defaultHistogramView =
                   histogramPredicate   = return True,
                   histogramBuild       = histogram binSturges,
                   histogramSeries      = [], 
+                  histogramPlotTitle   = "$TITLE",
+                  histogramRunPlotTitle = "$PLOT_TITLE / Run $RUN_INDEX of $RUN_COUNT",
                   histogramPlotBars    = colourisePlotBars,
                   histogramLayout      = id }
 
@@ -176,13 +184,17 @@ simulateHistogram st expdata =
          build = histogramBuild $ histogramView st
      i <- liftSimulation simulationIndex
      let file = fromJust $ M.lookup (i - 1) (histogramMap st)
-         title =
+         title = histogramTitle $ histogramView st
+         plotTitle = 
+           replace "$TITLE" title
+           (histogramPlotTitle $ histogramView st)
+         runPlotTitle =
            if n == 1
-           then histogramTitle $ histogramView st
+           then plotTitle
            else replace "$RUN_INDEX" (show i) $
                 replace "$RUN_COUNT" (show n) $
-                replace "$TITLE" (histogramTitle $ histogramView st)
-                (histogramRunTitle $ histogramView st)
+                replace "$PLOT_TITLE" plotTitle $
+                (histogramRunPlotTitle $ histogramView st)
      hs <- forM (zip providers input) $ \(provider, input) ->
        newSignalHistoryThrough (experimentQueue expdata) $
        mapSignalM (const input) $
@@ -198,7 +210,7 @@ simulateHistogram st expdata =
                    plot_bars_titles ^= names $
                    defaultPlotBars
               chart = layout $
-                      layout1_title ^= title $
+                      layout1_title ^= runPlotTitle $
                       layout1_plots ^= [Left p] $
                       defaultLayout1
           liftIO $ 
@@ -247,7 +259,7 @@ histogramHtmlMultiple st index =
 header :: HistogramViewState -> Int -> HtmlWriter ()
 header st index =
   do writeHtmlHeader3WithId ("id" ++ show index) $ 
-       writeHtmlText (histogramHeader $ histogramView st)
+       writeHtmlText (histogramTitle $ histogramView st)
      let description = histogramDescription $ histogramView st
      unless (null description) $
        writeHtmlParagraph $ 
@@ -258,4 +270,4 @@ histogramTOCHtml :: HistogramViewState -> Int -> HtmlWriter ()
 histogramTOCHtml st index =
   writeHtmlListItem $
   writeHtmlLink ("#id" ++ show index) $
-  writeHtmlText (histogramHeader $ histogramView st)
+  writeHtmlText (histogramTitle $ histogramView st)

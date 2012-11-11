@@ -8,7 +8,7 @@
 -- Tested with: GHC 7.4.1
 --
 -- The module defines 'DeviationChartView' that saves the deviation
--- chart as the PNG file.
+-- chart in the PNG file.
 --
 
 module Simulation.Aivika.Experiment.DeviationChartView
@@ -51,11 +51,9 @@ import Simulation.Aivika.Statistics
 -- in the PNG file.
 data DeviationChartView =
   DeviationChartView { deviationChartTitle       :: String,
-                       -- ^ This is a title used in the chart.
-                       deviationChartHeader      :: String,
-                       -- ^ This is a header in HTML.
+                       -- ^ This is a title used in HTML.
                        deviationChartDescription :: String,
-                       -- ^ This is a description in HTML.
+                       -- ^ This is a description used in HTML.
                        deviationChartWidth       :: Int,
                        -- ^ The width of the chart.
                        deviationChartHeight      :: Int,
@@ -72,17 +70,26 @@ data DeviationChartView =
                        deviationChartSeries      :: [Either String String],
                        -- ^ It contains the labels of data plotted
                        -- on the chart.
+                       deviationChartPlotTitle :: String,
+                       -- ^ This is a title used in the chart. 
+                       -- It may include special variable @$TITLE@.
+                       --
+                       -- An example is
+                       --
+                       -- @
+                       --   deviationChartPlotTitle = \"$TITLE\"
+                       -- @
                        deviationChartPlotLines :: [PlotLines Double Double ->
                                                    PlotLines Double Double],
                        -- ^ Probably, an infinite sequence of plot 
                        -- transformations based on which the plot
                        -- is constructed for each series. Generally,
-                       -- it must not coincide with a sequence of 
+                       -- it may not coincide with a sequence of 
                        -- labels as one label may denote a whole list 
                        -- or an array of data providers.
                        --
                        -- Here you can define a colour or style of
-                       -- of the plot lines.
+                       -- the plot lines.
                        deviationChartPlotFillBetween :: [PlotFillBetween Double Double ->
                                                          PlotFillBetween Double Double],
                        -- ^ Corresponds exactly to 'deviationChartPlotLines'
@@ -104,12 +111,12 @@ data DeviationChartView =
 defaultDeviationChartView :: DeviationChartView
 defaultDeviationChartView = 
   DeviationChartView { deviationChartTitle       = "Deviation Chart",
-                       deviationChartHeader      = "Deviation Chart",
                        deviationChartDescription = [],
                        deviationChartWidth       = 640,
                        deviationChartHeight      = 480,
                        deviationChartFileName    = UniqueFileName "$TITLE" ".png",
                        deviationChartSeries      = [], 
+                       deviationChartPlotTitle   = "$TITLE",
                        deviationChartPlotLines   = colourisePlotLines,
                        deviationChartPlotFillBetween = colourisePlotFillBetween,
                        deviationChartBottomAxis  = id,
@@ -221,6 +228,9 @@ simulateDeviationChart st expdata =
 finaliseDeviationChart :: DeviationChartViewState -> IO ()
 finaliseDeviationChart st =
   do let title = deviationChartTitle $ deviationChartView st
+         plotTitle = 
+           replace "$TITLE" title
+           (deviationChartPlotTitle $ deviationChartView st)
          width = deviationChartWidth $ deviationChartView st
          height = deviationChartHeight $ deviationChartView st
          plotLines = deviationChartPlotLines $ deviationChartView st
@@ -268,7 +278,7 @@ finaliseDeviationChart st =
                        defaultLayoutAxis
                 chart = plotLayout $
                         layout1_bottom_axis ^= axis $
-                        layout1_title ^= title $
+                        layout1_title ^= plotTitle $
                         layout1_plots ^= ps $
                         defaultLayout1
             file <- resolveFileName 
@@ -305,7 +315,7 @@ deviationChartHtml st index =
 header :: DeviationChartViewState -> Int -> HtmlWriter ()
 header st index =
   do writeHtmlHeader3WithId ("id" ++ show index) $ 
-       writeHtmlText (deviationChartHeader $ deviationChartView st)
+       writeHtmlText (deviationChartTitle $ deviationChartView st)
      let description = deviationChartDescription $ deviationChartView st
      unless (null description) $
        writeHtmlParagraph $ 
@@ -316,4 +326,4 @@ deviationChartTOCHtml :: DeviationChartViewState -> Int -> HtmlWriter ()
 deviationChartTOCHtml st index =
   writeHtmlListItem $
   writeHtmlLink ("#id" ++ show index) $
-  writeHtmlText (deviationChartHeader $ deviationChartView st)
+  writeHtmlText (deviationChartTitle $ deviationChartView st)

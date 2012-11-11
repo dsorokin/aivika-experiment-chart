@@ -47,22 +47,9 @@ import Simulation.Aivika.Dynamics.EventQueue
 -- in the PNG files.
 data TimeSeriesView =
   TimeSeriesView { timeSeriesTitle       :: String,
-                   -- ^ This is a title used in the chart.
-                   timeSeriesRunTitle    :: String,
-                   -- ^ The run title for the view. It is used 
-                   -- when simulating multiple runs and it may 
-                   -- include special variables @$RUN_INDEX@, 
-                   -- @$RUN_COUNT@ and @$TITLE@.
-                   --
-                   -- An example is 
-                   --
-                   -- @
-                   --   timeSeriesRunTitle = \"$TITLE / Run $RUN_INDEX of $RUN_COUNT\"
-                   -- @
-                   timeSeriesHeader      :: String,
-                   -- ^ This is a header in HTML.
+                   -- ^ This is a title used in HTML.
                    timeSeriesDescription :: String,
-                   -- ^ This is a description in HTML.
+                   -- ^ This is a description used in HTML.
                    timeSeriesWidth       :: Int,
                    -- ^ The width of the chart.
                    timeSeriesHeight      :: Int,
@@ -83,6 +70,27 @@ data TimeSeriesView =
                    timeSeries      :: [Either String String],
                    -- ^ It contains the labels of data plotted
                    -- on the chart.
+                   timeSeriesPlotTitle :: String,
+                   -- ^ This is a title used in the chart when
+                   -- simulating a single run. It may include 
+                   -- special variable @$TITLE@.
+                   --
+                   -- An example is
+                   --
+                   -- @
+                   --   timeSeriesPlotTitle = \"$TITLE\"
+                   -- @
+                   timeSeriesRunPlotTitle :: String,
+                   -- ^ The run title for the chart. It is used 
+                   -- when simulating multiple runs and it may 
+                   -- include special variables @$RUN_INDEX@, 
+                   -- @$RUN_COUNT@ and @$PLOT_TITLE@.
+                   --
+                   -- An example is 
+                   --
+                   -- @
+                   --   timeSeriesRunPlotTitle = \"$PLOT_TITLE / Run $RUN_INDEX of $RUN_COUNT\"
+                   -- @
                    timeSeriesPlotLines :: [PlotLines Double Double ->
                                            PlotLines Double Double],
                    -- ^ Probably, an infinite sequence of plot 
@@ -93,7 +101,7 @@ data TimeSeriesView =
                    -- or an array of data providers.
                    --
                    -- Here you can define a colour or style of
-                   -- of the plot lines.
+                   -- the plot lines.
                    timeSeriesBottomAxis :: LayoutAxis Double ->
                                            LayoutAxis Double,
                    -- ^ A transformation of the bottom axis, 
@@ -108,14 +116,14 @@ data TimeSeriesView =
 defaultTimeSeriesView :: TimeSeriesView
 defaultTimeSeriesView = 
   TimeSeriesView { timeSeriesTitle       = "Time Series",
-                   timeSeriesRunTitle    = "$TITLE / Run $RUN_INDEX of $RUN_COUNT",
-                   timeSeriesHeader      = "Time Series",
                    timeSeriesDescription = [],
                    timeSeriesWidth       = 640,
                    timeSeriesHeight      = 480,
                    timeSeriesFileName    = UniqueFileName "$TITLE - $RUN_INDEX" ".png",
                    timeSeriesPredicate   = return True,
                    timeSeries            = [], 
+                   timeSeriesPlotTitle   = "$TITLE",
+                   timeSeriesRunPlotTitle = "$PLOT_TITLE / Run $RUN_INDEX of $RUN_COUNT",
                    timeSeriesPlotLines   = colourisePlotLines,
                    timeSeriesBottomAxis  = id,
                    timeSeriesLayout      = id }
@@ -178,13 +186,17 @@ simulateTimeSeries st expdata =
          plotLayout = timeSeriesLayout $ timeSeriesView st
      i <- liftSimulation simulationIndex
      let file = fromJust $ M.lookup (i - 1) (timeSeriesMap st)
-         title =
+         title = timeSeriesTitle $ timeSeriesView st
+         plotTitle = 
+           replace "$TITLE" title
+           (timeSeriesPlotTitle $ timeSeriesView st)
+         runPlotTitle =
            if n == 1
-           then timeSeriesTitle $ timeSeriesView st
+           then plotTitle
            else replace "$RUN_INDEX" (show i) $
                 replace "$RUN_COUNT" (show n) $
-                replace "$TITLE" (timeSeriesTitle $ timeSeriesView st)
-                (timeSeriesRunTitle $ timeSeriesView st)
+                replace "$PLOT_TITLE" plotTitle $
+                (timeSeriesRunPlotTitle $ timeSeriesView st)
      hs <- forM (zip providers input) $ \(provider, input) ->
        let transform () =
              do x <- predicate
@@ -210,7 +222,7 @@ simulateTimeSeries st expdata =
                       defaultLayoutAxis
               chart = plotLayout $
                       layout1_bottom_axis ^= axis $
-                      layout1_title ^= title $
+                      layout1_title ^= runPlotTitle $
                       layout1_plots ^= ps' $
                       defaultLayout1
           liftIO $ 
@@ -253,7 +265,7 @@ timeSeriesHtmlMultiple st index =
 header :: TimeSeriesViewState -> Int -> HtmlWriter ()
 header st index =
   do writeHtmlHeader3WithId ("id" ++ show index) $ 
-       writeHtmlText (timeSeriesHeader $ timeSeriesView st)
+       writeHtmlText (timeSeriesTitle $ timeSeriesView st)
      let description = timeSeriesDescription $ timeSeriesView st
      unless (null description) $
        writeHtmlParagraph $ 
@@ -264,4 +276,4 @@ timeSeriesTOCHtml :: TimeSeriesViewState -> Int -> HtmlWriter ()
 timeSeriesTOCHtml st index =
   writeHtmlListItem $
   writeHtmlLink ("#id" ++ show index) $
-  writeHtmlText (timeSeriesHeader $ timeSeriesView st)
+  writeHtmlText (timeSeriesTitle $ timeSeriesView st)

@@ -54,11 +54,9 @@ import Simulation.Aivika.Dynamics.Base (starttime, integIterationBnds, integTime
 -- simulation runs.
 data FinalHistogramView =
   FinalHistogramView { finalHistogramTitle       :: String,
-                       -- ^ This is a title used in the histogram.
-                       finalHistogramHeader      :: String,
-                       -- ^ This is a header in HTML.
+                       -- ^ This is a title used in HTML.
                        finalHistogramDescription :: String,
-                       -- ^ This is a description in HTML.
+                       -- ^ This is a description used in HTML.
                        finalHistogramWidth       :: Int,
                        -- ^ The width of the histogram.
                        finalHistogramHeight      :: Int,
@@ -81,13 +79,22 @@ data FinalHistogramView =
                        finalHistogramSeries      :: [String],
                        -- ^ It contains the labels of data plotted
                        -- on the histogram.
+                       finalHistogramPlotTitle   :: String,
+                       -- ^ This is a title used in the histogram. 
+                       -- It may include special variable @$TITLE@.
+                       --
+                       -- An example is
+                       --
+                       -- @
+                       --   finalHistogramPlotTitle = \"$TITLE\"
+                       -- @
                        finalHistogramPlotBars :: PlotBars Double Double ->
                                                  PlotBars Double Double,
                        -- ^ A transformation based on which the plot bar
                        -- is constructed for the series. 
                        --
                        -- Here you can define a colour or style of
-                       -- of the plot bars.
+                       -- the plot bars.
                        finalHistogramLayout :: Layout1 Double Double ->
                                                Layout1 Double Double
                        -- ^ A transformation of the plot layout, 
@@ -98,7 +105,6 @@ data FinalHistogramView =
 defaultFinalHistogramView :: FinalHistogramView
 defaultFinalHistogramView = 
   FinalHistogramView { finalHistogramTitle       = "Final Histogram",
-                       finalHistogramHeader      = "Final Histogram",
                        finalHistogramDescription = [],
                        finalHistogramWidth       = 640,
                        finalHistogramHeight      = 480,
@@ -106,6 +112,7 @@ defaultFinalHistogramView =
                        finalHistogramPredicate   = return True,
                        finalHistogramBuild       = histogram binSturges,
                        finalHistogramSeries      = [], 
+                       finalHistogramPlotTitle   = "$TITLE",
                        finalHistogramPlotBars    = colourisePlotBars,
                        finalHistogramLayout      = id }
 
@@ -203,6 +210,9 @@ simulateFinalHistogram st expdata =
 finaliseFinalHistogram :: FinalHistogramViewState -> IO ()
 finaliseFinalHistogram st =
   do let title = finalHistogramTitle $ finalHistogramView st
+         plotTitle = 
+           replace "$TITLE" title
+           (finalHistogramPlotTitle $ finalHistogramView st)
          width = finalHistogramWidth $ finalHistogramView st
          height = finalHistogramHeight $ finalHistogramView st
          histogram = finalHistogramBuild $ finalHistogramView st
@@ -223,7 +233,7 @@ finaliseFinalHistogram st =
                      plot_bars_titles ^= names $
                      defaultPlotBars
             let chart = layout $
-                        layout1_title ^= title $
+                        layout1_title ^= plotTitle $
                         layout1_plots ^= [Left p] $
                         defaultLayout1
             file <- resolveFileName 
@@ -261,7 +271,7 @@ finalHistogramHtml st index =
 header :: FinalHistogramViewState -> Int -> HtmlWriter ()
 header st index =
   do writeHtmlHeader3WithId ("id" ++ show index) $ 
-       writeHtmlText (finalHistogramHeader $ finalHistogramView st)
+       writeHtmlText (finalHistogramTitle $ finalHistogramView st)
      let description = finalHistogramDescription $ finalHistogramView st
      unless (null description) $
        writeHtmlParagraph $ 
@@ -272,4 +282,4 @@ finalHistogramTOCHtml :: FinalHistogramViewState -> Int -> HtmlWriter ()
 finalHistogramTOCHtml st index =
   writeHtmlListItem $
   writeHtmlLink ("#id" ++ show index) $
-  writeHtmlText (finalHistogramHeader $ finalHistogramView st)
+  writeHtmlText (finalHistogramTitle $ finalHistogramView st)

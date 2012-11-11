@@ -51,11 +51,9 @@ import Simulation.Aivika.Dynamics.Base (time)
 -- simulation runs sequentially.
 data FinalXYChartView =
   FinalXYChartView { finalXYChartTitle       :: String,
-                     -- ^ This is a title used in the chart.
-                     finalXYChartHeader      :: String,
-                     -- ^ This is a header in HTML.
+                     -- ^ This is a title used HTML.
                      finalXYChartDescription :: String,
-                     -- ^ This is a description in HTML.
+                     -- ^ This is a description used in HTML.
                      finalXYChartWidth       :: Int,
                      -- ^ The width of the chart.
                      finalXYChartHeight      :: Int,
@@ -80,6 +78,15 @@ data FinalXYChartView =
                      finalXYChartYSeries     :: [Either String String],
                      -- ^ It contains the labels of Y series plotted
                      -- on the chart.
+                     finalXYChartPlotTitle   :: String,
+                     -- ^ This is a title used in the chart. 
+                     -- It may include special variable @$TITLE@.
+                     --
+                     -- An example is
+                     --
+                     -- @
+                     --   finalXYChartPlotTitle = \"$TITLE\"
+                     -- @
                      finalXYChartPlotLines :: [PlotLines Double Double ->
                                                PlotLines Double Double],
                      -- ^ Probably, an infinite sequence of plot 
@@ -90,7 +97,7 @@ data FinalXYChartView =
                      -- or an array of data providers.
                      --
                      -- Here you can define a colour or style of
-                     -- of the plot lines.
+                     -- the plot lines.
                      finalXYChartBottomAxis :: LayoutAxis Double ->
                                                LayoutAxis Double,
                      -- ^ A transformation of the bottom axis, 
@@ -105,7 +112,6 @@ data FinalXYChartView =
 defaultFinalXYChartView :: FinalXYChartView
 defaultFinalXYChartView = 
   FinalXYChartView { finalXYChartTitle       = "Final XY Chart",
-                     finalXYChartHeader      = "Final XY Chart",
                      finalXYChartDescription = [],
                      finalXYChartWidth       = 640,
                      finalXYChartHeight      = 480,
@@ -113,6 +119,7 @@ defaultFinalXYChartView =
                      finalXYChartPredicate   = return True,
                      finalXYChartXSeries     = Nothing,
                      finalXYChartYSeries     = [], 
+                     finalXYChartPlotTitle   = "$TITLE",
                      finalXYChartPlotLines   = colourisePlotLines,
                      finalXYChartBottomAxis  = id,
                      finalXYChartLayout      = id }
@@ -239,6 +246,9 @@ simulateFinalXYChart st expdata =
 finaliseFinalXYChart :: FinalXYChartViewState -> IO ()
 finaliseFinalXYChart st =
   do let title = finalXYChartTitle $ finalXYChartView st
+         plotTitle = 
+           replace "$TITLE" title
+           (finalXYChartPlotTitle $ finalXYChartView st)
          width = finalXYChartWidth $ finalXYChartView st
          height = finalXYChartHeight $ finalXYChartView st
          plotLines = finalXYChartPlotLines $ finalXYChartView st
@@ -267,7 +277,7 @@ finaliseFinalXYChart st =
                        defaultLayoutAxis
                 chart = plotLayout $
                         layout1_bottom_axis ^= axis $
-                        layout1_title ^= title $
+                        layout1_title ^= plotTitle $
                         layout1_plots ^= ps $
                         defaultLayout1
             file <- resolveFileName 
@@ -301,7 +311,7 @@ finalXYChartHtml st index =
 header :: FinalXYChartViewState -> Int -> HtmlWriter ()
 header st index =
   do writeHtmlHeader3WithId ("id" ++ show index) $ 
-       writeHtmlText (finalXYChartHeader $ finalXYChartView st)
+       writeHtmlText (finalXYChartTitle $ finalXYChartView st)
      let description = finalXYChartDescription $ finalXYChartView st
      unless (null description) $
        writeHtmlParagraph $ 
@@ -312,4 +322,4 @@ finalXYChartTOCHtml :: FinalXYChartViewState -> Int -> HtmlWriter ()
 finalXYChartTOCHtml st index =
   writeHtmlListItem $
   writeHtmlLink ("#id" ++ show index) $
-  writeHtmlText (finalXYChartHeader $ finalXYChartView st)
+  writeHtmlText (finalXYChartTitle $ finalXYChartView st)
