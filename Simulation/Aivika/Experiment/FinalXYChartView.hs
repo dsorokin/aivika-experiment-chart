@@ -236,7 +236,7 @@ simulateFinalXYChart st expdata =
           handleSignal_ h $ \_ ->
             do x'  <- x
                ys' <- sequence ys
-               i   <- liftSimulation $ simulationIndex
+               i   <- liftSimulation simulationIndex
                liftIO $ withMVar lock $ \() ->
                  forM_ (zip ys' xys) $ \(y', xy) ->
                  writeArray xy i $ Just (x', y')

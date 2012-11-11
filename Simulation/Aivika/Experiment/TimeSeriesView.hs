@@ -195,7 +195,7 @@ simulateTimeSeries st expdata =
            then plotTitle
            else replace "$RUN_INDEX" (show i) $
                 replace "$RUN_COUNT" (show n) $
-                replace "$PLOT_TITLE" plotTitle $
+                replace "$PLOT_TITLE" plotTitle
                 (timeSeriesRunPlotTitle $ timeSeriesView st)
      hs <- forM (zip providers input) $ \(provider, input) ->
        let transform () =

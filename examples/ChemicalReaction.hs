@@ -68,7 +68,7 @@ model =
      integDiff integA (- ka * a)
      integDiff integB (ka * a - kb * b)
      integDiff integC (kb * b)
-     experimentDataInStartTime queue $
+     experimentDataInStartTime queue
        [("t", seriesEntity "time" time),
         ("a", seriesEntity "a" a),
         ("b", seriesEntity "b" b),

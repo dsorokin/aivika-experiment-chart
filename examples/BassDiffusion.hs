@@ -111,7 +111,7 @@ model =
      definePersons ps potentialAdopters adopters
      runDynamicsInStartTime $
        activatePersons ps
-     experimentDataInStartTime q $
+     experimentDataInStartTime q
        [("potentialAdopters",
          seriesEntity "Potential Adopters" 
          potentialAdopters),

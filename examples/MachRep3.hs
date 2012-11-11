@@ -55,7 +55,7 @@ experiment =
          finalXYChartXSeries = Just "n",
          finalXYChartYSeries = [Right "x"], 
          finalXYChartPredicate =
-           do i <- liftSimulation $ simulationIndex
+           do i <- liftSimulation simulationIndex
               return $ (i < 50) || (i > 100) },
        outputView $ defaultFinalHistogramView {
          finalHistogramPlotTitle  = "Final Histogram (Default)",
@@ -150,7 +150,7 @@ model =
               y <- time
               return $ x / (2 * y)          
               
-     experimentDataInStartTime queue $
+     experimentDataInStartTime queue
        [("x", seriesEntity "The proportion of up time" result),
         ("t", seriesEntity "Total up time" totalUpTime),
         ("n", seriesEntity "Simulation run" simulationIndex)]

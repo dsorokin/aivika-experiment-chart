@@ -193,7 +193,7 @@ simulateHistogram st expdata =
            then plotTitle
            else replace "$RUN_INDEX" (show i) $
                 replace "$RUN_COUNT" (show n) $
-                replace "$PLOT_TITLE" plotTitle $
+                replace "$PLOT_TITLE" plotTitle
                 (histogramRunPlotTitle $ histogramView st)
      hs <- forM (zip providers input) $ \(provider, input) ->
        newSignalHistoryThrough (experimentQueue expdata) $

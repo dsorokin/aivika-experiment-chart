@@ -213,7 +213,7 @@ simulateXYChart st expdata =
            then plotTitle
            else replace "$RUN_INDEX" (show i) $
                 replace "$RUN_COUNT" (show n) $
-                replace "$PLOT_TITLE" plotTitle $
+                replace "$PLOT_TITLE" plotTitle
                 (xyChartRunPlotTitle $ xyChartView st)
      hs <- forM (zip yproviders ys) $ \(provider, y) ->
        let transform () =
