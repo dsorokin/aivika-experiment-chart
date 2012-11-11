@@ -51,9 +51,11 @@ import Simulation.Aivika.Dynamics.Base (time)
 -- simulation runs sequentially.
 data FinalXYChartView =
   FinalXYChartView { finalXYChartTitle       :: String,
-                     -- ^ This is a title used in HTML and chart.
+                     -- ^ This is a title used in the chart.
+                     finalXYChartHeader      :: String,
+                     -- ^ This is a header in HTML.
                      finalXYChartDescription :: String,
-                     -- ^ This is a description in the HTML.
+                     -- ^ This is a description in HTML.
                      finalXYChartWidth       :: Int,
                      -- ^ The width of the chart.
                      finalXYChartHeight      :: Int,
@@ -103,6 +105,7 @@ data FinalXYChartView =
 defaultFinalXYChartView :: FinalXYChartView
 defaultFinalXYChartView = 
   FinalXYChartView { finalXYChartTitle       = "Final XY Chart",
+                     finalXYChartHeader      = "Final XY Chart",
                      finalXYChartDescription = [],
                      finalXYChartWidth       = 640,
                      finalXYChartHeight      = 480,
@@ -298,7 +301,7 @@ finalXYChartHtml st index =
 header :: FinalXYChartViewState -> Int -> HtmlWriter ()
 header st index =
   do writeHtmlHeader3WithId ("id" ++ show index) $ 
-       writeHtmlText (finalXYChartTitle $ finalXYChartView st)
+       writeHtmlText (finalXYChartHeader $ finalXYChartView st)
      let description = finalXYChartDescription $ finalXYChartView st
      unless (null description) $
        writeHtmlParagraph $ 
@@ -309,4 +312,4 @@ finalXYChartTOCHtml :: FinalXYChartViewState -> Int -> HtmlWriter ()
 finalXYChartTOCHtml st index =
   writeHtmlListItem $
   writeHtmlLink ("#id" ++ show index) $
-  writeHtmlText (finalXYChartTitle $ finalXYChartView st)
+  writeHtmlText (finalXYChartHeader $ finalXYChartView st)

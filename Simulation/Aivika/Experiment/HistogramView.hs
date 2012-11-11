@@ -50,7 +50,7 @@ import Simulation.Aivika.Dynamics.EventQueue
 -- each simulation run separately.
 data HistogramView =
   HistogramView { histogramTitle       :: String,
-                  -- ^ This is a title used in HTML and histogram.
+                  -- ^ This is a title used in the histogram.
                   histogramRunTitle    :: String,
                   -- ^ The run title for the view. It is used 
                   -- when simulating multiple runs and it may 
@@ -62,8 +62,10 @@ data HistogramView =
                   -- @
                   --   histogramRunTitle = \"$TITLE / Run $RUN_INDEX of $RUN_COUNT\"
                   -- @
+                  histogramHeader      :: String,
+                  -- ^ This is a header in HTML.
                   histogramDescription :: String,
-                  -- ^ This is a description in the HTML.
+                  -- ^ This is a description in HTML.
                   histogramWidth       :: Int,
                   -- ^ The width of the histogram.
                   histogramHeight      :: Int,
@@ -105,6 +107,7 @@ defaultHistogramView :: HistogramView
 defaultHistogramView = 
   HistogramView { histogramTitle       = "Histogram",
                   histogramRunTitle    = "$TITLE / Run $RUN_INDEX of $RUN_COUNT",
+                  histogramHeader      = "Histogram",
                   histogramDescription = [],
                   histogramWidth       = 640,
                   histogramHeight      = 480,
@@ -244,7 +247,7 @@ histogramHtmlMultiple st index =
 header :: HistogramViewState -> Int -> HtmlWriter ()
 header st index =
   do writeHtmlHeader3WithId ("id" ++ show index) $ 
-       writeHtmlText (histogramTitle $ histogramView st)
+       writeHtmlText (histogramHeader $ histogramView st)
      let description = histogramDescription $ histogramView st
      unless (null description) $
        writeHtmlParagraph $ 
@@ -255,4 +258,4 @@ histogramTOCHtml :: HistogramViewState -> Int -> HtmlWriter ()
 histogramTOCHtml st index =
   writeHtmlListItem $
   writeHtmlLink ("#id" ++ show index) $
-  writeHtmlText (histogramTitle $ histogramView st)
+  writeHtmlText (histogramHeader $ histogramView st)

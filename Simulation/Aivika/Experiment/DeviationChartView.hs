@@ -51,9 +51,11 @@ import Simulation.Aivika.Statistics
 -- in the PNG file.
 data DeviationChartView =
   DeviationChartView { deviationChartTitle       :: String,
-                       -- ^ This is a title used in HTML and chart.
+                       -- ^ This is a title used in the chart.
+                       deviationChartHeader      :: String,
+                       -- ^ This is a header in HTML.
                        deviationChartDescription :: String,
-                       -- ^ This is a description in the HTML.
+                       -- ^ This is a description in HTML.
                        deviationChartWidth       :: Int,
                        -- ^ The width of the chart.
                        deviationChartHeight      :: Int,
@@ -102,6 +104,7 @@ data DeviationChartView =
 defaultDeviationChartView :: DeviationChartView
 defaultDeviationChartView = 
   DeviationChartView { deviationChartTitle       = "Deviation Chart",
+                       deviationChartHeader      = "Deviation Chart",
                        deviationChartDescription = [],
                        deviationChartWidth       = 640,
                        deviationChartHeight      = 480,
@@ -302,7 +305,7 @@ deviationChartHtml st index =
 header :: DeviationChartViewState -> Int -> HtmlWriter ()
 header st index =
   do writeHtmlHeader3WithId ("id" ++ show index) $ 
-       writeHtmlText (deviationChartTitle $ deviationChartView st)
+       writeHtmlText (deviationChartHeader $ deviationChartView st)
      let description = deviationChartDescription $ deviationChartView st
      unless (null description) $
        writeHtmlParagraph $ 
@@ -313,4 +316,4 @@ deviationChartTOCHtml :: DeviationChartViewState -> Int -> HtmlWriter ()
 deviationChartTOCHtml st index =
   writeHtmlListItem $
   writeHtmlLink ("#id" ++ show index) $
-  writeHtmlText (deviationChartTitle $ deviationChartView st)
+  writeHtmlText (deviationChartHeader $ deviationChartView st)

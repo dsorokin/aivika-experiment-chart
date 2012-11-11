@@ -54,9 +54,11 @@ import Simulation.Aivika.Dynamics.Base (starttime, integIterationBnds, integTime
 -- simulation runs.
 data FinalHistogramView =
   FinalHistogramView { finalHistogramTitle       :: String,
-                       -- ^ This is a title used in HTML and histogram.
+                       -- ^ This is a title used in the histogram.
+                       finalHistogramHeader      :: String,
+                       -- ^ This is a header in HTML.
                        finalHistogramDescription :: String,
-                       -- ^ This is a description in the HTML.
+                       -- ^ This is a description in HTML.
                        finalHistogramWidth       :: Int,
                        -- ^ The width of the histogram.
                        finalHistogramHeight      :: Int,
@@ -96,6 +98,7 @@ data FinalHistogramView =
 defaultFinalHistogramView :: FinalHistogramView
 defaultFinalHistogramView = 
   FinalHistogramView { finalHistogramTitle       = "Final Histogram",
+                       finalHistogramHeader      = "Final Histogram",
                        finalHistogramDescription = [],
                        finalHistogramWidth       = 640,
                        finalHistogramHeight      = 480,
@@ -258,7 +261,7 @@ finalHistogramHtml st index =
 header :: FinalHistogramViewState -> Int -> HtmlWriter ()
 header st index =
   do writeHtmlHeader3WithId ("id" ++ show index) $ 
-       writeHtmlText (finalHistogramTitle $ finalHistogramView st)
+       writeHtmlText (finalHistogramHeader $ finalHistogramView st)
      let description = finalHistogramDescription $ finalHistogramView st
      unless (null description) $
        writeHtmlParagraph $ 
@@ -269,4 +272,4 @@ finalHistogramTOCHtml :: FinalHistogramViewState -> Int -> HtmlWriter ()
 finalHistogramTOCHtml st index =
   writeHtmlListItem $
   writeHtmlLink ("#id" ++ show index) $
-  writeHtmlText (finalHistogramTitle $ finalHistogramView st)
+  writeHtmlText (finalHistogramHeader $ finalHistogramView st)

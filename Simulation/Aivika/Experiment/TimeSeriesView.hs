@@ -47,7 +47,7 @@ import Simulation.Aivika.Dynamics.EventQueue
 -- in the PNG files.
 data TimeSeriesView =
   TimeSeriesView { timeSeriesTitle       :: String,
-                   -- ^ This is a title used in HTML and chart.
+                   -- ^ This is a title used in the chart.
                    timeSeriesRunTitle    :: String,
                    -- ^ The run title for the view. It is used 
                    -- when simulating multiple runs and it may 
@@ -59,8 +59,10 @@ data TimeSeriesView =
                    -- @
                    --   timeSeriesRunTitle = \"$TITLE / Run $RUN_INDEX of $RUN_COUNT\"
                    -- @
+                   timeSeriesHeader      :: String,
+                   -- ^ This is a header in HTML.
                    timeSeriesDescription :: String,
-                   -- ^ This is a description in the HTML.
+                   -- ^ This is a description in HTML.
                    timeSeriesWidth       :: Int,
                    -- ^ The width of the chart.
                    timeSeriesHeight      :: Int,
@@ -107,6 +109,7 @@ defaultTimeSeriesView :: TimeSeriesView
 defaultTimeSeriesView = 
   TimeSeriesView { timeSeriesTitle       = "Time Series",
                    timeSeriesRunTitle    = "$TITLE / Run $RUN_INDEX of $RUN_COUNT",
+                   timeSeriesHeader      = "Time Series",
                    timeSeriesDescription = [],
                    timeSeriesWidth       = 640,
                    timeSeriesHeight      = 480,
@@ -250,7 +253,7 @@ timeSeriesHtmlMultiple st index =
 header :: TimeSeriesViewState -> Int -> HtmlWriter ()
 header st index =
   do writeHtmlHeader3WithId ("id" ++ show index) $ 
-       writeHtmlText (timeSeriesTitle $ timeSeriesView st)
+       writeHtmlText (timeSeriesHeader $ timeSeriesView st)
      let description = timeSeriesDescription $ timeSeriesView st
      unless (null description) $
        writeHtmlParagraph $ 
@@ -261,4 +264,4 @@ timeSeriesTOCHtml :: TimeSeriesViewState -> Int -> HtmlWriter ()
 timeSeriesTOCHtml st index =
   writeHtmlListItem $
   writeHtmlLink ("#id" ++ show index) $
-  writeHtmlText (timeSeriesTitle $ timeSeriesView st)
+  writeHtmlText (timeSeriesHeader $ timeSeriesView st)

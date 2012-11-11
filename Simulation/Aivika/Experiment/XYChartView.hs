@@ -48,7 +48,7 @@ import Simulation.Aivika.Dynamics.EventQueue
 -- in the PNG files.
 data XYChartView =
   XYChartView { xyChartTitle       :: String,
-                -- ^ This is a title used in HTML and chart.
+                -- ^ This is a title used in the chart.
                 xyChartRunTitle    :: String,
                 -- ^ The run title for the view. It is used 
                 -- when simulating multiple runs and it may 
@@ -60,8 +60,10 @@ data XYChartView =
                 -- @
                 --   xyChartRunTitle = \"$TITLE / Run $RUN_INDEX of $RUN_COUNT\"
                 -- @
+                xyChartHeader      :: String,
+                -- ^ This is a header in HTML.
                 xyChartDescription :: String,
-                -- ^ This is a description in the HTML.
+                -- ^ This is a description in HTML.
                 xyChartWidth       :: Int,
                 -- ^ The width of the chart.
                 xyChartHeight      :: Int,
@@ -113,6 +115,7 @@ defaultXYChartView :: XYChartView
 defaultXYChartView = 
   XYChartView { xyChartTitle       = "XY Chart",
                 xyChartRunTitle    = "$TITLE / Run $RUN_INDEX of $RUN_COUNT",
+                xyChartHeader      = "XY Chart",
                 xyChartDescription = [],
                 xyChartWidth       = 640,
                 xyChartHeight      = 480,
@@ -271,7 +274,7 @@ xyChartHtmlMultiple st index =
 header :: XYChartViewState -> Int -> HtmlWriter ()
 header st index =
   do writeHtmlHeader3WithId ("id" ++ show index) $ 
-       writeHtmlText (xyChartTitle $ xyChartView st)
+       writeHtmlText (xyChartHeader $ xyChartView st)
      let description = xyChartDescription $ xyChartView st
      unless (null description) $
        writeHtmlParagraph $ 
@@ -282,4 +285,4 @@ xyChartTOCHtml :: XYChartViewState -> Int -> HtmlWriter ()
 xyChartTOCHtml st index =
   writeHtmlListItem $
   writeHtmlLink ("#id" ++ show index) $
-  writeHtmlText (xyChartTitle $ xyChartView st)
+  writeHtmlText (xyChartHeader $ xyChartView st)
