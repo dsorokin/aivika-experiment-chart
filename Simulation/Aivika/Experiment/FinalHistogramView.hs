@@ -25,7 +25,7 @@ import Data.IORef
 import Data.Maybe
 import Data.Either
 import Data.Array
-import Data.Array.IO
+import Data.Array.IO.Safe
 
 import Data.Accessor
 
