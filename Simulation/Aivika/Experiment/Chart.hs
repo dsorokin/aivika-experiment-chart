@@ -26,6 +26,7 @@ colourisePlotLines :: [PlotLines x y -> PlotLines x y]
 colourisePlotLines = map mkstyle $ cycle defaultColorSeq
   where mkstyle c = plot_lines_style .> line_color ^= c
 
+-- | Colourise the filling areas.
 colourisePlotFillBetween :: [PlotFillBetween x y -> PlotFillBetween x y]
 colourisePlotFillBetween = map mkstyle $ cycle defaultColorSeq
   where mkstyle c = plot_fillbetween_style ^= solidFillStyle (dissolve 0.4 c)
