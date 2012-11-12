@@ -12,6 +12,7 @@ import Simulation.Aivika.Dynamics.Ref
 
 import Simulation.Aivika.Experiment
 import Simulation.Aivika.Experiment.DeviationChartView
+import Simulation.Aivika.Experiment.TimeSeriesView
 
 n = 100    -- the number of agents
 
@@ -33,7 +34,10 @@ experiment =
     experimentGenerators =
       [outputView $ defaultDeviationChartView {
          deviationChartSeries = [Left "potentialAdopters", 
-                                 Left "adopters"] } ] }
+                                 Left "adopters"] },
+       outputView $ defaultTimeSeriesView {
+         timeSeries = [Left "potentialAdopters", 
+                       Left "adopters"] } ] }
 
 exprnd :: Double -> IO Double
 exprnd lambda =
