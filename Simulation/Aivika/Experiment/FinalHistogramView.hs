@@ -162,7 +162,7 @@ newFinalHistogramResults names exp =
      return FinalHistogramResults { finalHistogramNames  = names,
                                     finalHistogramValues = values }
        
--- | Simulation the specified series.
+-- | Simulation of the specified series.
 simulateFinalHistogram :: FinalHistogramViewState -> ExperimentData -> Dynamics (Dynamics ())
 simulateFinalHistogram st expdata =
   do let protolabels = finalHistogramSeries $ finalHistogramView st
