@@ -10,6 +10,7 @@ import Simulation.Aivika.Experiment.LastValueView
 import Simulation.Aivika.Experiment.TableView
 import Simulation.Aivika.Experiment.TimeSeriesView
 import Simulation.Aivika.Experiment.XYChartView
+import Simulation.Aivika.Experiment.ExperimentSpecsView
 
 specs = Specs { spcStartTime = 0, 
                 spcStopTime = 13, 
@@ -21,13 +22,11 @@ experiment =
   defaultExperiment {
     experimentSpecs = specs,
     experimentRunCount = 1,
-    experimentDescription = "Experiment Description",
     experimentGenerators =
-      [outputView $ defaultLastValueView {
-          lastValueDescription = "Last Value description",
-          lastValueSeries = ["t", "a", "b", "c"] },
+      [outputView $ defaultExperimentSpecsView,
+       outputView $ defaultLastValueView {
+         lastValueSeries = ["t", "a", "b", "c"] },
        outputView $ defaultTableView {
-         tableDescription = "Table description",
          tableSeries = ["t", "a", "b", "c"] }, 
        outputView $ defaultTimeSeriesView {
          timeSeries = [Left "a", Left "b", Left "c"] },

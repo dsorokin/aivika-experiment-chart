@@ -35,6 +35,8 @@ import Simulation.Aivika.Experiment.TimeSeriesView
 import Simulation.Aivika.Experiment.DeviationChartView
 import Simulation.Aivika.Experiment.FinalHistogramView
 import Simulation.Aivika.Experiment.FinalXYChartView
+import Simulation.Aivika.Experiment.ExperimentSpecsView
+import Simulation.Aivika.Experiment.FinalStatsView
 
 specs = Specs { spcStartTime = 0.0,
                 spcStopTime = 1000.0,
@@ -48,8 +50,9 @@ experiment =
     experimentRunCount = 200,
     experimentDescription = "Experiment Description",
     experimentGenerators =
-      [outputView $ defaultDeviationChartView {
-          deviationChartSeries = [Left "t", Right "x"] },
+      [outputView $ defaultExperimentSpecsView,
+       outputView $ defaultDeviationChartView {
+         deviationChartSeries = [Left "t", Right "x"] },
        outputView $ defaultFinalXYChartView {
          finalXYChartPlotTitle = "The proportion up time for simulation runs < 50 and > 100", 
          finalXYChartXSeries = Just "n",
@@ -63,6 +66,8 @@ experiment =
        outputView $ defaultFinalHistogramView {
          finalHistogramPlotTitle  = "Final Histogram (Default)",
          finalHistogramSeries = ["t", "t"] },
+       outputView $ defaultFinalStatsView {
+         finalStatsSeries = ["x"] },
        outputView $ defaultFinalHistogramView {
          finalHistogramPlotTitle  = "Final Histogram (Default)",
          finalHistogramSeries = ["x"] },

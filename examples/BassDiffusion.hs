@@ -13,6 +13,7 @@ import Simulation.Aivika.Dynamics.Ref
 import Simulation.Aivika.Experiment
 import Simulation.Aivika.Experiment.DeviationChartView
 import Simulation.Aivika.Experiment.TimeSeriesView
+import Simulation.Aivika.Experiment.ExperimentSpecsView
 
 n = 100    -- the number of agents
 
@@ -32,7 +33,8 @@ experiment =
     experimentRunCount = 20,
     experimentDescription = "This is a famous Bass Diffusion model solved with help of the agent-based modelling.",
     experimentGenerators =
-      [outputView $ defaultDeviationChartView {
+      [outputView $ defaultExperimentSpecsView,
+       outputView $ defaultDeviationChartView {
          deviationChartSeries = [Left "potentialAdopters", 
                                  Left "adopters"] },
        outputView $ defaultTimeSeriesView {
