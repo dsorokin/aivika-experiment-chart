@@ -122,7 +122,7 @@ data XYChartView =
 defaultXYChartView :: XYChartView
 defaultXYChartView = 
   XYChartView { xyChartTitle       = "XY Chart",
-                xyChartDescription = [],
+                xyChartDescription = "It shows the XY chart(s).",
                 xyChartWidth       = 640,
                 xyChartHeight      = 480,
                 xyChartFileName    = UniqueFileName "$TITLE - $RUN_INDEX" ".png",

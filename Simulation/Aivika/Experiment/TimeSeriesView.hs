@@ -116,7 +116,7 @@ data TimeSeriesView =
 defaultTimeSeriesView :: TimeSeriesView
 defaultTimeSeriesView = 
   TimeSeriesView { timeSeriesTitle       = "Time Series",
-                   timeSeriesDescription = [],
+                   timeSeriesDescription = "It shows the Time Series chart(s).",
                    timeSeriesWidth       = 640,
                    timeSeriesHeight      = 480,
                    timeSeriesFileName    = UniqueFileName "$TITLE - $RUN_INDEX" ".png",

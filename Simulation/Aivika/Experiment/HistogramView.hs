@@ -114,7 +114,7 @@ data HistogramView =
 defaultHistogramView :: HistogramView
 defaultHistogramView = 
   HistogramView { histogramTitle       = "Histogram",
-                  histogramDescription = [],
+                  histogramDescription = "It shows the histogram(s) by data gathered in the integration time points.",
                   histogramWidth       = 640,
                   histogramHeight      = 480,
                   histogramFileName    = UniqueFileName "$TITLE - $RUN_INDEX" ".png",

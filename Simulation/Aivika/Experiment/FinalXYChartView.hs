@@ -112,7 +112,7 @@ data FinalXYChartView =
 defaultFinalXYChartView :: FinalXYChartView
 defaultFinalXYChartView = 
   FinalXYChartView { finalXYChartTitle       = "Final XY Chart",
-                     finalXYChartDescription = [],
+                     finalXYChartDescription = "It shows the XY chart for the results in the final time points.",
                      finalXYChartWidth       = 640,
                      finalXYChartHeight      = 480,
                      finalXYChartFileName    = UniqueFileName "$TITLE" ".png",

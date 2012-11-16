@@ -105,7 +105,7 @@ data FinalHistogramView =
 defaultFinalHistogramView :: FinalHistogramView
 defaultFinalHistogramView = 
   FinalHistogramView { finalHistogramTitle       = "Final Histogram",
-                       finalHistogramDescription = [],
+                       finalHistogramDescription = "It shows a histogram by data gathered in the final time points.",
                        finalHistogramWidth       = 640,
                        finalHistogramHeight      = 480,
                        finalHistogramFileName    = UniqueFileName "$TITLE" ".png",

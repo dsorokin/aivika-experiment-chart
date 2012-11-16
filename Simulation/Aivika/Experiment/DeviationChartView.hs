@@ -111,7 +111,7 @@ data DeviationChartView =
 defaultDeviationChartView :: DeviationChartView
 defaultDeviationChartView = 
   DeviationChartView { deviationChartTitle       = "Deviation Chart",
-                       deviationChartDescription = [],
+                       deviationChartDescription = "It shows the Deviation chart by rule 3-sigma.",
                        deviationChartWidth       = 640,
                        deviationChartHeight      = 480,
                        deviationChartFileName    = UniqueFileName "$TITLE" ".png",
