@@ -33,7 +33,7 @@ experiment =
     experimentRunCount = 20,
     experimentDescription = "This is a famous Bass Diffusion model solved with help of the agent-based modelling.",
     experimentGenerators =
-      [outputView $ defaultExperimentSpecsView,
+      [outputView defaultExperimentSpecsView,
        outputView $ defaultDeviationChartView {
          deviationChartSeries = [Left "potentialAdopters", 
                                  Left "adopters"] },

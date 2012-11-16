@@ -23,7 +23,7 @@ experiment =
     experimentSpecs = specs,
     experimentRunCount = 1,
     experimentGenerators =
-      [outputView $ defaultExperimentSpecsView,
+      [outputView defaultExperimentSpecsView,
        outputView $ defaultLastValueView {
          lastValueSeries = ["t", "a", "b", "c"] },
        outputView $ defaultTableView {

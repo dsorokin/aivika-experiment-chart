@@ -50,7 +50,7 @@ experiment =
     experimentRunCount = 200,
     experimentDescription = "Experiment Description",
     experimentGenerators =
-      [outputView $ defaultExperimentSpecsView,
+      [outputView defaultExperimentSpecsView,
        outputView $ defaultDeviationChartView {
          deviationChartSeries = [Left "t", Right "x"] },
        outputView $ defaultFinalXYChartView {
