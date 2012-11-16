@@ -43,7 +43,7 @@ library
                      MissingH >= 1.2.0.0,
                      data-accessor >= 0.2.2.3,
                      colour >= 2.3.3,
-                     aivika >= 0.4.3,
-                     aivika-experiment >= 0.1.2
+                     aivika >= 0.5.1,
+                     aivika-experiment >= 0.2
 
     ghc-options:     -O2
