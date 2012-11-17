@@ -203,7 +203,7 @@ simulateFinalHistogram st expdata =
             do xs <- sequence input
                liftIO $ withMVar lock $ \() ->
                  forM_ (zip xs values) $ \(x, values) ->
-                 modifyIORef values (x :)
+                 x `seq` modifyIORef values (x :)
      return $ return ()
      
 -- | Plot the histogram after the simulation is complete.

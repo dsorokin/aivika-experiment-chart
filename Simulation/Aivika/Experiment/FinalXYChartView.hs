@@ -239,7 +239,7 @@ simulateFinalXYChart st expdata =
                i   <- liftSimulation simulationIndex
                liftIO $ withMVar lock $ \() ->
                  forM_ (zip ys' xys) $ \(y', xy) ->
-                 writeArray xy i $ Just (x', y')
+                 x' `seq` y' `seq` writeArray xy i $ Just (x', y')
      return $ return ()
      
 -- | Plot the XY chart after the simulation is complete.

@@ -221,7 +221,8 @@ simulateDeviationChart st expdata =
                liftIO $ withMVar lock $ \() ->
                  forM_ (zip xs stats) $ \(x, stats) ->
                  do y <- readArray stats i
-                    writeArray stats i $ addSamplingStats x y
+                    let y' = addSamplingStats x y
+                    y' `seq` writeArray stats i y'
      return $ return ()
      
 -- | Plot the deviation chart after the simulation is complete.
