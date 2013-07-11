@@ -1,6 +1,8 @@
 
 {-# LANGUAGE RecursiveDo #-}
 
+-- This financial model is described in Vensim Modeling Guide.
+
 import Control.Monad
 
 -- from package aivika
