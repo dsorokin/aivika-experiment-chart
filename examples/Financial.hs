@@ -1,7 +1,15 @@
 
 {-# LANGUAGE RecursiveDo #-}
 
--- This financial model is described in Vensim Modeling Guide.
+-- This financial model is described in
+-- Vensim 5 Modeling Guide, Chapter Financial Modeling and Risk.
+
+-- To enable the parallel simulation, you should compile it
+-- with option -threaded and then pass in other options +RTS -N2 -RTS
+-- to the executable if you have a dual core processor without
+-- hyper-threading. Also you can increase the number
+-- of parallel threads via option -N if you have a more modern
+-- processor.
 
 import Control.Monad
 
@@ -17,6 +25,7 @@ import Simulation.Aivika.Dynamics.EventQueue
 import Simulation.Aivika.Experiment
 import Simulation.Aivika.Experiment.ExperimentSpecsView
 import Simulation.Aivika.Experiment.TableView
+import Simulation.Aivika.Experiment.FinalStatsView
 
 -- from package aivika-experiment-chart
 import Simulation.Aivika.Experiment.DeviationChartView
@@ -161,44 +170,59 @@ monteCarloExperiment =
   defaultExperiment {
     experimentSpecs = specs,
     experimentRunCount = 1000,
-    experimentDescription = "Financial Model (Monte-Carlo simulation).",
+    experimentDescription = "Financial Model (the Monte-Carlo simulation) as described in " ++
+                            "Vensim 5 Modeling Guide, Chapter Financial Modeling and Risk.",
     experimentGenerators =
       [outputView defaultExperimentSpecsView,
        
        outputView $ defaultDeviationChartView {
-         deviationChartTitle = "Net Income and Cash Flow",
+         deviationChartTitle = "The deviation chart for Net Income and Cash Flow",
          deviationChartSeries = [Left netIncomeName, 
                                  Left netCashFlowName] },
 
        outputView $ defaultDeviationChartView {
-         deviationChartTitle = "Net Present Value of Income and Cash Flow",
+         deviationChartTitle = "The deviation chart for Net Present Value of Income and Cash Flow",
          deviationChartSeries = [Left npvIncomeName, 
                                  Left npvCashFlowName] },
 
        outputView $ defaultFinalHistogramView {
-         finalHistogramTitle = "Net Present Value of Income and Cash Flow",
-         finalHistogramSeries = [npvIncomeName, npvCashFlowName] } ] }
+         finalHistogramTitle = "Histogram for Net Income and Cash Flow",
+         finalHistogramSeries = [netIncomeName, netCashFlowName] },
+
+       outputView $ defaultFinalHistogramView {
+         finalHistogramTitle = "Histogram for Net Present Value of Income and Cash Flow",
+         finalHistogramSeries = [npvIncomeName, npvCashFlowName] },
+
+       outputView $ defaultFinalStatsView {
+         finalStatsTitle = "Summary for Net Income and Cash Flow",
+         finalStatsSeries = [netIncomeName, netCashFlowName] },
+
+       outputView $ defaultFinalStatsView {
+         finalStatsTitle = "Summary for Net Present Value of Income and Cash Flow",
+         finalStatsSeries = [npvIncomeName, npvCashFlowName] } ] }
 
 -- | The experiment with single simulation run.
 singleExperiment :: Experiment
 singleExperiment =
   defaultExperiment {
     experimentSpecs = specs,
-    experimentDescription = "Financial Model.",
+    experimentDescription = "Financial Model as described in " ++
+                            "Vensim 5 Modeling Guide, Chapter Financial Modeling and Risk.",
     experimentGenerators =
       [outputView defaultExperimentSpecsView,
        
        outputView $ defaultTimeSeriesView {
-         timeSeriesTitle = "Net Income and Cash Flow",
+         timeSeriesTitle = "Time series of Net Income and Cash Flow",
          timeSeries = [Left netIncomeName, 
                        Left netCashFlowName] },
        
        outputView $ defaultTimeSeriesView {
-         timeSeriesTitle = "Net Present Value for Income and Cash Flow",
+         timeSeriesTitle = "Time series of Net Present Value for Income and Cash Flow",
          timeSeries = [Left npvIncomeName, 
                        Left npvCashFlowName] },
 
        outputView $ defaultTableView {
+         tableTitle = "Table",
          tableSeries = [netIncomeName, netCashFlowName,
                         npvIncomeName, npvCashFlowName] } ] }
 
@@ -206,8 +230,9 @@ main = do
   
   -- run the ordinary simulation
   putStrLn "*** The simulation with default parameters..."
-  runExperiment singleExperiment (model defaultParams)
+  runExperiment singleExperiment $ model defaultParams
+  putStrLn ""
 
   -- run the Monte-Carlo simulation
   putStrLn "*** The Monte-Carlo simulation..."
-  randomParams >>= \x -> runExperiment monteCarloExperiment (model x)
+  randomParams >>= runExperimentParallel monteCarloExperiment . model
