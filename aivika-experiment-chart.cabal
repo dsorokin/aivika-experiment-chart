@@ -43,7 +43,7 @@ library
                      split >= 0.2.2,
                      data-accessor >= 0.2.2.3,
                      colour >= 2.3.3,
-                     aivika >= 0.5.1,
+                     aivika >= 0.5.4,
                      aivika-experiment >= 0.2.2
 
     ghc-options:     -O2
