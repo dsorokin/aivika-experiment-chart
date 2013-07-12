@@ -1,4 +1,6 @@
 
+{-# LANGUAGE RecursiveDo #-}
+
 import Simulation.Aivika.Dynamics
 import Simulation.Aivika.Dynamics.Simulation
 import Simulation.Aivika.Dynamics.SystemDynamics
@@ -22,13 +24,17 @@ experiment =
   defaultExperiment {
     experimentSpecs = specs,
     experimentRunCount = 1,
-    experimentGenerators =
+    experimentTitle = "Chemical Reaction",
+    experimentDescription = "Chemical Reaction as described in " ++
+                            "the 5-minute tutorial of Berkeley-Madonna",
+    experimentGenerators = 
       [outputView defaultExperimentSpecsView,
        outputView $ defaultLastValueView {
          lastValueSeries = ["t", "a", "b", "c"] },
        outputView $ defaultTableView {
          tableSeries = ["t", "a", "b", "c"] }, 
        outputView $ defaultTimeSeriesView {
+         timeSeriesTitle = "Time Series",
          timeSeries = [Left "a", Left "b", Left "c"] },
        -- outputView $ defaultTimeSeriesView {
        --   timeSeriesPlotTitle = "Variables a, b and c for t <= 5 or t >= 7",
@@ -37,12 +43,18 @@ experiment =
        --     do t <- time
        --        return (t <= 5 || t >= 7) },
        outputView $ defaultXYChartView {
+         xyChartTitle = "XYChart - 1",
+         xyChartPlotTitle = "b=b(a), c=c(a)",
          xyChartXSeries = Just "a",
          xyChartYSeries = [Left "b", Right "c"] },
        outputView $ defaultXYChartView {
+         xyChartTitle = "XYChart - 2",
+         xyChartPlotTitle = "a=a(b), c=c(b)",
          xyChartXSeries = Just "b",
          xyChartYSeries = [Right "a", Right "c"] },
        outputView $ defaultXYChartView {
+         xyChartTitle = "XYChart - 3",
+         xyChartPlotTitle = "a=a(c), b=b(c)",
          xyChartXSeries = Just "c",
          xyChartYSeries = [Right "a", Left "b"] } ] }
        -- outputView $ defaultXYChartView {
@@ -55,22 +67,16 @@ experiment =
 
 model :: Simulation ExperimentData
 model =
-  do queue  <- newQueue
-     integA <- newInteg 100
-     integB <- newInteg 0
-     integC <- newInteg 0
-     let a = integValue integA
-         b = integValue integB
-         c = integValue integC
-     let ka = 1
-         kb = 1
-     integDiff integA (- ka * a)
-     integDiff integB (ka * a - kb * b)
-     integDiff integC (kb * b)
-     experimentDataInStartTime queue
-       [("t", seriesEntity "time" time),
-        ("a", seriesEntity "a" a),
-        ("b", seriesEntity "b" b),
-        ("c", seriesEntity "c" c)]
+  mdo queue <- newQueue
+      a <- integ (- ka * a) 100
+      b <- integ (ka * a - kb * b) 0
+      c <- integ (kb * b) 0
+      let ka = 1
+          kb = 1
+      experimentDataInStartTime queue
+        [("t", seriesEntity "time" time),
+         ("a", seriesEntity "a" a),
+         ("b", seriesEntity "b" b),
+         ("c", seriesEntity "c" c)]
 
 main = runExperiment experiment model

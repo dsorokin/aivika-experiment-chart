@@ -170,6 +170,7 @@ monteCarloExperiment =
   defaultExperiment {
     experimentSpecs = specs,
     experimentRunCount = 1000,
+    experimentTitle = "Financial Model (the Monte-Carlo simulation)",
     experimentDescription = "Financial Model (the Monte-Carlo simulation) as described in " ++
                             "Vensim 5 Modeling Guide, Chapter Financial Modeling and Risk.",
     experimentGenerators =
@@ -206,6 +207,7 @@ singleExperiment :: Experiment
 singleExperiment =
   defaultExperiment {
     experimentSpecs = specs,
+    experimentTitle = "Financial Model",
     experimentDescription = "Financial Model as described in " ++
                             "Vensim 5 Modeling Guide, Chapter Financial Modeling and Risk.",
     experimentGenerators =
