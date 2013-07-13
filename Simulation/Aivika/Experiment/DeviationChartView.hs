@@ -1,11 +1,11 @@
 
 -- |
 -- Module     : Simulation.Aivika.Experiment.DeviationChartView
--- Copyright  : Copyright (c) 2012, David Sorokin <david.sorokin@gmail.com>
+-- Copyright  : Copyright (c) 2012-2013, David Sorokin <david.sorokin@gmail.com>
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
 -- Stability  : experimental
--- Tested with: GHC 7.4.1
+-- Tested with: GHC 7.6.3
 --
 -- The module defines 'DeviationChartView' that saves the deviation
 -- chart in the PNG file.
@@ -37,6 +37,7 @@ import Simulation.Aivika.Experiment
 import Simulation.Aivika.Experiment.HtmlWriter
 import Simulation.Aivika.Experiment.Utils (divideBy, replace)
 import Simulation.Aivika.Experiment.Chart (colourisePlotLines, colourisePlotFillBetween)
+import Simulation.Aivika.Experiment.SamplingStatsSource
 
 import Simulation.Aivika.Dynamics
 import Simulation.Aivika.Dynamics.Simulation
@@ -184,12 +185,12 @@ simulateDeviationChart st expdata =
          providers = flip map joinedproviders $ either id id         
          input =
            flip map providers $ \provider ->
-           case providerToDouble provider of
+           case providerToDoubleStatsSource provider of
              Nothing -> error $
                         "Cannot represent series " ++
                         providerName provider ++ 
-                        " as double values: simulateDeviationChart"
-             Just input -> input
+                        " as a series of double values: simulateDeviationChart"
+             Just input -> samplingStatsSourceData input
          names = flip map joinedproviders $ \protoprovider ->
            case protoprovider of
              Left provider  -> Left $ providerName provider
@@ -219,7 +220,7 @@ simulateDeviationChart st expdata =
                liftIO $ withMVar lock $ \() ->
                  forM_ (zip xs stats) $ \(x, stats) ->
                  do y <- readArray stats i
-                    let y' = addSamplingStats x y
+                    let y' = addDataToSamplingStats x y
                     y' `seq` writeArray stats i y'
      return $ return ()
      
