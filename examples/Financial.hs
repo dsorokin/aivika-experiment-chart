@@ -3,7 +3,13 @@
 
 -- This financial model is described in
 -- Vensim 5 Modeling Guide, Chapter Financial Modeling and Risk.
-
+--
+-- It illustrates how you can use the Monte-Carlo simulation
+-- and define external parameters. Here the system of recursive
+-- diffential equations is used but the paradigm can be any
+-- supported by Aivika including DES or agent-base modeling
+-- or their combination.
+--
 -- To enable the parallel simulation, you should compile it
 -- with option -threaded and then pass in other options +RTS -N2 -RTS
 -- to the executable if you have a dual core processor without
