@@ -39,6 +39,7 @@ import Simulation.Aivika.Experiment.HtmlWriter
 import Simulation.Aivika.Experiment.Utils (divideBy, replace)
 import Simulation.Aivika.Experiment.Chart (colourisePlotBars)
 import Simulation.Aivika.Experiment.Histogram
+import Simulation.Aivika.Experiment.ListSource
 
 import Simulation.Aivika.Dynamics
 import Simulation.Aivika.Dynamics.Simulation
@@ -138,7 +139,7 @@ data FinalHistogramViewState =
 -- | The histogram item.
 data FinalHistogramResults =
   FinalHistogramResults { finalHistogramNames  :: [String],
-                          finalHistogramValues :: [IORef [Double]] }
+                          finalHistogramValues :: [ListRef Double] }
   
 -- | Create a new state of the view.
 newFinalHistogram :: FinalHistogramView -> Experiment -> FilePath -> IO FinalHistogramViewState
@@ -156,7 +157,7 @@ newFinalHistogram view exp dir =
 -- | Create new histogram results.
 newFinalHistogramResults :: [String] -> Experiment -> IO FinalHistogramResults
 newFinalHistogramResults names exp =
-  do values <- forM names $ \_ -> liftIO $ newIORef []
+  do values <- forM names $ \_ -> liftIO newListRef
      return FinalHistogramResults { finalHistogramNames  = names,
                                     finalHistogramValues = values }
        
@@ -169,12 +170,12 @@ simulateFinalHistogram st expdata =
          providers = concat protoproviders
          input =
            flip map providers $ \provider ->
-           case providerToDouble provider of
+           case providerToDoubleListSource provider of
              Nothing -> error $
                         "Cannot represent series " ++
                         providerName provider ++ 
-                        " as double values: simulateFinalHistogram"
-             Just input -> input
+                        " as a source of double values: simulateFinalHistogram"
+             Just input -> listSourceData input
          names = map providerName providers
          predicate = finalHistogramPredicate $ finalHistogramView st
          exp = finalHistogramExperiment st
@@ -201,7 +202,7 @@ simulateFinalHistogram st expdata =
             do xs <- sequence input
                liftIO $ withMVar lock $ \() ->
                  forM_ (zip xs values) $ \(x, values) ->
-                 x `seq` modifyIORef values (x :)
+                 addDataToListRef values x
      return $ return ()
      
 -- | Plot the histogram after the simulation is complete.
@@ -222,7 +223,7 @@ finaliseFinalHistogram st =
        Just results ->
          do let names  = finalHistogramNames results
                 values = finalHistogramValues results
-            xs <- forM values readIORef
+            xs <- forM values readListRef
             let zs = histogramToBars . filterHistogram . histogram $ 
                      map filterData xs
                 p  = plotBars $
