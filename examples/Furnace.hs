@@ -442,6 +442,7 @@ experiment :: Experiment
 experiment =
   defaultExperiment {
     experimentSpecs = specs,
+    -- experimentRunCount = 1000,
     experimentRunCount = 100,
     experimentTitle = "The Furnace model (the Monte-Carlo simulation)",
     experimentGenerators =
@@ -470,7 +471,7 @@ experiment =
        outputView $ defaultFinalHistogramView {
          finalHistogramTitle = "Final Histogram - 1.2",
          finalHistogramPlotTitle = "The distribution of the awaited in the queue " ++
-                                   "ingot counts in the final time point.",
+                                   "ingot count in the final time point.",
          finalHistogramSeries = [awaitedIngotCountName] },
        
        outputView $ defaultFinalStatsView {
