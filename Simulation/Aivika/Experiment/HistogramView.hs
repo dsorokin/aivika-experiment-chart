@@ -37,6 +37,7 @@ import Simulation.Aivika.Experiment.HtmlWriter
 import Simulation.Aivika.Experiment.Utils (divideBy, replace)
 import Simulation.Aivika.Experiment.Chart (colourisePlotBars)
 import Simulation.Aivika.Experiment.Histogram
+import Simulation.Aivika.Experiment.ListSource
 
 import Simulation.Aivika.Dynamics
 import Simulation.Aivika.Dynamics.Simulation
@@ -167,12 +168,12 @@ simulateHistogram st expdata =
          names = map providerName providers
          input =
            flip map providers $ \provider ->
-           case providerToDouble provider of
+           case providerToDoubleListSource provider of
              Nothing -> error $
                         "Cannot represent series " ++
                         providerName provider ++ 
-                        " as double values: simulateHistogram"
-             Just input -> input
+                        " as a source of double values: simulateHistogram"
+             Just input -> fmap listDataList $ listSourceData input
          n = experimentRunCount $ histogramExperiment st
          width = histogramWidth $ histogramView st
          height = histogramHeight $ histogramView st
@@ -201,7 +202,7 @@ simulateHistogram st expdata =
      return $
        do xs <- forM hs readSignalHistory
           let zs = histogramToBars . filterHistogram . build $ 
-                   map (filterData . elems . snd) xs
+                   map (filterData . concat . elems . snd) xs
               p  = plotBars $
                    bars $
                    plot_bars_values ^= zs $
