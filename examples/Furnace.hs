@@ -1,13 +1,27 @@
 
 -- This is a model of the Furnace. It is described in different sources [1, 2].
 --
--- It illustrates how the time-driven and process-oriented simulation models
--- can be combined based on the common event queue. It also uses the differential
--- equation but it is modeled directly with help of the Euler method.
+-- This model is often used in the literature as an example of combined
+-- continuous-discrete simulation but this is not a point here. It illustrates
+-- how the time-driven and process-oriented simulation models can be combined
+-- based on the common event queue. It still uses the differential equation but
+-- it is modeled directly [3] with help of the Euler method within the time-driven
+-- part of the combined model.
 --
--- [1] { add a foreing source in English }
+-- [1] { add a foreign source in English }
 --
 -- [2] Труб И.И., Объектно-ориентированное моделирование на C++: Учебный курс. - СПб.: Питер, 2006
+--
+-- [3] The time bounds for such an equation are much smaller than that ones which are defined
+--     by the specs. Therefore there is no sense to use the 'integ' function as it would be
+--     very slow because of large allocating memory for each integral, although it is possible.
+--
+--     However, you can still combine the differential (and difference) equations with the DES and
+--     agent-based models. The integral (as well as any 'Dynamics' computation) can be used directly
+--     in the DES sub-model. But to update something from the DES sub-model that could be used aready
+--     in the differential equations, you should save data with help of types 'Var' or 'UVar' as they
+--     keep all the history of their past values. Also the values of these two types are managed by
+--     the event queue that allows synchronizing them with the DES sub-model.
 
 import Data.Maybe
 import System.Random
