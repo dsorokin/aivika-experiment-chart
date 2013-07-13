@@ -1,16 +1,16 @@
 
 -- This is a model of the Furnace. It is described in different sources [1, 2].
 --
+-- [1] { add a foreign source in English }
+--
+-- [2] Труб И.И., Объектно-ориентированное моделирование на C++: Учебный курс. - СПб.: Питер, 2006
+--
 -- This model is often used in the literature as an example of combined
 -- continuous-discrete simulation but this is not a point here. It illustrates
 -- how the time-driven and process-oriented simulation models can be combined
 -- based on the common event queue. It still uses the differential equation but
 -- it is modeled directly [3] with help of the Euler method within the time-driven
 -- part of the combined model.
---
--- [1] { add a foreign source in English }
---
--- [2] Труб И.И., Объектно-ориентированное моделирование на C++: Учебный курс. - СПб.: Питер, 2006
 --
 -- [3] The time bounds for such an equation are much smaller than that ones which are defined
 --     by the specs. Therefore there is no sense to use the 'integ' function as it would be
@@ -22,6 +22,15 @@
 --     in the differential equations, you should save data with help of types 'Var' or 'UVar' as they
 --     keep all the history of their past values. Also the values of these two types are managed by
 --     the event queue that allows synchronizing them with the DES sub-model.
+--
+-- To define the external parameters for the Monte-Carlo simulation, see the Financial model.
+--
+-- To enable the parallel simulation, you should compile it
+-- with option -threaded and then pass in other options +RTS -N2 -RTS
+-- to the executable if you have a dual core processor without
+-- hyper-threading. Also you can increase the number
+-- of parallel threads via option -N if you have a more modern
+-- processor.
 
 import Data.Maybe
 import System.Random
@@ -39,6 +48,9 @@ import Simulation.Aivika.Dynamics.Random
 import Simulation.Aivika.Statistics
 
 import Simulation.Aivika.Experiment
+import Simulation.Aivika.Experiment.ExperimentSpecsView
+import Simulation.Aivika.Experiment.FinalStatsView
+import Simulation.Aivika.Experiment.DeviationChartView
 
 import qualified Simulation.Aivika.Queue as Q
 
@@ -388,12 +400,12 @@ model =
          seriesEntity "ready ingot count" $
          furnaceUnloadCount furnace),
 
-        (awaitingIngotCountName,
-         seriesEntity "awaiting in the queue ingot count" $
+        (awaitedIngotCountName,
+         seriesEntity "awaited in the queue ingot count" $
          furnaceWaitCount furnace),
 
         (readyIngotTempsName,
-         seriesEntity "the temperature of ready ingots" $
+         seriesEntity "the temperature of ready ingot" $
          furnaceUnloadTemps furnace),
                 
         (pitCountStatsName,
@@ -417,12 +429,97 @@ model =
 totalIngotCountName    = "totalIngotCount"
 loadedIngotCountName   = "loadedIngotCount"
 readyIngotCountName    = "readyIngotCount"
-awaitingIngotCountName = "awaitingIngotCount"
+awaitedIngotCountName  = "awaitedIngotCount"
 readyIngotTempsName    = "readyIngotTemps"
 pitCountStatsName      = "pitCountStats"
 queueCountStatsName    = "queueCountStats"
 meanWaitTimeName       = "the mean wait time in the queue"
 meanHeatingTimeName    = "the mean heating time"
 
--- | The main program.
-main = runSimulation model specs
+-- | The experiment.
+experiment :: Experiment
+experiment =
+  defaultExperiment {
+    experimentSpecs = specs,
+    experimentRunCount = 100,
+    experimentTitle = "The Furnace model (the Monte-Carlo simulation)",
+    experimentGenerators =
+      [outputView defaultExperimentSpecsView,
+       
+       outputView $ defaultDeviationChartView {
+         deviationChartTitle = "Deviation Chart - 1.1",
+         deviationChartPlotTitle = "The total, loaded and ready ingot counts",
+         deviationChartSeries = [Right totalIngotCountName,
+                                 Right loadedIngotCountName,
+                                 Right readyIngotCountName] },
+
+       outputView $ defaultDeviationChartView {
+         deviationChartTitle = "Deviation Chart - 1.2",
+         deviationChartPlotTitle = "The awaited in the queue ingot count",
+         deviationChartSeries = [Right awaitedIngotCountName] },
+
+       outputView $ defaultFinalStatsView {
+         finalStatsTitle = "Final Statistics - 1",
+         finalStatsDescription = "The distribution of total, loaded, ready and awaited in " ++
+                                 "the queue ingot counts in the final time point.",
+         finalStatsSeries = [totalIngotCountName,
+                             loadedIngotCountName,
+                             readyIngotCountName,
+                             awaitedIngotCountName] },
+
+       outputView $ defaultDeviationChartView {
+         deviationChartTitle = "Deviation Chart - 2",
+         deviationChartPlotTitle = "The used pit count",
+         deviationChartSeries = [Right pitCountStatsName] },
+
+       outputView $ defaultFinalStatsView {
+         finalStatsTitle = "Final Statistics - 2",
+         finalStatsDescription = "The distribution of the used pit count in the final time point.",
+         finalStatsSeries = [pitCountStatsName] },
+
+       outputView $ defaultDeviationChartView {
+         deviationChartTitle = "Deviation Chart - 3",
+         deviationChartPlotTitle = "The queue size",
+         deviationChartSeries = [Right queueCountStatsName] },
+
+       outputView $ defaultFinalStatsView {
+         finalStatsTitle = "Final Statistics - 3",
+         finalStatsDescription = "The distribution of the queue size in the final time point.",
+         finalStatsSeries = [queueCountStatsName] },
+
+       outputView $ defaultDeviationChartView {
+         deviationChartTitle = "Deviation Chart - 4",
+         deviationChartPlotTitle = "The mean wait time",
+         deviationChartSeries = [Right meanWaitTimeName] },
+
+       outputView $ defaultFinalStatsView {
+         finalStatsTitle = "Final Statistics - 4",
+         finalStatsDescription = "The distribution of the mean wait time in " ++
+                                 "the final simulation time point.",
+         finalStatsSeries = [meanWaitTimeName] },
+
+       outputView $ defaultDeviationChartView {
+         deviationChartTitle = "Deviation Chart - 5",
+         deviationChartPlotTitle = "The mean heating time",
+         deviationChartSeries = [Right meanHeatingTimeName] },
+
+       outputView $ defaultFinalStatsView {
+         finalStatsTitle = "Final Statistics - 5",
+         finalStatsDescription = "The distribution of the mean heating time in " ++
+                                 "the final simulation time point.",
+         finalStatsSeries = [meanHeatingTimeName] },
+
+       outputView $ defaultDeviationChartView {
+         deviationChartTitle = "Deviation Chart - 6",
+         deviationChartPlotTitle = "The ready ingot temperature",
+         deviationChartSeries = [Right readyIngotTempsName] },
+
+       outputView $ defaultFinalStatsView {
+         finalStatsTitle = "Final Statistics - 6",
+         finalStatsDescription = "The distribution of the ready ingot temperature in " ++
+                                 "the final simulation time point.",
+         finalStatsSeries = [readyIngotTempsName] }
+      ] }
+
+-- | The main program that launches the simulation experiment to produce the HTML file.
+main = runExperimentParallel experiment model
