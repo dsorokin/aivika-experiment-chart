@@ -51,6 +51,7 @@ import Simulation.Aivika.Experiment
 import Simulation.Aivika.Experiment.ExperimentSpecsView
 import Simulation.Aivika.Experiment.FinalStatsView
 import Simulation.Aivika.Experiment.DeviationChartView
+import Simulation.Aivika.Experiment.FinalHistogramView
 
 import qualified Simulation.Aivika.Queue as Q
 
@@ -458,9 +459,23 @@ experiment =
          deviationChartPlotTitle = "The awaited in the queue ingot count",
          deviationChartSeries = [Right awaitedIngotCountName] },
 
+       outputView $ defaultFinalHistogramView {
+         finalHistogramTitle = "Final Histogram - 1.1",
+         finalHistogramPlotTitle = "The distribution of total, loaded and ready " ++
+                                   "ingot counts in the final time point.",
+         finalHistogramSeries = [totalIngotCountName,
+                                 loadedIngotCountName,
+                                 readyIngotCountName] },
+       
+       outputView $ defaultFinalHistogramView {
+         finalHistogramTitle = "Final Histogram - 1.2",
+         finalHistogramPlotTitle = "The distribution of the awaited in the queue " ++
+                                   "ingot counts in the final time point.",
+         finalHistogramSeries = [awaitedIngotCountName] },
+       
        outputView $ defaultFinalStatsView {
          finalStatsTitle = "Final Statistics - 1",
-         finalStatsDescription = "The distribution of total, loaded, ready and awaited in " ++
+         finalStatsDescription = "The summary of total, loaded, ready and awaited in " ++
                                  "the queue ingot counts in the final time point.",
          finalStatsSeries = [totalIngotCountName,
                              loadedIngotCountName,
@@ -471,20 +486,20 @@ experiment =
          deviationChartTitle = "Deviation Chart - 2",
          deviationChartPlotTitle = "The used pit count",
          deviationChartSeries = [Right pitCountStatsName] },
-
+       
        outputView $ defaultFinalStatsView {
          finalStatsTitle = "Final Statistics - 2",
-         finalStatsDescription = "The distribution of the used pit count in the final time point.",
+         finalStatsDescription = "The summary of the used pit count in the final time point.",
          finalStatsSeries = [pitCountStatsName] },
 
        outputView $ defaultDeviationChartView {
          deviationChartTitle = "Deviation Chart - 3",
          deviationChartPlotTitle = "The queue size",
          deviationChartSeries = [Right queueCountStatsName] },
-
+       
        outputView $ defaultFinalStatsView {
          finalStatsTitle = "Final Statistics - 3",
-         finalStatsDescription = "The distribution of the queue size in the final time point.",
+         finalStatsDescription = "The summary of the queue size in the final time point.",
          finalStatsSeries = [queueCountStatsName] },
 
        outputView $ defaultDeviationChartView {
@@ -492,9 +507,15 @@ experiment =
          deviationChartPlotTitle = "The mean wait time",
          deviationChartSeries = [Right meanWaitTimeName] },
 
+       outputView $ defaultFinalHistogramView {
+         finalHistogramTitle = "Final Histogram - 4",
+         finalHistogramPlotTitle = "The distribution of the mean wait time " ++
+                                   "in the final simulation time point.",
+         finalHistogramSeries = [meanWaitTimeName] },
+       
        outputView $ defaultFinalStatsView {
          finalStatsTitle = "Final Statistics - 4",
-         finalStatsDescription = "The distribution of the mean wait time in " ++
+         finalStatsDescription = "The summary of the mean wait time in " ++
                                  "the final simulation time point.",
          finalStatsSeries = [meanWaitTimeName] },
 
@@ -503,9 +524,15 @@ experiment =
          deviationChartPlotTitle = "The mean heating time",
          deviationChartSeries = [Right meanHeatingTimeName] },
 
+       outputView $ defaultFinalHistogramView {
+         finalHistogramTitle = "Final Histogram - 5",
+         finalHistogramPlotTitle = "The distribution of the mean heating time " ++
+                                   "in the final simulation time point.",
+         finalHistogramSeries = [meanHeatingTimeName] },
+       
        outputView $ defaultFinalStatsView {
          finalStatsTitle = "Final Statistics - 5",
-         finalStatsDescription = "The distribution of the mean heating time in " ++
+         finalStatsDescription = "The summary of the mean heating time in " ++
                                  "the final simulation time point.",
          finalStatsSeries = [meanHeatingTimeName] },
 
@@ -514,9 +541,15 @@ experiment =
          deviationChartPlotTitle = "The ready ingot temperature",
          deviationChartSeries = [Right readyIngotTempsName] },
 
+       outputView $ defaultFinalHistogramView {
+         finalHistogramTitle = "Final Histogram - 6",
+         finalHistogramPlotTitle = "The distribution of the ready ingot temperature " ++
+                                   "in the final simulation time point.",
+         finalHistogramSeries = [readyIngotTempsName] },
+       
        outputView $ defaultFinalStatsView {
          finalStatsTitle = "Final Statistics - 6",
-         finalStatsDescription = "The distribution of the ready ingot temperature in " ++
+         finalStatsDescription = "The summary of the ready ingot temperature in " ++
                                  "the final simulation time point.",
          finalStatsSeries = [readyIngotTempsName] }
       ] }
