@@ -1,5 +1,5 @@
 name:            aivika-experiment-chart
-version:         0.2.3
+version:         0.3
 synopsis:        Simulation experiments with charting for the Aivika library
 description:
     This package complements the Aivika and Aivika Experiment packages with
@@ -46,7 +46,7 @@ library
                      split >= 0.2.2,
                      data-accessor >= 0.2.2.3,
                      colour >= 2.3.3,
-                     aivika >= 0.5.4,
-                     aivika-experiment >= 0.2.2
+                     aivika >= 0.6,
+                     aivika-experiment >= 0.3
 
     ghc-options:     -O2
