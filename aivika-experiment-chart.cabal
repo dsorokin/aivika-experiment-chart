@@ -26,6 +26,7 @@ extra-source-files:  examples/MachRep3.hs
                      examples/Financial.hs
                      examples/DifferenceEquations.hs
                      examples/Furnace.hs
+                     examples/README
 
 library
 
