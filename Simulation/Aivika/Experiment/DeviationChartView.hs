@@ -64,7 +64,7 @@ data DeviationChartView =
                        -- An example is
                        --
                        -- @
-                       --   deviationChartFileName = UniqueFileName \"$TITLE\", \".png\"
+                       --   deviationChartFileName = UniqueFileName \"$TITLE\" \".png\"
                        -- @
                        deviationChartSeries      :: [Either String String],
                        -- ^ It contains the labels of data plotted

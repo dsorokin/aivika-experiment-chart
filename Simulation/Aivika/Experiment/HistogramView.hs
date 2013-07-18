@@ -64,7 +64,7 @@ data HistogramView =
                   -- An example is
                   --
                   -- @
-                  --   histogramFileName = UniqueFileName \"$TITLE - $RUN_INDEX\", \".png\"
+                  --   histogramFileName = UniqueFileName \"$TITLE - $RUN_INDEX\" \".png\"
                   -- @
                   histogramPredicate   :: Dynamics Bool,
                   -- ^ It specifies the predicate that defines

@@ -63,7 +63,7 @@ data FinalXYChartView =
                      -- An example is
                      --
                      -- @
-                     --   finalXYChartFileName = UniqueFileName \"$TITLE\", \".png\"
+                     --   finalXYChartFileName = UniqueFileName \"$TITLE\" \".png\"
                      -- @
                      finalXYChartPredicate   :: Dynamics Bool,
                      -- ^ It specifies the predicate that defines

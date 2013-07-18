@@ -60,7 +60,7 @@ data TimeSeriesView =
                    -- An example is
                    --
                    -- @
-                   --   timeSeriesFileName = UniqueFileName \"$TITLE - $RUN_INDEX\", \".png\"
+                   --   timeSeriesFileName = UniqueFileName \"$TITLE - $RUN_INDEX\" \".png\"
                    -- @
                    timeSeriesPredicate   :: Dynamics Bool,
                    -- ^ It specifies the predicate that defines

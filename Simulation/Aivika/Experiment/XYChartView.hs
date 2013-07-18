@@ -61,7 +61,7 @@ data XYChartView =
                 -- An example is
                 --
                 -- @
-                --   xyChartFileName = UniqueFileName \"$TITLE - $RUN_INDEX\", \".png\"
+                --   xyChartFileName = UniqueFileName \"$TITLE - $RUN_INDEX\" \".png\"
                 -- @
                 xyChartPredicate   :: Dynamics Bool,
                 -- ^ It specifies the predicate that defines

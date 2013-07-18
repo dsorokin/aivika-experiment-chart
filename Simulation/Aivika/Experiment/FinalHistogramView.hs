@@ -67,7 +67,7 @@ data FinalHistogramView =
                        -- An example is
                        --
                        -- @
-                       --   finalHistogramFileName = UniqueFileName \"$TITLE\", \".png\"
+                       --   finalHistogramFileName = UniqueFileName \"$TITLE\" \".png\"
                        -- @
                        finalHistogramPredicate   :: Dynamics Bool,
                        -- ^ It specifies the predicate that defines
