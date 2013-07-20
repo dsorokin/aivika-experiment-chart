@@ -40,7 +40,6 @@ import Simulation.Aivika.Experiment.Chart (colourisePlotLines)
 import Simulation.Aivika.Dynamics
 import Simulation.Aivika.Dynamics.Simulation
 import Simulation.Aivika.Dynamics.Signal
-import Simulation.Aivika.Dynamics.EventQueue
 
 -- | Defines the 'View' that saves the XY charts
 -- in the PNG files.
@@ -219,7 +218,7 @@ simulateXYChart st expdata =
                 if p 
                   then liftM2 (,) x y
                   else return (1/0, 1/0)  -- such values will be ignored then
-       in newSignalHistoryThrough (experimentQueue expdata) $
+       in newSignalHistory $
           mapSignalM transform $
           experimentMixedSignal expdata [provider] <>
           experimentMixedSignal expdata [xprovider]

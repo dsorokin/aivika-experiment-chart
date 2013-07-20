@@ -42,7 +42,6 @@ import Simulation.Aivika.Experiment.SamplingStatsSource
 import Simulation.Aivika.Dynamics
 import Simulation.Aivika.Dynamics.Simulation
 import Simulation.Aivika.Dynamics.Signal
-import Simulation.Aivika.Dynamics.EventQueue
 import Simulation.Aivika.Dynamics.Base (starttime, integIterationBnds, integTimes, integIteration)
 import Simulation.Aivika.Statistics
 
@@ -208,20 +207,15 @@ simulateDeviationChart st expdata =
          error "Series with different names are returned for different runs: simulateDeviationChart"
      results <- liftIO $ fmap fromJust $ readIORef (deviationChartResults st)
      let stats = deviationChartStats results
-     t0 <- starttime
-     enqueue (experimentQueue expdata) t0 $
-       do let h = experimentSignalInIntegTimes expdata
-          -- we must subscribe through the event queue;
-          -- otherwise, we will loose a signal in the start time,
-          -- because the handleSignal_ function checks the event queue
-          handleSignal_ h $ \_ ->
-            do xs <- sequence input
-               i  <- integIteration
-               liftIO $ withMVar lock $ \() ->
-                 forM_ (zip xs stats) $ \(x, stats) ->
-                 do y <- readArray stats i
-                    let y' = addDataToSamplingStats x y
-                    y' `seq` writeArray stats i y'
+         h = experimentSignalInIntegTimes expdata
+     handleSignal_ h $ \_ ->
+       do xs <- sequence input
+          i  <- integIteration
+          liftIO $ withMVar lock $ \() ->
+            forM_ (zip xs stats) $ \(x, stats) ->
+            do y <- readArray stats i
+               let y' = addDataToSamplingStats x y
+               y' `seq` writeArray stats i y'
      return $ return ()
      
 -- | Plot the deviation chart after the simulation is complete.

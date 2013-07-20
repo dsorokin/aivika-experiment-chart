@@ -44,7 +44,6 @@ import Simulation.Aivika.Experiment.ListSource
 import Simulation.Aivika.Dynamics
 import Simulation.Aivika.Dynamics.Simulation
 import Simulation.Aivika.Dynamics.Signal
-import Simulation.Aivika.Dynamics.EventQueue
 import Simulation.Aivika.Dynamics.Base (starttime, integIterationBnds, integTimes, integIteration)
 
 -- | Defines the 'View' that saves the histogram
@@ -191,18 +190,13 @@ simulateFinalHistogram st expdata =
          error "Series with different names are returned for different runs: simulateFinalHistogram"
      results <- liftIO $ fmap fromJust $ readIORef (finalHistogramResults st)
      let values = finalHistogramValues results
-     t0 <- starttime
-     enqueue (experimentQueue expdata) t0 $
-       do let h = filterSignalM (const predicate) $
-                  experimentSignalInStopTime expdata
-          -- we must subscribe through the event queue;
-          -- otherwise, we will loose a signal in the start time,
-          -- because the handleSignal_ function checks the event queue
-          handleSignal_ h $ \_ ->
-            do xs <- sequence input
-               liftIO $ withMVar lock $ \() ->
-                 forM_ (zip xs values) $ \(x, values) ->
-                 addDataToListRef values x
+         h = filterSignalM (const predicate) $
+             experimentSignalInStopTime expdata
+     handleSignal_ h $ \_ ->
+       do xs <- sequence input
+          liftIO $ withMVar lock $ \() ->
+            forM_ (zip xs values) $ \(x, values) ->
+            addDataToListRef values x
      return $ return ()
      
 -- | Plot the histogram after the simulation is complete.

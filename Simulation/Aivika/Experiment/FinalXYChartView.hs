@@ -41,7 +41,6 @@ import Simulation.Aivika.Experiment.Chart (colourisePlotLines)
 import Simulation.Aivika.Dynamics
 import Simulation.Aivika.Dynamics.Simulation
 import Simulation.Aivika.Dynamics.Signal
-import Simulation.Aivika.Dynamics.EventQueue
 import Simulation.Aivika.Dynamics.Base (time)
 
 -- | Defines the 'View' that saves the XY chart
@@ -224,20 +223,15 @@ simulateFinalXYChart st expdata =
             error "Series with different names are returned for different runs: simulateFinalXYChart"
      results <- liftIO $ fmap fromJust $ readIORef (finalXYChartResults st)
      let xys = finalXYChartXY results
-     t <- time
-     enqueue (experimentQueue expdata) t $
-       do let h = filterSignalM (const predicate) $
-                  experimentSignalInStopTime expdata
-          -- we must subscribe through the event queue;
-          -- otherwise, we will loose a signal in the start time,
-          -- because the handleSignal_ function checks the event queue
-          handleSignal_ h $ \_ ->
-            do x'  <- x
-               ys' <- sequence ys
-               i   <- liftSimulation simulationIndex
-               liftIO $ withMVar lock $ \() ->
-                 forM_ (zip ys' xys) $ \(y', xy) ->
-                 x' `seq` y' `seq` writeArray xy i $ Just (x', y')
+         h = filterSignalM (const predicate) $
+             experimentSignalInStopTime expdata
+     handleSignal_ h $ \_ ->
+       do x'  <- x
+          ys' <- sequence ys
+          i   <- liftSimulation simulationIndex
+          liftIO $ withMVar lock $ \() ->
+            forM_ (zip ys' xys) $ \(y', xy) ->
+            x' `seq` y' `seq` writeArray xy i $ Just (x', y')
      return $ return ()
      
 -- | Plot the XY chart after the simulation is complete.

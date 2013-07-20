@@ -42,7 +42,6 @@ import Simulation.Aivika.Experiment.ListSource
 import Simulation.Aivika.Dynamics
 import Simulation.Aivika.Dynamics.Simulation
 import Simulation.Aivika.Dynamics.Signal
-import Simulation.Aivika.Dynamics.EventQueue
 
 -- | Defines the 'View' that saves the histogram in 
 -- the PNG files by all integration time points for 
@@ -195,7 +194,7 @@ simulateHistogram st expdata =
                 replace "$PLOT_TITLE" plotTitle
                 (histogramRunPlotTitle $ histogramView st)
      hs <- forM (zip providers input) $ \(provider, input) ->
-       newSignalHistoryThrough (experimentQueue expdata) $
+       newSignalHistory $
        mapSignalM (const input) $
        filterSignalM (const predicate) $
        experimentSignalInIntegTimes expdata

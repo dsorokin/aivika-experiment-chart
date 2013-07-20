@@ -39,7 +39,6 @@ import Simulation.Aivika.Experiment.Chart (colourisePlotLines)
 import Simulation.Aivika.Dynamics
 import Simulation.Aivika.Dynamics.Simulation
 import Simulation.Aivika.Dynamics.Signal
-import Simulation.Aivika.Dynamics.EventQueue
 
 -- | Defines the 'View' that saves the time series charts
 -- in the PNG files.
@@ -199,7 +198,7 @@ simulateTimeSeries st expdata =
        let transform () =
              do x <- predicate
                 if x then input else return (1/0)  -- the infinite values will be ignored then
-       in newSignalHistoryThrough (experimentQueue expdata) $
+       in newSignalHistory $
           mapSignalM transform $
           experimentMixedSignal expdata [provider]
      return $
