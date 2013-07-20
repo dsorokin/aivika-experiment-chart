@@ -175,25 +175,28 @@ newDeviationChartResults names exp =
 -- | Simulate the specified series.
 simulateDeviationChart :: DeviationChartViewState -> ExperimentData -> Dynamics (Dynamics ())
 simulateDeviationChart st expdata =
-  do let protolabels = deviationChartSeries $ deviationChartView st
-         protoproviders = flip map protolabels $ \protolabel ->
-           case protolabel of
-             Left label  -> map Left $ experimentSeriesProviders expdata [label]
-             Right label -> map Right $ experimentSeriesProviders expdata [label]
-         joinedproviders = join protoproviders
-         providers = flip map joinedproviders $ either id id         
-         input =
+  do let labels = deviationChartSeries $ deviationChartView st
+         (leftLabels, rightLabels) = partitionEithers labels 
+         (leftProviders, rightProviders) =
+           (experimentSeriesProviders expdata leftLabels,
+            experimentSeriesProviders expdata rightLabels)
+         providerInput providers =
            flip map providers $ \provider ->
            case providerToDoubleStatsSource provider of
              Nothing -> error $
                         "Cannot represent series " ++
                         providerName provider ++ 
-                        " as a series of double values: simulateDeviationChart"
-             Just input -> samplingStatsSourceData input
-         names = flip map joinedproviders $ \protoprovider ->
-           case protoprovider of
-             Left provider  -> Left $ providerName provider
-             Right provider -> Right $ providerName provider
+                        " as a source of double values: simulateDeviationChart"
+             Just input -> (providerName provider,
+                            provider,
+                            samplingStatsSourceData input)
+         leftInput = providerInput leftProviders
+         rightInput = providerInput rightProviders
+         leftNames = flip map leftInput $ \(x, _, _) -> Left x
+         rightNames = flip map rightInput $ \(x, _, _) -> Right x
+         input = leftInput ++ rightInput
+         names = leftNames ++ rightNames
+         source = flip map input $ \(_, _, x) -> x 
          exp = deviationChartExperiment st
          lock = deviationChartLock st
      results <- liftIO $ readIORef (deviationChartResults st)
@@ -209,7 +212,7 @@ simulateDeviationChart st expdata =
      let stats = deviationChartStats results
          h = experimentSignalInIntegTimes expdata
      handleSignal_ h $ \_ ->
-       do xs <- sequence input
+       do xs <- sequence source
           i  <- integIteration
           liftIO $ withMVar lock $ \() ->
             forM_ (zip xs stats) $ \(x, stats) ->
