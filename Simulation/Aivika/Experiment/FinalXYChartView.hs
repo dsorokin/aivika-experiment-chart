@@ -174,38 +174,37 @@ newFinalXYChartResults xname ynames exp =
 -- | Simulation.
 simulateFinalXYChart :: FinalXYChartViewState -> ExperimentData -> Dynamics (Dynamics ())
 simulateFinalXYChart st expdata =
-  do let yprotolabels = finalXYChartYSeries $ finalXYChartView st
-         xprotolabel  = finalXYChartXSeries $ finalXYChartView st
-         ylabels = flip map yprotolabels $ either id id
-         xlabel  = flip fromMaybe xprotolabel $
+  do let ylabels = finalXYChartYSeries $ finalXYChartView st
+         xlabels = finalXYChartXSeries $ finalXYChartView st
+         xlabel  = flip fromMaybe xlabels $
                    error "X series is not provided: simulateFinalXYChart"
-         yprotoproviders = flip map yprotolabels $ \protolabel ->
-           case protolabel of
-             Left label  -> map Left $ experimentSeriesProviders expdata [label]
-             Right label -> map Right $ experimentSeriesProviders expdata [label]
-         joinedproviders = join yprotoproviders
-         yproviders = flip map joinedproviders $ either id id         
+         (leftYLabels, rightYLabels) = partitionEithers ylabels
+         leftYProviders  = experimentSeriesProviders expdata leftYLabels
+         rightYProviders = experimentSeriesProviders expdata rightYLabels
          xprovider  = 
            case experimentSeriesProviders expdata [xlabel] of
              [provider] -> provider
              _ -> error $
                   "Only a single X series must be" ++
                   " provided: simulateFinalXYChart"
-         ys  = input yproviders
-         [x] = input [xprovider]
-         input providers =
+         providerInput providers =
            flip map providers $ \provider ->
            case providerToDouble provider of
              Nothing -> error $
                         "Cannot represent series " ++
                         providerName provider ++ 
                         " as double values: simulateFinalXYChart"
-             Just input -> input
-         ynames = flip map joinedproviders $ \protoprovider ->
-           case protoprovider of
-             Left provider  -> Left $ providerName provider
-             Right provider -> Right $ providerName provider
-         xname  = providerName xprovider
+             Just input -> (providerName provider, input)
+         leftYInput  = providerInput leftYProviders
+         rightYInput = providerInput rightYProviders
+         yinput   = leftYInput ++ rightYInput
+         [xinput] = providerInput [xprovider]
+         leftYNames  = map (Left . fst) leftYInput
+         rightYNames = map (Right . fst) rightYInput
+         ynames = leftYNames ++ rightYNames
+         xname  = fst xinput
+         ys = map snd yinput
+         x  = snd xinput
          predicate = finalXYChartPredicate $ finalXYChartView st
          exp = finalXYChartExperiment st
          lock = finalXYChartLock st
