@@ -163,10 +163,8 @@ newFinalHistogramResults names exp =
 -- | Simulation of the specified series.
 simulateFinalHistogram :: FinalHistogramViewState -> ExperimentData -> Dynamics (Dynamics ())
 simulateFinalHistogram st expdata =
-  do let protolabels = finalHistogramSeries $ finalHistogramView st
-         protoproviders = flip map protolabels $ \protolabel ->
-           experimentSeriesProviders expdata [protolabel]
-         providers = concat protoproviders
+  do let labels = finalHistogramSeries $ finalHistogramView st
+         providers = experimentSeriesProviders expdata labels
          input =
            flip map providers $ \provider ->
            case providerToDoubleListSource provider of
