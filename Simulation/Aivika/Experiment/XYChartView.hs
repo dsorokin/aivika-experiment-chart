@@ -24,6 +24,7 @@ import Data.Maybe
 import Data.Either
 import Data.Array
 import Data.Monoid
+import Data.List
 
 import Data.Accessor
 
@@ -170,28 +171,30 @@ newXYChart view exp dir =
 -- | Plot the XY chart during the simulation.
 simulateXYChart :: XYChartViewState -> ExperimentData -> Dynamics (Dynamics ())
 simulateXYChart st expdata =
-  do let yprotolabels = xyChartYSeries $ xyChartView st
-         xprotolabel  = xyChartXSeries $ xyChartView st
-         ylabels = flip map yprotolabels $ either id id
-         xlabel  = flip fromMaybe xprotolabel $
+  do let ylabels = xyChartYSeries $ xyChartView st
+         xlabels = xyChartXSeries $ xyChartView st
+         xlabel  = flip fromMaybe xlabels $
                    error "X series is not provided: simulateXYChart"
-         yproviders = experimentSeriesProviders expdata ylabels
+         (leftYLabels, rightYLabels) = partitionEithers ylabels
+         leftYProviders  = experimentSeriesProviders expdata leftYLabels
+         rightYProviders = experimentSeriesProviders expdata rightYLabels
          xprovider  = 
            case experimentSeriesProviders expdata [xlabel] of
              [provider] -> provider
              _ -> error $
                   "Only a single X series must be" ++
                   " provided: simulateXYChart"
-         ys  = input yproviders
-         [x] = input [xprovider]
-         input providers =
+         providerInput providers =
            flip map providers $ \provider ->
            case providerToDouble provider of
              Nothing -> error $
                         "Cannot represent series " ++
                         providerName provider ++ 
                         " as double values: simulateXYChart"
-             Just input -> input
+             Just input -> (providerName provider, provider, input)
+         leftYInput  = providerInput leftYProviders
+         rightYInput = providerInput rightYProviders
+         [(xname, _, x)] = providerInput [xprovider]
          n = experimentRunCount $ xyChartExperiment st
          width = xyChartWidth $ xyChartView st
          height = xyChartHeight $ xyChartView st
@@ -212,29 +215,37 @@ simulateXYChart st expdata =
                 replace "$RUN_COUNT" (show n) $
                 replace "$PLOT_TITLE" plotTitle
                 (xyChartRunPlotTitle $ xyChartView st)
-     hs <- forM (zip yproviders ys) $ \(provider, y) ->
-       let transform () =
-             do p <- predicate
-                if p 
-                  then liftM2 (,) x y
-                  else return (1/0, 1/0)  -- such values will be ignored then
-       in newSignalHistory $
-          mapSignalM transform $
-          experimentMixedSignal expdata [provider] <>
-          experimentMixedSignal expdata [xprovider]
+         inputHistory input = 
+           forM input $ \(name, provider, y) ->
+           let transform () =
+                 do p <- predicate
+                    if p
+                      then liftM2 (,) x y
+                      else return (1/0, 1/0)  -- such values will be ignored then
+           in newSignalHistory $
+              mapSignalM transform $
+              experimentMixedSignal expdata [provider] <>
+              experimentMixedSignal expdata [xprovider]
+     leftHs  <- inputHistory leftYInput
+     rightHs <- inputHistory rightYInput
      return $
-       do ps <- forM (zip3 hs yproviders plotLines) $ \(h, provider, plotLines) ->
-            do (ts, zs) <- readSignalHistory h 
-               return $
-                 toPlot $
-                 plotLines $
-                 plot_lines_values ^= filterPlotLinesValues (elems zs) $
-                 plot_lines_title ^= providerName provider $
-                 defaultPlotLines
-          let ps' = flip map (zip ps yprotolabels) $ \(p, label) ->
-                case label of
-                  Left _  -> Left p
-                  Right _ -> Right p
+       do let plots hs input plotLineTails =
+                do ps <-
+                     forM (zip3 hs input (head plotLineTails)) $
+                     \(h, (name, provider, input), plotLines) ->
+                     do (ts, zs) <- readSignalHistory h 
+                        return $
+                          toPlot $
+                          plotLines $
+                          plot_lines_values ^= filterPlotLinesValues (elems zs) $
+                          plot_lines_title ^= name $
+                          defaultPlotLines
+                   return (ps, drop (length hs) plotLineTails)     
+          (leftPs, plotLineTails) <- plots leftHs leftYInput (tails plotLines)
+          (rightPs, plotLineTails) <- plots rightHs rightYInput plotLineTails
+          let leftPs' = map Left leftPs
+              rightPs' = map Right rightPs
+              ps' = leftPs' ++ rightPs'
               axis  = plotBottomAxis $
                       laxis_title ^= providerName xprovider $
                       defaultLayoutAxis
