@@ -23,6 +23,7 @@ import Data.IORef
 import Data.Maybe
 import Data.Either
 import Data.Array
+import Data.List
 
 import Data.Accessor
 
@@ -163,17 +164,21 @@ newTimeSeries view exp dir =
 -- | Plot the time series chart during the simulation.
 simulateTimeSeries :: TimeSeriesViewState -> ExperimentData -> Dynamics (Dynamics ())
 simulateTimeSeries st expdata =
-  do let protolabels = timeSeries $ timeSeriesView st
-         labels = flip map protolabels $ either id id
-         providers = experimentSeriesProviders expdata labels
-         input =
+  do let labels = timeSeries $ timeSeriesView st
+         (leftLabels, rightLabels) = partitionEithers labels 
+         (leftProviders, rightProviders) =
+           (experimentSeriesProviders expdata leftLabels,
+            experimentSeriesProviders expdata rightLabels)
+         providerInput providers =
            flip map providers $ \provider ->
            case providerToDouble provider of
              Nothing -> error $
                         "Cannot represent series " ++
                         providerName provider ++ 
                         " as double values: simulateTimeSeries"
-             Just input -> input
+             Just input -> (providerName provider, provider, input)
+         leftInput = providerInput leftProviders
+         rightInput = providerInput rightProviders
          n = experimentRunCount $ timeSeriesExperiment st
          width = timeSeriesWidth $ timeSeriesView st
          height = timeSeriesHeight $ timeSeriesView st
@@ -194,26 +199,34 @@ simulateTimeSeries st expdata =
                 replace "$RUN_COUNT" (show n) $
                 replace "$PLOT_TITLE" plotTitle
                 (timeSeriesRunPlotTitle $ timeSeriesView st)
-     hs <- forM (zip providers input) $ \(provider, input) ->
-       let transform () =
-             do x <- predicate
-                if x then input else return (1/0)  -- the infinite values will be ignored then
-       in newSignalHistory $
-          mapSignalM transform $
-          experimentMixedSignal expdata [provider]
+         inputHistory input =
+           forM input $ \(name, provider, input) ->
+           let transform () =
+                 do x <- predicate
+                    if x then input else return (1/0)  -- the infinite values will be ignored then
+           in newSignalHistory $
+              mapSignalM transform $
+              experimentMixedSignal expdata [provider]
+     leftHs <- inputHistory leftInput
+     rightHs <- inputHistory rightInput
      return $
-       do ps <- forM (zip3 hs providers plotLines) $ \(h, provider, plotLines) ->
-            do (ts, xs) <- readSignalHistory h 
-               return $
-                 toPlot $
-                 plotLines $
-                 plot_lines_values ^= filterPlotLinesValues (zip (elems ts) (elems xs)) $
-                 plot_lines_title ^= providerName provider $
-                 defaultPlotLines
-          let ps' = flip map (zip ps protolabels) $ \(p, label) ->
-                case label of
-                  Left _  -> Left p
-                  Right _ -> Right p
+       do let plots hs input plotLineTails =
+                do ps <-
+                     forM (zip3 hs input (head plotLineTails)) $
+                     \(h, (name, provider, input), plotLines) ->
+                     do (ts, xs) <- readSignalHistory h 
+                        return $
+                          toPlot $
+                          plotLines $
+                          plot_lines_values ^= filterPlotLinesValues (zip (elems ts) (elems xs)) $
+                          plot_lines_title ^= name $
+                          defaultPlotLines
+                   return (ps, drop (length hs) plotLineTails)
+          (leftPs, plotLineTails) <- plots leftHs leftInput (tails plotLines)
+          (rightPs, plotLineTails) <- plots rightHs rightInput plotLineTails
+          let leftPs' = map Left leftPs
+              rightPs' = map Right rightPs
+              ps' = leftPs' ++ rightPs'
               axis  = plotBottomAxis $
                       laxis_title ^= "time" $
                       defaultLayoutAxis
