@@ -57,9 +57,9 @@ import qualified Simulation.Aivika.Queue as Q
 
 -- | The simulation specs.
 specs = Specs { spcStartTime = 0.0,
-                spcStopTime = 10000.0,
+                spcStopTime = 1000.0,
                 -- spcStopTime = 300.0,
-                spcDT = 1,
+                spcDT = 0.1,
                 spcMethod = RungeKutta4 }
         
 -- | Return an exponentially distributed random value with mean 
@@ -443,7 +443,7 @@ experiment =
   defaultExperiment {
     experimentSpecs = specs,
     -- experimentRunCount = 1000,
-    experimentRunCount = 30,
+    experimentRunCount = 100,
     experimentTitle = "The Furnace model (the Monte-Carlo simulation)",
     experimentGenerators =
       [outputView defaultExperimentSpecsView,
