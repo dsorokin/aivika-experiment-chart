@@ -57,9 +57,9 @@ import qualified Simulation.Aivika.Queue as Q
 
 -- | The simulation specs.
 specs = Specs { spcStartTime = 0.0,
-                -- spcStopTime = 1000.0,
-                spcStopTime = 300.0,
-                spcDT = 0.1,
+                spcStopTime = 10000.0,
+                -- spcStopTime = 300.0,
+                spcDT = 1,
                 spcMethod = RungeKutta4 }
         
 -- | Return an exponentially distributed random value with mean 
@@ -409,13 +409,13 @@ model =
          seriesEntity "the temperature of ready ingot" $
          furnaceUnloadTemps furnace),
                 
-        (pitCountStatsName,
+        (pitCountName,
          seriesEntity "the used pit count" $
-         furnacePitCountStats furnace),
+         readUVar $ furnacePitCount furnace),
               
-        (queueCountStatsName,
+        (queueCountName,
          seriesEntity "the queue size" $
-         furnaceQueueCountStats furnace),
+         readUVar $ furnaceQueueCount furnace),
               
         (meanWaitTimeName,
          seriesEntity "the mean wait time" $
@@ -432,8 +432,8 @@ loadedIngotCountName   = "loadedIngotCount"
 readyIngotCountName    = "readyIngotCount"
 awaitedIngotCountName  = "awaitedIngotCount"
 readyIngotTempsName    = "readyIngotTemps"
-pitCountStatsName      = "pitCountStats"
-queueCountStatsName    = "queueCountStats"
+pitCountName           = "pitCount"
+queueCountName         = "queueCount"
 meanWaitTimeName       = "the mean wait time in the queue"
 meanHeatingTimeName    = "the mean heating time"
 
@@ -443,7 +443,7 @@ experiment =
   defaultExperiment {
     experimentSpecs = specs,
     -- experimentRunCount = 1000,
-    experimentRunCount = 100,
+    experimentRunCount = 30,
     experimentTitle = "The Furnace model (the Monte-Carlo simulation)",
     experimentGenerators =
       [outputView defaultExperimentSpecsView,
@@ -486,22 +486,34 @@ experiment =
        outputView $ defaultDeviationChartView {
          deviationChartTitle = "Deviation Chart - 2",
          deviationChartPlotTitle = "The used pit count",
-         deviationChartSeries = [Right pitCountStatsName] },
+         deviationChartSeries = [Right pitCountName] },
        
+       outputView $ defaultFinalHistogramView {
+         finalHistogramTitle = "Final Histogram - 2",
+         finalHistogramPlotTitle = "The distribution of the used pit count " ++
+                                   "in the final simulation time point.",
+         finalHistogramSeries = [pitCountName] },
+
        outputView $ defaultFinalStatsView {
          finalStatsTitle = "Final Statistics - 2",
          finalStatsDescription = "The summary of the used pit count in the final time point.",
-         finalStatsSeries = [pitCountStatsName] },
+         finalStatsSeries = [pitCountName] },
 
        outputView $ defaultDeviationChartView {
          deviationChartTitle = "Deviation Chart - 3",
          deviationChartPlotTitle = "The queue size",
-         deviationChartSeries = [Right queueCountStatsName] },
+         deviationChartSeries = [Right queueCountName] },
        
+       outputView $ defaultFinalHistogramView {
+         finalHistogramTitle = "Final Histogram - 3",
+         finalHistogramPlotTitle = "The distribution of the queue size " ++
+                                   "in the final simulation time point.",
+         finalHistogramSeries = [queueCountName] },
+
        outputView $ defaultFinalStatsView {
          finalStatsTitle = "Final Statistics - 3",
          finalStatsDescription = "The summary of the queue size in the final time point.",
-         finalStatsSeries = [queueCountStatsName] },
+         finalStatsSeries = [queueCountName] },
 
        outputView $ defaultDeviationChartView {
          deviationChartTitle = "Deviation Chart - 4",
