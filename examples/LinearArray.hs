@@ -14,11 +14,10 @@ import Control.Monad.Trans
 
 import qualified Data.Vector as V
 
+import Simulation.Aivika.Specs
+import Simulation.Aivika.Simulation
 import Simulation.Aivika.Dynamics
-import Simulation.Aivika.Dynamics.Simulation
-import Simulation.Aivika.Dynamics.SystemDynamics
-import Simulation.Aivika.Dynamics.EventQueue
-import Simulation.Aivika.Dynamics.Base
+import Simulation.Aivika.SystemDynamics
 
 import Simulation.Aivika.Experiment
 import Simulation.Aivika.Experiment.TableView
@@ -46,8 +45,7 @@ generateArray bnds generator =
 
 model :: Int -> Simulation ExperimentData
 model n =
-  mdo queue <- newQueue
-      m <- generateArray (1, n) $ \i ->
+  mdo m <- generateArray (1, n) $ \i ->
         integ (q + k * (c!(i - 1) - c!i) + k * (c!(i + 1) - c!i)) 0
       let c =
             array (0, n + 1) [(i, if (i == 0) || (i == n + 1)
@@ -56,7 +54,7 @@ model n =
           q = 1
           k = 2
           v = 0.75
-      experimentDataInStartTime queue
+      experimentDataInStartTime
         [("t", seriesEntity "time" time),
          ("m", seriesEntity "M" m),
          ("c", seriesEntity "C" c)]

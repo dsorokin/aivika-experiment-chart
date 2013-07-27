@@ -1,12 +1,11 @@
 
 {-# LANGUAGE RecursiveDo #-}
 
+import Simulation.Aivika.Specs
+import Simulation.Aivika.Simulation
 import Simulation.Aivika.Dynamics
-import Simulation.Aivika.Dynamics.Simulation
-import Simulation.Aivika.Dynamics.SystemDynamics
-import Simulation.Aivika.Dynamics.EventQueue
-import Simulation.Aivika.Dynamics.Base
 import Simulation.Aivika.Dynamics.Random
+import Simulation.Aivika.SystemDynamics
 
 import Simulation.Aivika.Experiment
 import Simulation.Aivika.Experiment.TableView
@@ -46,9 +45,7 @@ experiment =
 
 model :: Simulation ExperimentData
 model =
-  mdo queue <- newQueue
-      
-      x <- newNormal 3 0.8
+  mdo x <- newNormalDynamics 3 0.8
       sumX <- sumDynamics x 0
       sumX2 <- sumDynamics (x * x) 0
       
@@ -59,7 +56,7 @@ model =
       let avg = ifDynamics (n .>. 0) (sumX / n) 0
       let std = ifDynamics (n .>. 1) (sqrt ((sumX2 - sumX * avg) / (n - 1))) 0
       
-      experimentDataInStartTime queue
+      experimentDataInStartTime
         [("t", seriesEntity "time" time),
          ("n", seriesEntity "n" n),
          ("x", seriesEntity "x" x),

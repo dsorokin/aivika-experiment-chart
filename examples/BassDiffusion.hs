@@ -4,11 +4,12 @@ import Data.Array
 import Control.Monad
 import Control.Monad.Trans
 
+import Simulation.Aivika.Specs
+import Simulation.Aivika.Simulation
+import Simulation.Aivika.Event
 import Simulation.Aivika.Dynamics
-import Simulation.Aivika.Dynamics.Simulation
-import Simulation.Aivika.Dynamics.EventQueue
-import Simulation.Aivika.Dynamics.Agent
-import Simulation.Aivika.Dynamics.Ref
+import Simulation.Aivika.Agent
+import Simulation.Aivika.Ref
 
 import Simulation.Aivika.Experiment
 import Simulation.Aivika.Experiment.DeviationChartView
@@ -55,19 +56,19 @@ data Person = Person { personAgent :: Agent,
                        personPotentialAdopter :: AgentState,
                        personAdopter :: AgentState }
               
-createPerson :: EventQueue -> Simulation Person              
-createPerson q =    
-  do agent <- newAgent q
+createPerson :: Simulation Person              
+createPerson =    
+  do agent <- newAgent
      potentialAdopter <- newState agent
      adopter <- newState agent
      return Person { personAgent = agent,
                      personPotentialAdopter = potentialAdopter,
                      personAdopter = adopter }
        
-createPersons :: EventQueue -> Simulation (Array Int Person)
-createPersons q =
+createPersons :: Simulation (Array Int Person)
+createPersons =
   do list <- forM [1 .. n] $ \i ->
-       do p <- createPerson q
+       do p <- createPerson
           return (i, p)
      return $ array (1, n) list
      
@@ -101,23 +102,22 @@ definePersons ps potentialAdopters adopters =
   forM_ (elems ps) $ \p -> 
   definePerson p ps potentialAdopters adopters
                                
-activatePerson :: Person -> Dynamics ()
+activatePerson :: Person -> Event ()
 activatePerson p = activateState (personPotentialAdopter p)
 
-activatePersons :: Array Int Person -> Dynamics ()
+activatePersons :: Array Int Person -> Event ()
 activatePersons ps =
   forM_ (elems ps) $ \p -> activatePerson p
 
 model :: Simulation ExperimentData
 model =
-  do q <- newQueue
-     potentialAdopters <- newRef q 0
-     adopters <- newRef q 0
-     ps <- createPersons q
+  do potentialAdopters <- newRef 0
+     adopters <- newRef 0
+     ps <- createPersons
      definePersons ps potentialAdopters adopters
-     runDynamicsInStartTime $
+     runEventInStartTime IncludingCurrentEvents $
        activatePersons ps
-     experimentDataInStartTime q
+     experimentDataInStartTime
        [("potentialAdopters",
          seriesEntity "Potential Adopters" 
          potentialAdopters),

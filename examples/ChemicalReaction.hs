@@ -1,11 +1,10 @@
 
 {-# LANGUAGE RecursiveDo #-}
 
+import Simulation.Aivika.Specs
+import Simulation.Aivika.Simulation
 import Simulation.Aivika.Dynamics
-import Simulation.Aivika.Dynamics.Simulation
-import Simulation.Aivika.Dynamics.SystemDynamics
-import Simulation.Aivika.Dynamics.EventQueue
-import Simulation.Aivika.Dynamics.Base
+import Simulation.Aivika.SystemDynamics
 
 import Simulation.Aivika.Experiment
 import Simulation.Aivika.Experiment.LastValueView
@@ -67,13 +66,12 @@ experiment =
 
 model :: Simulation ExperimentData
 model =
-  mdo queue <- newQueue
-      a <- integ (- ka * a) 100
+  mdo a <- integ (- ka * a) 100
       b <- integ (ka * a - kb * b) 0
       c <- integ (kb * b) 0
       let ka = 1
           kb = 1
-      experimentDataInStartTime queue
+      experimentDataInStartTime
         [("t", seriesEntity "time" time),
          ("a", seriesEntity "a" a),
          ("b", seriesEntity "b" b),

@@ -37,22 +37,21 @@ import System.Random
 import Control.Monad
 import Control.Monad.Trans
 
+import Simulation.Aivika.Specs
+import Simulation.Aivika.Simulation
 import Simulation.Aivika.Dynamics
-import Simulation.Aivika.Dynamics.Simulation
-import Simulation.Aivika.Dynamics.Base
-import Simulation.Aivika.Dynamics.EventQueue
-import Simulation.Aivika.Dynamics.Ref
-import Simulation.Aivika.Dynamics.UVar
-import Simulation.Aivika.Dynamics.Process
-import Simulation.Aivika.Dynamics.Random
+import Simulation.Aivika.Event
+import Simulation.Aivika.Ref
+import Simulation.Aivika.Process
+import Simulation.Aivika.Random
+
+import qualified Simulation.Aivika.DoubleLinkedList as DLL
 
 import Simulation.Aivika.Experiment
 import Simulation.Aivika.Experiment.ExperimentSpecsView
 import Simulation.Aivika.Experiment.FinalStatsView
 import Simulation.Aivika.Experiment.DeviationChartView
 import Simulation.Aivika.Experiment.FinalHistogramView
-
-import qualified Simulation.Aivika.Queue as Q
 
 -- | The simulation specs.
 specs = Specs { spcStartTime = 0.0,
@@ -76,15 +75,13 @@ temprnd =
 
 -- | Represents the furnace.
 data Furnace = 
-  Furnace { furnaceQueue :: EventQueue,
-            -- ^ The event queue.
-            furnaceNormalGen :: IO Double,
+  Furnace { furnaceNormalGen :: IO Double,
             -- ^ The normal random number generator.
             furnacePits :: [Pit],
             -- ^ The pits for ingots.
             furnacePitCount :: Ref Int,
             -- ^ The count of active pits with ingots.
-            furnaceAwaitingIngots :: Q.Queue Ingot,
+            furnaceAwaitingIngots :: DLL.DoubleLinkedList Ingot,
             -- ^ The awaiting ingots in the queue.
             furnaceQueueCount :: Ref Int,
             -- ^ The queue count.
@@ -108,9 +105,7 @@ data Furnace =
 
 -- | A pit in the furnace to place the ingots.
 data Pit = 
-  Pit { pitQueue :: EventQueue,
-        -- ^ The bound dynamics queue.
-        pitIngot :: Ref (Maybe Ingot),
+  Pit { pitIngot :: Ref (Maybe Ingot),
         -- ^ The ingot in the pit.
         pitTemp :: Ref Double
         -- ^ The ingot temperature in the pit.
@@ -118,7 +113,7 @@ data Pit =
 
 data Ingot = 
   Ingot { ingotFurnace :: Furnace,
-          -- ^ Return the furnace.
+          -- ^ The furnace.
           ingotReceiveTime :: Double,
           -- ^ The time at which the ingot was received.
           ingotReceiveTemp :: Double,
@@ -132,23 +127,22 @@ data Ingot =
           }
 
 -- | Create a furnace.
-newFurnace :: EventQueue -> Simulation Furnace
-newFurnace queue =
-  do normalGen <- liftIO normalGen
-     pits <- sequence [newPit queue | i <- [1..10]]
-     pitCount <- newRef queue 0
-     awaitingIngots <- liftIO Q.newQueue
-     queueCount <- newRef queue 0
-     waitCount <- newRef queue 0
-     waitTime <- newRef queue 0.0
-     heatingTime <- newRef queue 0.0
-     h <- newRef queue 1650.0
-     totalCount <- newRef queue 0
-     loadCount <- newRef queue 0
-     unloadCount <- newRef queue 0
-     unloadTemps <- newRef queue []
-     return Furnace { furnaceQueue = queue,
-                      furnaceNormalGen = normalGen,
+newFurnace :: Simulation Furnace
+newFurnace =
+  do normalGen <- liftIO newNormalGen
+     pits <- sequence [newPit | i <- [1..10]]
+     pitCount <- newRef 0
+     awaitingIngots <- liftIO DLL.newList
+     queueCount <- newRef 0
+     waitCount <- newRef 0
+     waitTime <- newRef 0.0
+     heatingTime <- newRef 0.0
+     h <- newRef 1650.0
+     totalCount <- newRef 0
+     loadCount <- newRef 0
+     unloadCount <- newRef 0
+     unloadTemps <- newRef []
+     return Furnace { furnaceNormalGen = normalGen,
                       furnacePits = pits,
                       furnacePitCount = pitCount,
                       furnaceAwaitingIngots = awaitingIngots,
@@ -163,18 +157,17 @@ newFurnace queue =
                       furnaceUnloadTemps = unloadTemps }
 
 -- | Create a new pit.
-newPit :: EventQueue -> Simulation Pit
-newPit queue =
-  do ingot <- newRef queue Nothing
-     h' <- newRef queue 0.0
-     return Pit { pitQueue = queue,
-                  pitIngot = ingot,
+newPit :: Simulation Pit
+newPit =
+  do ingot <- newRef Nothing
+     h' <- newRef 0.0
+     return Pit { pitIngot = ingot,
                   pitTemp  = h' }
 
 -- | Create a new ingot.
-newIngot :: Furnace -> Dynamics Ingot
+newIngot :: Furnace -> Event Ingot
 newIngot furnace =
-  do t  <- time
+  do t  <- liftDynamics time
      xi <- liftIO $ furnaceNormalGen furnace
      h' <- liftIO temprnd
      let c = 0.1 + (0.05 + xi * 0.01)
@@ -186,7 +179,7 @@ newIngot furnace =
                     ingotCoeff = c }
 
 -- | Heat the ingot up in the pit if there is such an ingot.
-heatPitUp :: Pit -> Dynamics ()
+heatPitUp :: Pit -> Event ()
 heatPitUp pit =
   do ingot <- readRef (pitIngot pit)
      case ingot of
@@ -196,21 +189,21 @@ heatPitUp pit =
          
          -- update the temperature of the ingot.
          let furnace = ingotFurnace ingot
-         dt' <- dt
+         dt' <- liftDynamics dt
          h'  <- readRef (pitTemp pit)
          h   <- readRef (furnaceTemp furnace)
          writeRef (pitTemp pit) $ 
            h' + dt' * (h - h') * ingotCoeff ingot
 
 -- | Check whether there are ready ingots in the pits.
-ingotsReady :: Furnace -> Dynamics Bool
+ingotsReady :: Furnace -> Event Bool
 ingotsReady furnace =
   fmap (not . null) $ 
   filterM (fmap (>= 2200.0) . readRef . pitTemp) $ 
   furnacePits furnace
 
 -- | Try to unload the ready ingot from the specified pit.
-tryUnloadPit :: Furnace -> Pit -> Dynamics ()
+tryUnloadPit :: Furnace -> Pit -> Event ()
 tryUnloadPit furnace pit =
   do h' <- readRef (pitTemp pit)
      when (h' >= 2000.0) $
@@ -218,20 +211,20 @@ tryUnloadPit furnace pit =
           unloadIngot ingot pit
 
 -- | Try to load an awaiting ingot in the specified empty pit.
-tryLoadPit :: Furnace -> Pit -> Dynamics ()       
+tryLoadPit :: Furnace -> Pit -> Event ()       
 tryLoadPit furnace pit =
   do let ingots = furnaceAwaitingIngots furnace
-     flag <- liftIO $ Q.queueNull ingots
+     flag <- liftIO $ DLL.listNull ingots
      unless flag $
-       do ingot <- liftIO $ Q.queueFront ingots
-          liftIO $ Q.dequeue ingots
-          t' <- time
+       do ingot <- liftIO $ DLL.listFirst ingots
+          liftIO $ DLL.listRemoveFirst ingots
+          t' <- liftDynamics time
           modifyRef (furnaceQueueCount furnace) (+ (-1))
           loadIngot (ingot { ingotLoadTime = t',
                              ingotLoadTemp = 400.0 }) pit
               
 -- | Unload the ingot from the specified pit.       
-unloadIngot :: Ingot -> Pit -> Dynamics ()
+unloadIngot :: Ingot -> Pit -> Event ()
 unloadIngot ingot pit = 
   do h' <- readRef (pitTemp pit)
      writeRef (pitIngot pit) Nothing
@@ -243,7 +236,7 @@ unloadIngot ingot pit =
      writeRef (furnacePitCount furnace) (count - 1)
      
      -- how long did we heat the ingot up?
-     t' <- time
+     t' <- liftDynamics time
      modifyRef (furnaceHeatingTime furnace)
        (+ (t' - ingotLoadTime ingot))
      
@@ -254,7 +247,7 @@ unloadIngot ingot pit =
      modifyRef (furnaceUnloadCount furnace) (+ 1)
      
 -- | Load the ingot in the specified pit
-loadIngot :: Ingot -> Pit -> Dynamics ()
+loadIngot :: Ingot -> Pit -> Event ()
 loadIngot ingot pit =
   do writeRef (pitIngot pit) $ Just ingot
      writeRef (pitTemp pit) $ ingotLoadTemp ingot
@@ -271,7 +264,7 @@ loadIngot ingot pit =
      writeRef (furnaceTemp furnace) $ h + dh
 
      -- how long did we keep the ingot in the queue?
-     t' <- time
+     t' <- liftDynamics time
      modifyRef (furnaceWaitCount furnace) (+ 1) 
      modifyRef (furnaceWaitTime furnace)
        (+ (t' - ingotReceiveTime ingot))
@@ -280,11 +273,10 @@ loadIngot ingot pit =
      modifyRef (furnaceLoadCount furnace) (+ 1)
   
 -- | Start iterating the furnace processing through the event queue.
-startIteratingFurnace :: Furnace -> Dynamics ()
+startIteratingFurnace :: Furnace -> Event ()
 startIteratingFurnace furnace = 
-  let queue = furnaceQueue furnace
-      pits = furnacePits furnace
-  in enqueueWithIntegTimes queue $
+  let pits = furnacePits furnace
+  in enqueueEventWithIntegTimes $
      do ready <- ingotsReady furnace
         when ready $ 
           do mapM_ (tryUnloadPit furnace) pits
@@ -293,19 +285,19 @@ startIteratingFurnace furnace =
         mapM_ heatPitUp pits
         
         -- update the temperature of the furnace
-        dt' <- dt
+        dt' <- liftDynamics dt
         h   <- readRef (furnaceTemp furnace)
         writeRef (furnaceTemp furnace) $
           h + dt' * (2600.0 - h) * 0.2
 
 -- | Return all empty pits.
-emptyPits :: Furnace -> Dynamics [Pit]
+emptyPits :: Furnace -> Event [Pit]
 emptyPits furnace =
   filterM (fmap isNothing . readRef . pitIngot) $
   furnacePits furnace
 
 -- | Accept a new ingot.
-acceptIngot :: Furnace -> Dynamics ()
+acceptIngot :: Furnace -> Event ()
 acceptIngot furnace =
   do ingot <- newIngot furnace
      
@@ -316,7 +308,7 @@ acceptIngot furnace =
      count <- readRef (furnacePitCount furnace)
      if count >= 10
        then do let ingots = furnaceAwaitingIngots furnace
-               liftIO $ Q.enqueue ingots ingot
+               liftIO $ DLL.listAddLast ingots ingot
                modifyRef (furnaceQueueCount furnace) (+ 1)
        else do pit:_ <- emptyPits furnace
                loadIngot ingot pit
@@ -327,12 +319,12 @@ processFurnace furnace =
   do delay <- liftIO $ exprnd (1.0 / 2.5)
      holdProcess delay
      -- we have got a new ingot
-     liftDynamics $ acceptIngot furnace
+     liftEvent $ acceptIngot furnace
      -- repeat it again
      processFurnace furnace
 
 -- | Initialize the furnace.
-initializeFurnace :: Furnace -> Dynamics ()
+initializeFurnace :: Furnace -> Event ()
 initializeFurnace furnace =
   do x1 <- newIngot furnace
      x2 <- newIngot furnace
@@ -354,21 +346,33 @@ initializeFurnace furnace =
 -- | The simulation model that returns experimental data.
 model :: Simulation ExperimentData
 model =
-  do queue <- newQueue
-     furnace <- newFurnace queue
-     pid <- newProcessID queue
+  do furnace <- newFurnace
+     pid <- newProcessId
 
      -- initialize the furnace and start its iterating in start time
-     runDynamicsInStartTime $
+     runEventInStartTime IncludingCurrentEvents $
        do initializeFurnace furnace
           startIteratingFurnace furnace
      
-     -- start accepting input ingots by launching the process
-     runDynamicsInStartTime $
-       do t0 <- starttime
-          runProcess (processFurnace furnace) pid t0
+     -- accept input ingots
+     runProcessInStartTime IncludingCurrentEvents
+       pid (processFurnace furnace)
+
+     -- the mean wait time in the queue
+     let meanWaitTime :: Event Double
+         meanWaitTime =
+           do waitTime <- readRef (furnaceWaitTime furnace)
+              waitCount <- readRef (furnaceWaitCount furnace)
+              return $ waitTime / fromIntegral waitCount
+         
+     -- the mean heating time
+     let meanHeatingTime :: Event Double
+         meanHeatingTime =
+           do heatingTime <- readRef (furnaceHeatingTime furnace)
+              unloadCount <- readRef (furnaceUnloadCount furnace)
+              return $ heatingTime / fromIntegral unloadCount
      
-     experimentDataInStartTime queue $
+     experimentDataInStartTime
        [(totalIngotCountName,
          seriesEntity "total ingot count" $
          furnaceTotalCount furnace),
@@ -398,14 +402,12 @@ model =
          furnaceQueueCount furnace),
               
         (meanWaitTimeName,
-         seriesEntity "the mean wait time" $
-         readRef (furnaceWaitTime furnace) /
-         fmap fromIntegral (readRef (furnaceWaitCount furnace))),
+         seriesEntity "the mean wait time"
+         meanWaitTime),
 
         (meanHeatingTimeName,
-         seriesEntity "the mean heating time" $
-         readRef (furnaceHeatingTime furnace) /
-         fmap fromIntegral (readRef (furnaceUnloadCount furnace))) ]
+         seriesEntity "the mean heating time"
+         meanHeatingTime) ]
               
 totalIngotCountName    = "totalIngotCount"
 loadedIngotCountName   = "loadedIngotCount"

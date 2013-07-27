@@ -20,12 +20,11 @@
 import Control.Monad
 
 -- from package aivika
+import Simulation.Aivika.Specs
+import Simulation.Aivika.Simulation
 import Simulation.Aivika.Dynamics
-import Simulation.Aivika.Dynamics.Simulation
-import Simulation.Aivika.Dynamics.Base
-import Simulation.Aivika.Dynamics.SystemDynamics
-import Simulation.Aivika.Dynamics.Parameter
-import Simulation.Aivika.Dynamics.EventQueue
+import Simulation.Aivika.SystemDynamics
+import Simulation.Aivika.Parameter.Random
 
 -- from package aivika-experiment
 import Simulation.Aivika.Experiment
@@ -150,12 +149,7 @@ model params =
           taxes = taxableIncome * taxRate
           variableProductionCost = liftParam paramsVariableProductionCost
 
-      -- we have to create an event queue to return the experimental data,
-      -- although it was not used in the model itself 
-
-      queue <- newQueue
-      
-      experimentDataInStartTime queue
+      experimentDataInStartTime
         [(netIncomeName, seriesEntity "Net income" netIncome),
          (netCashFlowName, seriesEntity "Net cash flow" netCashFlow),
          (npvIncomeName, seriesEntity "NPV income" npvIncome),
