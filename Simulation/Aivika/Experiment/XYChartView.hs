@@ -38,9 +38,10 @@ import Simulation.Aivika.Experiment.HtmlWriter
 import Simulation.Aivika.Experiment.Utils (divideBy, replace)
 import Simulation.Aivika.Experiment.Chart (colourisePlotLines)
 
-import Simulation.Aivika.Dynamics
-import Simulation.Aivika.Dynamics.Simulation
-import Simulation.Aivika.Dynamics.Signal
+import Simulation.Aivika.Specs
+import Simulation.Aivika.Simulation
+import Simulation.Aivika.Event
+import Simulation.Aivika.Signal
 
 -- | Defines the 'View' that saves the XY charts
 -- in the PNG files.
@@ -63,7 +64,7 @@ data XYChartView =
                 -- @
                 --   xyChartFileName = UniqueFileName \"$TITLE - $RUN_INDEX\" \".png\"
                 -- @
-                xyChartPredicate   :: Dynamics Bool,
+                xyChartPredicate   :: Event Bool,
                 -- ^ It specifies the predicate that defines
                 -- when we plot data in the chart.
                 xyChartXSeries     :: Maybe String,
@@ -169,7 +170,7 @@ newXYChart view exp dir =
                                xyChartMap        = m }
        
 -- | Plot the XY chart during the simulation.
-simulateXYChart :: XYChartViewState -> ExperimentData -> Dynamics (Dynamics ())
+simulateXYChart :: XYChartViewState -> ExperimentData -> Event (Event ())
 simulateXYChart st expdata =
   do let ylabels = xyChartYSeries $ xyChartView st
          xlabels = xyChartXSeries $ xyChartView st

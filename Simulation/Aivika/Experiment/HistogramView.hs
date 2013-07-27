@@ -39,9 +39,10 @@ import Simulation.Aivika.Experiment.Chart (colourisePlotBars)
 import Simulation.Aivika.Experiment.Histogram
 import Simulation.Aivika.Experiment.ListSource
 
-import Simulation.Aivika.Dynamics
-import Simulation.Aivika.Dynamics.Simulation
-import Simulation.Aivika.Dynamics.Signal
+import Simulation.Aivika.Specs
+import Simulation.Aivika.Simulation
+import Simulation.Aivika.Event
+import Simulation.Aivika.Signal
 
 -- | Defines the 'View' that saves the histogram in 
 -- the PNG files by all integration time points for 
@@ -65,7 +66,7 @@ data HistogramView =
                   -- @
                   --   histogramFileName = UniqueFileName \"$TITLE - $RUN_INDEX\" \".png\"
                   -- @
-                  histogramPredicate   :: Dynamics Bool,
+                  histogramPredicate   :: Event Bool,
                   -- ^ It specifies the predicate that defines
                   -- when we count data when plotting the histogram.
                   histogramBuild       :: [[Double]] -> Histogram, 
@@ -160,7 +161,7 @@ newHistogram view exp dir =
                                  histogramMap        = m }
        
 -- | Plot the histogram during the simulation.
-simulateHistogram :: HistogramViewState -> ExperimentData -> Dynamics (Dynamics ())
+simulateHistogram :: HistogramViewState -> ExperimentData -> Event (Event ())
 simulateHistogram st expdata =
   do let labels = histogramSeries $ histogramView st
          providers = experimentSeriesProviders expdata labels

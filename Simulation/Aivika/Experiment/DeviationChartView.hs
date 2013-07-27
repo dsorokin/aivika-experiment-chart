@@ -39,10 +39,11 @@ import Simulation.Aivika.Experiment.Utils (divideBy, replace)
 import Simulation.Aivika.Experiment.Chart (colourisePlotLines, colourisePlotFillBetween)
 import Simulation.Aivika.Experiment.SamplingStatsSource
 
+import Simulation.Aivika.Specs
+import Simulation.Aivika.Simulation
 import Simulation.Aivika.Dynamics
-import Simulation.Aivika.Dynamics.Simulation
-import Simulation.Aivika.Dynamics.Signal
-import Simulation.Aivika.Dynamics.Base (starttime, integIterationBnds, integTimes, integIteration)
+import Simulation.Aivika.Event
+import Simulation.Aivika.Signal
 import Simulation.Aivika.Statistics
 
 -- | Defines the 'View' that saves the deviation chart
@@ -173,7 +174,7 @@ newDeviationChartResults names exp =
                                     deviationChartStats = stats }
        
 -- | Simulate the specified series.
-simulateDeviationChart :: DeviationChartViewState -> ExperimentData -> Dynamics (Dynamics ())
+simulateDeviationChart :: DeviationChartViewState -> ExperimentData -> Event (Event ())
 simulateDeviationChart st expdata =
   do let labels = deviationChartSeries $ deviationChartView st
          (leftLabels, rightLabels) = partitionEithers labels 
@@ -213,7 +214,7 @@ simulateDeviationChart st expdata =
          h = experimentSignalInIntegTimes expdata
      handleSignal_ h $ \_ ->
        do xs <- sequence source
-          i  <- integIteration
+          i  <- liftDynamics integIteration
           liftIO $ withMVar lock $ \() ->
             forM_ (zip xs stats) $ \(x, stats) ->
             do y <- readArray stats i

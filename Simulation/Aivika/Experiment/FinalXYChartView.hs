@@ -38,10 +38,11 @@ import Simulation.Aivika.Experiment.HtmlWriter
 import Simulation.Aivika.Experiment.Utils (divideBy, replace)
 import Simulation.Aivika.Experiment.Chart (colourisePlotLines)
 
+import Simulation.Aivika.Specs
+import Simulation.Aivika.Simulation
 import Simulation.Aivika.Dynamics
-import Simulation.Aivika.Dynamics.Simulation
-import Simulation.Aivika.Dynamics.Signal
-import Simulation.Aivika.Dynamics.Base (time)
+import Simulation.Aivika.Event
+import Simulation.Aivika.Signal
 
 -- | Defines the 'View' that saves the XY chart
 -- in the PNG file by final time points for all
@@ -64,7 +65,7 @@ data FinalXYChartView =
                      -- @
                      --   finalXYChartFileName = UniqueFileName \"$TITLE\" \".png\"
                      -- @
-                     finalXYChartPredicate   :: Dynamics Bool,
+                     finalXYChartPredicate   :: Event Bool,
                      -- ^ It specifies the predicate that defines
                      -- when we count data when plotting the chart.
                      finalXYChartXSeries     :: Maybe String,
@@ -172,7 +173,7 @@ newFinalXYChartResults xname ynames exp =
                                   finalXYChartXY     = xy }
        
 -- | Simulation.
-simulateFinalXYChart :: FinalXYChartViewState -> ExperimentData -> Dynamics (Dynamics ())
+simulateFinalXYChart :: FinalXYChartViewState -> ExperimentData -> Event (Event ())
 simulateFinalXYChart st expdata =
   do let ylabels = finalXYChartYSeries $ finalXYChartView st
          xlabels = finalXYChartXSeries $ finalXYChartView st

@@ -37,9 +37,10 @@ import Simulation.Aivika.Experiment.HtmlWriter
 import Simulation.Aivika.Experiment.Utils (divideBy, replace)
 import Simulation.Aivika.Experiment.Chart (colourisePlotLines)
 
-import Simulation.Aivika.Dynamics
-import Simulation.Aivika.Dynamics.Simulation
-import Simulation.Aivika.Dynamics.Signal
+import Simulation.Aivika.Specs
+import Simulation.Aivika.Simulation
+import Simulation.Aivika.Event
+import Simulation.Aivika.Signal
 
 -- | Defines the 'View' that saves the time series charts
 -- in the PNG files.
@@ -62,7 +63,7 @@ data TimeSeriesView =
                    -- @
                    --   timeSeriesFileName = UniqueFileName \"$TITLE - $RUN_INDEX\" \".png\"
                    -- @
-                   timeSeriesPredicate   :: Dynamics Bool,
+                   timeSeriesPredicate   :: Event Bool,
                    -- ^ It specifies the predicate that defines
                    -- when we plot data in the chart.
                    timeSeries      :: [Either String String],
@@ -162,7 +163,7 @@ newTimeSeries view exp dir =
                                   timeSeriesMap          = m }
        
 -- | Plot the time series chart during the simulation.
-simulateTimeSeries :: TimeSeriesViewState -> ExperimentData -> Dynamics (Dynamics ())
+simulateTimeSeries :: TimeSeriesViewState -> ExperimentData -> Event (Event ())
 simulateTimeSeries st expdata =
   do let labels = timeSeries $ timeSeriesView st
          (leftLabels, rightLabels) = partitionEithers labels 
