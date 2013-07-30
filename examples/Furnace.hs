@@ -44,6 +44,9 @@ import Simulation.Aivika.Event
 import Simulation.Aivika.Ref
 import Simulation.Aivika.Process
 import Simulation.Aivika.Random
+import Simulation.Aivika.Signal
+import Simulation.Aivika.Queue.Infinite
+import Simulation.Aivika.Statistics
 
 import qualified Simulation.Aivika.DoubleLinkedList as DLL
 
@@ -81,27 +84,24 @@ data Furnace =
             -- ^ The pits for ingots.
             furnacePitCount :: Ref Int,
             -- ^ The count of active pits with ingots.
-            furnaceAwaitingIngots :: DLL.DoubleLinkedList Ingot,
-            -- ^ The awaiting ingots in the queue.
-            furnaceQueueCount :: Ref Int,
-            -- ^ The queue count.
-            furnaceWaitCount :: Ref Int,
-            -- ^ The count of awaiting ingots.
-            furnaceWaitTime :: Ref Double,
-            -- ^ The wait time for all loaded ingots.
-            furnaceHeatingTime :: Ref Double,
-            -- ^ The heating time for all unloaded ingots.
+            furnaceQueue :: FCFSQueue Ingot,
+            -- ^ The furnace queue.
+            furnaceUnloadedSource :: SignalSource (),
+            -- ^ Notifies when the ingots have been
+            -- unloaded from the furnace.
+            furnaceHeatingTime :: Ref (SamplingStats Double),
+            -- ^ The heating time for the ready ingots.
             furnaceTemp :: Ref Double,
             -- ^ The furnace temperature.
-            furnaceTotalCount :: Ref Int,
-            -- ^ The total count of ingots.
-            furnaceLoadCount :: Ref Int,
-            -- ^ The count of loaded ingots.
-            furnaceUnloadCount :: Ref Int,
-            -- ^ The count of unloaded ingots.
-            furnaceUnloadTemps :: Ref [Double]
-            -- ^ The temperatures of all unloaded ingots.
+            furnaceReadyCount :: Ref Int,
+            -- ^ The count of ready ingots.
+            furnaceReadyTemps :: Ref [Double]
+            -- ^ The temperatures of all ready ingots.
             }
+
+-- | Notifies when the ingots have been unloaded from the furnace.
+furnaceUnloaded :: Furnace -> Signal ()
+furnaceUnloaded = publishSignal . furnaceUnloadedSource
 
 -- | A pit in the furnace to place the ingots.
 data Pit = 
@@ -132,29 +132,21 @@ newFurnace =
   do normalGen <- liftIO newNormalGen
      pits <- sequence [newPit | i <- [1..10]]
      pitCount <- newRef 0
-     awaitingIngots <- liftIO DLL.newList
-     queueCount <- newRef 0
-     waitCount <- newRef 0
-     waitTime <- newRef 0.0
-     heatingTime <- newRef 0.0
+     queue <- newFCFSQueue
+     heatingTime <- newRef emptySamplingStats
      h <- newRef 1650.0
-     totalCount <- newRef 0
-     loadCount <- newRef 0
-     unloadCount <- newRef 0
-     unloadTemps <- newRef []
+     readyCount <- newRef 0
+     readyTemps <- newRef []
+     s <- newSignalSource
      return Furnace { furnaceNormalGen = normalGen,
                       furnacePits = pits,
                       furnacePitCount = pitCount,
-                      furnaceAwaitingIngots = awaitingIngots,
-                      furnaceQueueCount = queueCount,
-                      furnaceWaitCount = waitCount,
-                      furnaceWaitTime = waitTime,
+                      furnaceQueue = queue,
+                      furnaceUnloadedSource = s,
                       furnaceHeatingTime = heatingTime,
                       furnaceTemp = h,
-                      furnaceTotalCount = totalCount,
-                      furnaceLoadCount = loadCount, 
-                      furnaceUnloadCount = unloadCount, 
-                      furnaceUnloadTemps = unloadTemps }
+                      furnaceReadyCount = readyCount, 
+                      furnaceReadyTemps = readyTemps }
 
 -- | Create a new pit.
 newPit :: Simulation Pit
@@ -208,80 +200,69 @@ tryUnloadPit furnace pit =
   do h' <- readRef (pitTemp pit)
      when (h' >= 2000.0) $
        do Just ingot <- readRef (pitIngot pit)  
-          unloadIngot ingot pit
+          unloadIngot furnace ingot pit
 
 -- | Try to load an awaiting ingot in the specified empty pit.
 tryLoadPit :: Furnace -> Pit -> Event ()       
 tryLoadPit furnace pit =
-  do let ingots = furnaceAwaitingIngots furnace
-     flag <- liftIO $ DLL.listNull ingots
-     unless flag $
-       do ingot <- liftIO $ DLL.listFirst ingots
-          liftIO $ DLL.listRemoveFirst ingots
-          t' <- liftDynamics time
-          modifyRef (furnaceQueueCount furnace) (+ (-1))
-          loadIngot (ingot { ingotLoadTime = t',
-                             ingotLoadTemp = 400.0 }) pit
+  do ingot <- tryDequeue (furnaceQueue furnace)
+     case ingot of
+       Nothing ->
+         return ()
+       Just ingot ->
+         do t' <- liftDynamics time
+            loadIngot furnace (ingot { ingotLoadTime = t',
+                                       ingotLoadTemp = 400.0 }) pit
               
 -- | Unload the ingot from the specified pit.       
-unloadIngot :: Ingot -> Pit -> Event ()
-unloadIngot ingot pit = 
+unloadIngot :: Furnace -> Ingot -> Pit -> Event ()
+unloadIngot furnace ingot pit = 
   do h' <- readRef (pitTemp pit)
      writeRef (pitIngot pit) Nothing
      writeRef (pitTemp pit) 0.0
-     
+
      -- count the active pits
-     let furnace = ingotFurnace ingot
-     count <- readRef (furnacePitCount furnace)
-     writeRef (furnacePitCount furnace) (count - 1)
+     modifyRef (furnacePitCount furnace) (+ (- 1))
      
      -- how long did we heat the ingot up?
      t' <- liftDynamics time
-     modifyRef (furnaceHeatingTime furnace)
-       (+ (t' - ingotLoadTime ingot))
+     modifyRef (furnaceHeatingTime furnace) $
+       addSamplingStats (t' - ingotLoadTime ingot)
      
      -- what is the temperature of the unloaded ingot?
-     modifyRef (furnaceUnloadTemps furnace) (h' :)
+     modifyRef (furnaceReadyTemps furnace) (h' :)
      
-     -- count the unloaded ingots
-     modifyRef (furnaceUnloadCount furnace) (+ 1)
+     -- count the ready ingots
+     modifyRef (furnaceReadyCount furnace) (+ 1)
      
 -- | Load the ingot in the specified pit
-loadIngot :: Ingot -> Pit -> Event ()
-loadIngot ingot pit =
+loadIngot :: Furnace -> Ingot -> Pit -> Event ()
+loadIngot furnace ingot pit =
   do writeRef (pitIngot pit) $ Just ingot
      writeRef (pitTemp pit) $ ingotLoadTemp ingot
-     
+
      -- count the active pits
-     let furnace = ingotFurnace ingot
+     modifyRef (furnacePitCount furnace) (+ 1)
      count <- readRef (furnacePitCount furnace)
-     writeRef (furnacePitCount furnace) (count + 1)
      
      -- decrease the furnace temperature
      h <- readRef (furnaceTemp furnace)
      let h' = ingotLoadTemp ingot
-         dh = - (h - h') / fromInteger (toInteger (count + 1))
+         dh = - (h - h') / fromIntegral count
      writeRef (furnaceTemp furnace) $ h + dh
-
-     -- how long did we keep the ingot in the queue?
-     t' <- liftDynamics time
-     modifyRef (furnaceWaitCount furnace) (+ 1) 
-     modifyRef (furnaceWaitTime furnace)
-       (+ (t' - ingotReceiveTime ingot))
-
-     -- count the loaded ingots
-     modifyRef (furnaceLoadCount furnace) (+ 1)
-  
+ 
 -- | Start iterating the furnace processing through the event queue.
 startIteratingFurnace :: Furnace -> Event ()
 startIteratingFurnace furnace = 
   let pits = furnacePits furnace
   in enqueueEventWithIntegTimes $
-     do ready <- ingotsReady furnace
+     do -- try to unload ready ingots
+        ready <- ingotsReady furnace
         when ready $ 
           do mapM_ (tryUnloadPit furnace) pits
-             pits' <- emptyPits furnace
-             mapM_ (tryLoadPit furnace) pits'
+             triggerSignal (furnaceUnloadedSource furnace) ()
+
+        -- heat up
         mapM_ heatPitUp pits
         
         -- update the temperature of the furnace
@@ -296,32 +277,36 @@ emptyPits furnace =
   filterM (fmap isNothing . readRef . pitIngot) $
   furnacePits furnace
 
--- | Accept a new ingot.
-acceptIngot :: Furnace -> Event ()
-acceptIngot furnace =
-  do ingot <- newIngot furnace
-     
-     -- counting
-     modifyRef (furnaceTotalCount furnace) (+ 1)
-     
-     -- check what to do with the new ingot
-     count <- readRef (furnacePitCount furnace)
-     if count >= 10
-       then do let ingots = furnaceAwaitingIngots furnace
-               liftIO $ DLL.listAddLast ingots ingot
-               modifyRef (furnaceQueueCount furnace) (+ 1)
-       else do pit:_ <- emptyPits furnace
-               loadIngot ingot pit
-       
--- | Process the furnace.
-processFurnace :: Furnace -> Process ()
-processFurnace furnace =
+-- | This process takes ingots from the queue and then
+-- loads them in the furnace.
+loadingProcess :: Furnace -> Process ()
+loadingProcess furnace =
+  do ingot <- dequeue (furnaceQueue furnace)
+     let wait :: Process ()
+         wait =
+           do count <- liftEvent $ readRef (furnacePitCount furnace)
+              when (count >= 10) $
+                do awaitSignal (furnaceUnloaded furnace)
+                   wait
+     wait
+     --  take any empty pit and load it
+     liftEvent $
+       do pit: _ <- emptyPits furnace
+          loadIngot furnace ingot pit
+     -- repeat it again
+     loadingProcess furnace
+                  
+-- | The input process that adds new ingots to the queue.
+inputProcess :: Furnace -> Process ()
+inputProcess furnace =
   do delay <- liftIO $ exprnd (1.0 / 2.5)
      holdProcess delay
      -- we have got a new ingot
-     liftEvent $ acceptIngot furnace
+     liftEvent $
+       do ingot <- newIngot furnace
+          enqueue (furnaceQueue furnace) ingot
      -- repeat it again
-     processFurnace furnace
+     inputProcess furnace
 
 -- | Initialize the furnace.
 initializeFurnace :: Furnace -> Event ()
@@ -334,64 +319,50 @@ initializeFurnace furnace =
      x6 <- newIngot furnace
      let p1 : p2 : p3 : p4 : p5 : p6 : ps = 
            furnacePits furnace
-     loadIngot (x1 { ingotLoadTemp = 550.0 }) p1
-     loadIngot (x2 { ingotLoadTemp = 600.0 }) p2
-     loadIngot (x3 { ingotLoadTemp = 650.0 }) p3
-     loadIngot (x4 { ingotLoadTemp = 700.0 }) p4
-     loadIngot (x5 { ingotLoadTemp = 750.0 }) p5
-     loadIngot (x6 { ingotLoadTemp = 800.0 }) p6
-     writeRef (furnaceTotalCount furnace) 6
+     loadIngot furnace (x1 { ingotLoadTemp = 550.0 }) p1
+     loadIngot furnace (x2 { ingotLoadTemp = 600.0 }) p2
+     loadIngot furnace (x3 { ingotLoadTemp = 650.0 }) p3
+     loadIngot furnace (x4 { ingotLoadTemp = 700.0 }) p4
+     loadIngot furnace (x5 { ingotLoadTemp = 750.0 }) p5
+     loadIngot furnace (x6 { ingotLoadTemp = 800.0 }) p6
      writeRef (furnaceTemp furnace) 1650.0
      
 -- | The simulation model that returns experimental data.
 model :: Simulation ExperimentData
 model =
   do furnace <- newFurnace
-     pid <- newProcessId
-
+     pid1 <- newProcessId
+     pid2 <- newProcessId
+  
      -- initialize the furnace and start its iterating in start time
      runEventInStartTime IncludingCurrentEvents $
        do initializeFurnace furnace
           startIteratingFurnace furnace
      
-     -- accept input ingots
+     -- generate randomly new input ingots
      runProcessInStartTime IncludingCurrentEvents
-       pid (processFurnace furnace)
+       pid1 (inputProcess furnace)
 
-     -- the mean wait time in the queue
-     let meanWaitTime :: Event Double
-         meanWaitTime =
-           do waitTime <- readRef (furnaceWaitTime furnace)
-              waitCount <- readRef (furnaceWaitCount furnace)
-              return $ waitTime / fromIntegral waitCount
-         
-     -- the mean heating time
-     let meanHeatingTime :: Event Double
-         meanHeatingTime =
-           do heatingTime <- readRef (furnaceHeatingTime furnace)
-              unloadCount <- readRef (furnaceUnloadCount furnace)
-              return $ heatingTime / fromIntegral unloadCount
+     -- load permanently the input ingots in the furnace
+     runProcessInStartTime IncludingCurrentEvents
+       pid2 (loadingProcess furnace)
      
      experimentDataInStartTime
        [(totalIngotCountName,
          seriesEntity "total ingot count" $
-         furnaceTotalCount furnace),
+         queueStoreCount (furnaceQueue furnace)),
              
         (loadedIngotCountName,
-         seriesEntity "loaded ingot count" $
-         furnaceLoadCount furnace),
+         seriesEntity "loaded ingot count" $  -- actually, +/- 1
+         queueOutputCount (furnaceQueue furnace)),
              
         (readyIngotCountName,
          seriesEntity "ready ingot count" $
-         furnaceUnloadCount furnace),
-
-        (awaitedIngotCountName,
-         seriesEntity "awaited in the queue ingot count" $
-         furnaceWaitCount furnace),
+         furnaceReadyCount furnace),
 
         (readyIngotTempsName,
          seriesEntity "the temperature of ready ingot" $
-         furnaceUnloadTemps furnace),
+         furnaceReadyTemps furnace),
                 
         (pitCountName,
          seriesEntity "the used pit count" $
@@ -399,15 +370,15 @@ model =
               
         (queueCountName,
          seriesEntity "the queue size" $
-         furnaceQueueCount furnace),
+         queueCount (furnaceQueue furnace)),
               
         (meanWaitTimeName,
-         seriesEntity "the mean wait time"
-         meanWaitTime),
+         seriesEntity "the mean wait time" $
+         queueWaitTime (furnaceQueue furnace)),
 
         (meanHeatingTimeName,
-         seriesEntity "the mean heating time"
-         meanHeatingTime) ]
+         seriesEntity "the mean heating time" $
+         furnaceHeatingTime furnace) ]
               
 totalIngotCountName    = "totalIngotCount"
 loadedIngotCountName   = "loadedIngotCount"
@@ -431,39 +402,27 @@ experiment =
       [outputView defaultExperimentSpecsView,
        
        outputView $ defaultDeviationChartView {
-         deviationChartTitle = "Deviation Chart - 1.1",
+         deviationChartTitle = "Deviation Chart - 1",
          deviationChartPlotTitle = "The total, loaded and ready ingot counts",
          deviationChartSeries = [Right totalIngotCountName,
                                  Right loadedIngotCountName,
                                  Right readyIngotCountName] },
 
-       outputView $ defaultDeviationChartView {
-         deviationChartTitle = "Deviation Chart - 1.2",
-         deviationChartPlotTitle = "The awaited in the queue ingot count",
-         deviationChartSeries = [Right awaitedIngotCountName] },
-
        outputView $ defaultFinalHistogramView {
-         finalHistogramTitle = "Final Histogram - 1.1",
+         finalHistogramTitle = "Final Histogram - 1",
          finalHistogramPlotTitle = "The distribution of total, loaded and ready " ++
                                    "ingot counts in the final time point.",
          finalHistogramSeries = [totalIngotCountName,
                                  loadedIngotCountName,
                                  readyIngotCountName] },
        
-       outputView $ defaultFinalHistogramView {
-         finalHistogramTitle = "Final Histogram - 1.2",
-         finalHistogramPlotTitle = "The distribution of the awaited in the queue " ++
-                                   "ingot count in the final time point.",
-         finalHistogramSeries = [awaitedIngotCountName] },
-       
        outputView $ defaultFinalStatsView {
          finalStatsTitle = "Final Statistics - 1",
-         finalStatsDescription = "The summary of total, loaded, ready and awaited in " ++
-                                 "the queue ingot counts in the final time point.",
+         finalStatsDescription = "The summary of total, loaded and ready " ++
+                                 "ingot counts in the final time point.",
          finalStatsSeries = [totalIngotCountName,
                              loadedIngotCountName,
-                             readyIngotCountName,
-                             awaitedIngotCountName] },
+                             readyIngotCountName] },
 
        outputView $ defaultDeviationChartView {
          deviationChartTitle = "Deviation Chart - 2",
@@ -472,8 +431,7 @@ experiment =
        
        outputView $ defaultFinalHistogramView {
          finalHistogramTitle = "Final Histogram - 2",
-         finalHistogramPlotTitle = "The distribution of the used pit count " ++
-                                   "in the final simulation time point.",
+         finalHistogramPlotTitle = "The used pit count in the final time point.",
          finalHistogramSeries = [pitCountName] },
 
        outputView $ defaultFinalStatsView {
@@ -488,8 +446,7 @@ experiment =
        
        outputView $ defaultFinalHistogramView {
          finalHistogramTitle = "Final Histogram - 3",
-         finalHistogramPlotTitle = "The distribution of the queue size " ++
-                                   "in the final simulation time point.",
+         finalHistogramPlotTitle = "The queue size in the final time point.",
          finalHistogramSeries = [queueCountName] },
 
        outputView $ defaultFinalStatsView {
@@ -502,16 +459,10 @@ experiment =
          deviationChartPlotTitle = "The mean wait time",
          deviationChartSeries = [Right meanWaitTimeName] },
 
-       outputView $ defaultFinalHistogramView {
-         finalHistogramTitle = "Final Histogram - 4",
-         finalHistogramPlotTitle = "The distribution of the mean wait time " ++
-                                   "in the final simulation time point.",
-         finalHistogramSeries = [meanWaitTimeName] },
-       
        outputView $ defaultFinalStatsView {
          finalStatsTitle = "Final Statistics - 4",
          finalStatsDescription = "The summary of the mean wait time in " ++
-                                 "the final simulation time point.",
+                                 "the final time point.",
          finalStatsSeries = [meanWaitTimeName] },
 
        outputView $ defaultDeviationChartView {
@@ -519,16 +470,10 @@ experiment =
          deviationChartPlotTitle = "The mean heating time",
          deviationChartSeries = [Right meanHeatingTimeName] },
 
-       outputView $ defaultFinalHistogramView {
-         finalHistogramTitle = "Final Histogram - 5",
-         finalHistogramPlotTitle = "The distribution of the mean heating time " ++
-                                   "in the final simulation time point.",
-         finalHistogramSeries = [meanHeatingTimeName] },
-       
        outputView $ defaultFinalStatsView {
          finalStatsTitle = "Final Statistics - 5",
          finalStatsDescription = "The summary of the mean heating time in " ++
-                                 "the final simulation time point.",
+                                 "the final time point.",
          finalStatsSeries = [meanHeatingTimeName] },
 
        outputView $ defaultDeviationChartView {
@@ -538,14 +483,14 @@ experiment =
 
        outputView $ defaultFinalHistogramView {
          finalHistogramTitle = "Final Histogram - 6",
-         finalHistogramPlotTitle = "The distribution of the ready ingot temperature " ++
-                                   "in the final simulation time point.",
+         finalHistogramPlotTitle = "The ready ingot temperature in " ++
+                                   "the final time point.",
          finalHistogramSeries = [readyIngotTempsName] },
        
        outputView $ defaultFinalStatsView {
          finalStatsTitle = "Final Statistics - 6",
          finalStatsDescription = "The summary of the ready ingot temperature in " ++
-                                 "the final simulation time point.",
+                                 "the final time point.",
          finalStatsSeries = [readyIngotTempsName] }
       ] }
 
