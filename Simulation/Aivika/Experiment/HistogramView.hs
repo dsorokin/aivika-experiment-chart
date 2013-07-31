@@ -2,10 +2,10 @@
 -- |
 -- Module     : Simulation.Aivika.Experiment.HistogramView
 -- Copyright  : Copyright (c) 2012, David Sorokin <david.sorokin@gmail.com>
--- License    : BSD3
+-- License    : GPL
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
 -- Stability  : experimental
--- Tested with: GHC 7.4.1
+-- Tested with: GHC 7.6.3
 --
 -- The module defines 'HistogramView' that saves the histogram
 -- in the PNG files by all integration time points for each 
