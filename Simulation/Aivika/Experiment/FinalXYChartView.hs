@@ -18,6 +18,7 @@ module Simulation.Aivika.Experiment.FinalXYChartView
 import Control.Monad
 import Control.Monad.Trans
 import Control.Concurrent.MVar
+import Control.Lens
 
 import qualified Data.Map as M
 import Data.IORef
@@ -25,13 +26,13 @@ import Data.Maybe
 import Data.Either
 import Data.Array
 import Data.Array.IO.Safe
-
-import Data.Accessor
+import Data.Default.Class
 
 import System.IO
 import System.FilePath
 
 import Graphics.Rendering.Chart
+import Graphics.Rendering.Chart.Backend.Cairo
 
 import Simulation.Aivika.Experiment
 import Simulation.Aivika.Experiment.HtmlWriter
@@ -39,6 +40,7 @@ import Simulation.Aivika.Experiment.Utils (divideBy, replace)
 import Simulation.Aivika.Experiment.Chart (colourisePlotLines)
 
 import Simulation.Aivika.Specs
+import Simulation.Aivika.Parameter
 import Simulation.Aivika.Simulation
 import Simulation.Aivika.Dynamics
 import Simulation.Aivika.Event
@@ -100,8 +102,8 @@ data FinalXYChartView =
                                                LayoutAxis Double,
                      -- ^ A transformation of the bottom axis, 
                      -- after the X title is added.
-                     finalXYChartLayout :: Layout1 Double Double ->
-                                           Layout1 Double Double
+                     finalXYChartLayout :: LayoutLR Double Double Double ->
+                                           LayoutLR Double Double Double
                      -- ^ A transformation of the plot layout, 
                      -- where you can redefine the axes, for example.
                    }
@@ -228,7 +230,7 @@ simulateFinalXYChart st expdata =
      handleSignal_ h $ \_ ->
        do x'  <- x
           ys' <- sequence ys
-          i   <- liftSimulation simulationIndex
+          i   <- liftParameter simulationIndex
           liftIO $ withMVar lock $ \() ->
             forM_ (zip ys' xys) $ \(y', xy) ->
             x' `seq` y' `seq` writeArray xy i $ Just (x', y')
@@ -257,26 +259,27 @@ finaliseFinalXYChart st =
               do zs <- getElems xy
                  let p = toPlot $
                          plotLines $
-                         plot_lines_values ^= filterPlotLinesValues zs $
-                         plot_lines_title ^= either id id name $
-                         defaultPlotLines
+                         plot_lines_values .~ filterPlotLinesValues zs $
+                         plot_lines_title .~ either id id name $
+                         def
                      r = case name of
                        Left _  -> Left p
                        Right _ -> Right p
                  return r
             let axis = plotBottomAxis $
-                       laxis_title ^= xname $
-                       defaultLayoutAxis
+                       laxis_title .~ xname $
+                       def
                 chart = plotLayout $
-                        layout1_bottom_axis ^= axis $
-                        layout1_title ^= plotTitle $
-                        layout1_plots ^= ps $
-                        defaultLayout1
+                        layoutlr_x_axis .~ axis $
+                        layoutlr_title .~ plotTitle $
+                        layoutlr_plots .~ ps $
+                        def
             file <- resolveFileName 
                     (Just $ finalXYChartDir st)
                     (finalXYChartFileName $ finalXYChartView st) $
                     M.fromList [("$TITLE", title)]
-            renderableToPNGFile (toRenderable chart) width height file
+            let opts = FileOptions (width, height) PNG
+            renderableToFile opts (toRenderable chart) file
             when (experimentVerbose $ finalXYChartExperiment st) $
               putStr "Generated file " >> putStrLn file
             writeIORef (finalXYChartFile st) $ Just file

@@ -19,6 +19,7 @@ module Simulation.Aivika.Experiment.FinalHistogramView
 import Control.Monad
 import Control.Monad.Trans
 import Control.Concurrent.MVar
+import Control.Lens
 
 import qualified Data.Map as M
 import Data.IORef
@@ -26,13 +27,13 @@ import Data.Maybe
 import Data.Either
 import Data.Array
 import Data.Array.IO.Safe
-
-import Data.Accessor
+import Data.Default.Class
 
 import System.IO
 import System.FilePath
 
 import Graphics.Rendering.Chart
+import Graphics.Rendering.Chart.Backend.Cairo
 
 import Simulation.Aivika.Experiment
 import Simulation.Aivika.Experiment.HtmlWriter
@@ -42,6 +43,7 @@ import Simulation.Aivika.Experiment.Histogram
 import Simulation.Aivika.Experiment.ListSource
 
 import Simulation.Aivika.Specs
+import Simulation.Aivika.Parameter
 import Simulation.Aivika.Simulation
 import Simulation.Aivika.Dynamics
 import Simulation.Aivika.Event
@@ -94,8 +96,8 @@ data FinalHistogramView =
                        --
                        -- Here you can define a colour or style of
                        -- the plot bars.
-                       finalHistogramLayout :: Layout1 Double Double ->
-                                               Layout1 Double Double
+                       finalHistogramLayout :: Layout Double Double ->
+                                               Layout Double Double
                        -- ^ A transformation of the plot layout, 
                        -- where you can redefine the axes, for example.
                  }
@@ -221,18 +223,19 @@ finaliseFinalHistogram st =
                      map filterData xs
                 p  = plotBars $
                      bars $
-                     plot_bars_values ^= zs $
-                     plot_bars_titles ^= names $
-                     defaultPlotBars
+                     plot_bars_values .~ zs $
+                     plot_bars_titles .~ names $
+                     def
             let chart = layout $
-                        layout1_title ^= plotTitle $
-                        layout1_plots ^= [Left p] $
-                        defaultLayout1
+                        layout_title .~ plotTitle $
+                        layout_plots .~ [p] $
+                        def
             file <- resolveFileName 
                     (Just $ finalHistogramDir st)
                     (finalHistogramFileName $ finalHistogramView st) $
                     M.fromList [("$TITLE", title)]
-            renderableToPNGFile (toRenderable chart) width height file
+            let opts = FileOptions (width, height) PNG
+            renderableToFile opts (toRenderable chart) file
             when (experimentVerbose $ finalHistogramExperiment st) $
               putStr "Generated file " >> putStrLn file
             writeIORef (finalHistogramFile st) $ Just file

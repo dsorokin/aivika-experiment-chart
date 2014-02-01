@@ -17,6 +17,7 @@ module Simulation.Aivika.Experiment.TimeSeriesView
 
 import Control.Monad
 import Control.Monad.Trans
+import Control.Lens
 
 import qualified Data.Map as M
 import Data.IORef
@@ -24,13 +25,13 @@ import Data.Maybe
 import Data.Either
 import Data.Array
 import Data.List
-
-import Data.Accessor
+import Data.Default.Class
 
 import System.IO
 import System.FilePath
 
 import Graphics.Rendering.Chart
+import Graphics.Rendering.Chart.Backend.Cairo
 
 import Simulation.Aivika.Experiment
 import Simulation.Aivika.Experiment.HtmlWriter
@@ -38,6 +39,7 @@ import Simulation.Aivika.Experiment.Utils (divideBy, replace)
 import Simulation.Aivika.Experiment.Chart (colourisePlotLines)
 
 import Simulation.Aivika.Specs
+import Simulation.Aivika.Parameter
 import Simulation.Aivika.Simulation
 import Simulation.Aivika.Event
 import Simulation.Aivika.Signal
@@ -105,8 +107,8 @@ data TimeSeriesView =
                                            LayoutAxis Double,
                    -- ^ A transformation of the bottom axis, 
                    -- after title @time@ is added.
-                   timeSeriesLayout :: Layout1 Double Double ->
-                                       Layout1 Double Double
+                   timeSeriesLayout :: LayoutLR Double Double Double ->
+                                       LayoutLR Double Double Double
                    -- ^ A transformation of the plot layout, 
                    -- where you can redefine the axes, for example.
                  }
@@ -187,7 +189,7 @@ simulateTimeSeries st expdata =
          plotLines = timeSeriesPlotLines $ timeSeriesView st
          plotBottomAxis = timeSeriesBottomAxis $ timeSeriesView st
          plotLayout = timeSeriesLayout $ timeSeriesView st
-     i <- liftSimulation simulationIndex
+     i <- liftParameter simulationIndex
      let file = fromJust $ M.lookup (i - 1) (timeSeriesMap st)
          title = timeSeriesTitle $ timeSeriesView st
          plotTitle = 
@@ -219,9 +221,9 @@ simulateTimeSeries st expdata =
                         return $
                           toPlot $
                           plotLines $
-                          plot_lines_values ^= filterPlotLinesValues (zip (elems ts) (elems xs)) $
-                          plot_lines_title ^= name $
-                          defaultPlotLines
+                          plot_lines_values .~ filterPlotLinesValues (zip (elems ts) (elems xs)) $
+                          plot_lines_title .~ name $
+                          def
                    return (ps, drop (length hs) plotLineTails)
           (leftPs, plotLineTails) <- plots leftHs leftInput (tails plotLines)
           (rightPs, plotLineTails) <- plots rightHs rightInput plotLineTails
@@ -229,15 +231,16 @@ simulateTimeSeries st expdata =
               rightPs' = map Right rightPs
               ps' = leftPs' ++ rightPs'
               axis  = plotBottomAxis $
-                      laxis_title ^= "time" $
-                      defaultLayoutAxis
+                      laxis_title .~ "time" $
+                      def
               chart = plotLayout $
-                      layout1_bottom_axis ^= axis $
-                      layout1_title ^= runPlotTitle $
-                      layout1_plots ^= ps' $
-                      defaultLayout1
+                      layoutlr_x_axis .~ axis $
+                      layoutlr_title .~ runPlotTitle $
+                      layoutlr_plots .~ ps' $
+                      def
           liftIO $ 
-            do renderableToPNGFile (toRenderable chart) width height file
+            do let opts = FileOptions (width, height) PNG
+               renderableToFile opts (toRenderable chart) file
                when (experimentVerbose $ timeSeriesExperiment st) $
                  putStr "Generated file " >> putStrLn file
      

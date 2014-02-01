@@ -15,24 +15,25 @@ module Simulation.Aivika.Experiment.Chart
         colourisePlotFillBetween,
         colourisePlotBars) where
 
+import Control.Lens
+
 import Data.Colour
 import Data.Colour.Names
-import Data.Accessor
 
 import Graphics.Rendering.Chart
 
 -- | Colourise the plot lines.
 colourisePlotLines :: [PlotLines x y -> PlotLines x y]
 colourisePlotLines = map mkstyle $ cycle defaultColorSeq
-  where mkstyle c = plot_lines_style .> line_color ^= c
+  where mkstyle c = plot_lines_style . line_color .~ c
 
 -- | Colourise the filling areas.
 colourisePlotFillBetween :: [PlotFillBetween x y -> PlotFillBetween x y]
 colourisePlotFillBetween = map mkstyle $ cycle defaultColorSeq
-  where mkstyle c = plot_fillbetween_style ^= solidFillStyle (dissolve 0.4 c)
+  where mkstyle c = plot_fillbetween_style .~ solidFillStyle (dissolve 0.4 c)
   
 -- | Colourise the plot bars.
 colourisePlotBars :: PlotBars x y -> PlotBars x y
-colourisePlotBars = plot_bars_item_styles ^= map mkstyle (cycle defaultColorSeq)
+colourisePlotBars = plot_bars_item_styles .~ map mkstyle (cycle defaultColorSeq)
   where mkstyle c = (solidFillStyle c, Just $ solidLine 1.0 $ opaque black)
   

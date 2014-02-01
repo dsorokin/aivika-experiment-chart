@@ -18,19 +18,20 @@ module Simulation.Aivika.Experiment.HistogramView
 
 import Control.Monad
 import Control.Monad.Trans
+import Control.Lens
 
 import qualified Data.Map as M
 import Data.IORef
 import Data.Maybe
 import Data.Either
 import Data.Array
-
-import Data.Accessor
+import Data.Default.Class
 
 import System.IO
 import System.FilePath
 
 import Graphics.Rendering.Chart
+import Graphics.Rendering.Chart.Backend.Cairo
 
 import Simulation.Aivika.Experiment
 import Simulation.Aivika.Experiment.HtmlWriter
@@ -40,6 +41,7 @@ import Simulation.Aivika.Experiment.Histogram
 import Simulation.Aivika.Experiment.ListSource
 
 import Simulation.Aivika.Specs
+import Simulation.Aivika.Parameter
 import Simulation.Aivika.Simulation
 import Simulation.Aivika.Event
 import Simulation.Aivika.Signal
@@ -103,8 +105,8 @@ data HistogramView =
                   --
                   -- Here you can define a colour or style of
                   -- the plot bars.
-                  histogramLayout :: Layout1 Double Double ->
-                                     Layout1 Double Double
+                  histogramLayout :: Layout Double Double ->
+                                     Layout Double Double
                   -- ^ A transformation of the plot layout, 
                   -- where you can redefine the axes, for example.
                 }
@@ -181,7 +183,7 @@ simulateHistogram st expdata =
          bars = histogramPlotBars $ histogramView st
          layout = histogramLayout $ histogramView st
          build = histogramBuild $ histogramView st
-     i <- liftSimulation simulationIndex
+     i <- liftParameter simulationIndex
      let file = fromJust $ M.lookup (i - 1) (histogramMap st)
          title = histogramTitle $ histogramView st
          plotTitle = 
@@ -205,15 +207,16 @@ simulateHistogram st expdata =
                    map (filterData . concat . elems . snd) xs
               p  = plotBars $
                    bars $
-                   plot_bars_values ^= zs $
-                   plot_bars_titles ^= names $
-                   defaultPlotBars
+                   plot_bars_values .~ zs $
+                   plot_bars_titles .~ names $
+                   def
               chart = layout $
-                      layout1_title ^= runPlotTitle $
-                      layout1_plots ^= [Left p] $
-                      defaultLayout1
+                      layout_title .~ runPlotTitle $
+                      layout_plots .~ [p] $
+                      def
           liftIO $ 
-            do renderableToPNGFile (toRenderable chart) width height file
+            do let opts = FileOptions (width, height) PNG
+               renderableToFile opts (toRenderable chart) file
                when (experimentVerbose $ histogramExperiment st) $
                  putStr "Generated file " >> putStrLn file
      

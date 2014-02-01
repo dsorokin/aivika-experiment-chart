@@ -17,6 +17,7 @@ module Simulation.Aivika.Experiment.XYChartView
 
 import Control.Monad
 import Control.Monad.Trans
+import Control.Lens
 
 import qualified Data.Map as M
 import Data.IORef
@@ -25,13 +26,13 @@ import Data.Either
 import Data.Array
 import Data.Monoid
 import Data.List
-
-import Data.Accessor
+import Data.Default.Class
 
 import System.IO
 import System.FilePath
 
 import Graphics.Rendering.Chart
+import Graphics.Rendering.Chart.Backend.Cairo
 
 import Simulation.Aivika.Experiment
 import Simulation.Aivika.Experiment.HtmlWriter
@@ -39,6 +40,7 @@ import Simulation.Aivika.Experiment.Utils (divideBy, replace)
 import Simulation.Aivika.Experiment.Chart (colourisePlotLines)
 
 import Simulation.Aivika.Specs
+import Simulation.Aivika.Parameter
 import Simulation.Aivika.Simulation
 import Simulation.Aivika.Event
 import Simulation.Aivika.Signal
@@ -111,8 +113,8 @@ data XYChartView =
                                      LayoutAxis Double,
                 -- ^ A transformation of the bottom axis, 
                 -- after the X title is added.
-                xyChartLayout :: Layout1 Double Double ->
-                                 Layout1 Double Double
+                xyChartLayout :: LayoutLR Double Double Double ->
+                                 LayoutLR Double Double Double
                 -- ^ A transformation of the plot layout, 
                 -- where you can redefine the axes, for example.
               }
@@ -203,7 +205,7 @@ simulateXYChart st expdata =
          plotLines = xyChartPlotLines $ xyChartView st
          plotBottomAxis = xyChartBottomAxis $ xyChartView st
          plotLayout = xyChartLayout $ xyChartView st
-     i <- liftSimulation simulationIndex
+     i <- liftParameter simulationIndex
      let file = fromJust $ M.lookup (i - 1) (xyChartMap st)
          title = xyChartTitle $ xyChartView st
          plotTitle = 
@@ -238,9 +240,9 @@ simulateXYChart st expdata =
                         return $
                           toPlot $
                           plotLines $
-                          plot_lines_values ^= filterPlotLinesValues (elems zs) $
-                          plot_lines_title ^= name $
-                          defaultPlotLines
+                          plot_lines_values .~ filterPlotLinesValues (elems zs) $
+                          plot_lines_title .~ name $
+                          def
                    return (ps, drop (length hs) plotLineTails)     
           (leftPs, plotLineTails) <- plots leftHs leftYInput (tails plotLines)
           (rightPs, plotLineTails) <- plots rightHs rightYInput plotLineTails
@@ -248,15 +250,16 @@ simulateXYChart st expdata =
               rightPs' = map Right rightPs
               ps' = leftPs' ++ rightPs'
               axis  = plotBottomAxis $
-                      laxis_title ^= providerName xprovider $
-                      defaultLayoutAxis
+                      laxis_title .~ providerName xprovider $
+                      def
               chart = plotLayout $
-                      layout1_bottom_axis ^= axis $
-                      layout1_title ^= runPlotTitle $
-                      layout1_plots ^= ps' $
-                      defaultLayout1
+                      layoutlr_x_axis .~ axis $
+                      layoutlr_title .~ runPlotTitle $
+                      layoutlr_plots .~ ps' $
+                      def
           liftIO $ 
-            do renderableToPNGFile (toRenderable chart) width height file
+            do let opts = FileOptions (width, height) PNG
+               renderableToFile opts (toRenderable chart) file
                when (experimentVerbose $ xyChartExperiment st) $
                  putStr "Generated file " >> putStrLn file
      
