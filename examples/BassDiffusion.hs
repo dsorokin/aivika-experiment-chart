@@ -4,6 +4,7 @@ import Data.Array
 import Control.Monad
 import Control.Monad.Trans
 
+import Simulation.Aivika.Generator
 import Simulation.Aivika.Specs
 import Simulation.Aivika.Simulation
 import Simulation.Aivika.Event
@@ -25,7 +26,8 @@ adoptionFraction = 0.015
 specs = Specs { spcStartTime = 0.0, 
                 spcStopTime = 8.0,
                 spcDT = 0.1,
-                spcMethod = RungeKutta4 }
+                spcMethod = RungeKutta4,
+                spcGeneratorType = SimpleGenerator }
 
 experiment :: Experiment
 experiment =
@@ -40,7 +42,8 @@ experiment =
                                  Left "adopters"] },
        outputView $ defaultTimeSeriesView {
          timeSeries = [Left "potentialAdopters", 
-                       Left "adopters"] } ] }
+                       Left "adopters"] } ]
+    }
 
 exprnd :: Double -> IO Double
 exprnd lambda =
@@ -80,7 +83,7 @@ definePerson p ps potentialAdopters adopters =
           t <- liftIO $ exprnd advertisingEffectiveness 
           let st  = personPotentialAdopter p
               st' = personAdopter p
-          addTimeout st t $ activateState st'
+          addTimeout st t $ selectState st'
      setStateActivation (personAdopter p) $ 
        do modifyRef adopters  $ \a -> a + 1
           -- add a timer that works while the state is active
@@ -88,10 +91,10 @@ definePerson p ps potentialAdopters adopters =
           addTimer (personAdopter p) t $
             do i <- liftIO $ getStdRandom $ randomR (1, n)
                let p' = ps ! i
-               st <- agentState (personAgent p')
+               st <- selectedState (personAgent p')
                when (st == Just (personPotentialAdopter p')) $
                  do b <- liftIO $ boolrnd adoptionFraction
-                    when b $ activateState (personAdopter p')
+                    when b $ selectState (personAdopter p')
      setStateDeactivation (personPotentialAdopter p) $
        modifyRef potentialAdopters $ \a -> a - 1
      setStateDeactivation (personAdopter p) $
@@ -103,7 +106,7 @@ definePersons ps potentialAdopters adopters =
   definePerson p ps potentialAdopters adopters
                                
 activatePerson :: Person -> Event ()
-activatePerson p = activateState (personPotentialAdopter p)
+activatePerson p = selectState (personPotentialAdopter p)
 
 activatePersons :: Array Int Person -> Event ()
 activatePersons ps =

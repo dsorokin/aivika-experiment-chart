@@ -252,7 +252,15 @@ simulateXYChart st expdata =
               axis  = plotBottomAxis $
                       laxis_title .~ providerName xprovider $
                       def
-              chart = plotLayout $
+              updateLeftAxis =
+                if null leftPs
+                then layoutlr_left_axis_visibility .~ AxisVisibility False False False
+                else id
+              updateRightAxis =
+                if null rightPs
+                then layoutlr_right_axis_visibility .~ AxisVisibility False False False
+                else id
+              chart = plotLayout . updateLeftAxis . updateRightAxis $
                       layoutlr_x_axis .~ axis $
                       layoutlr_title .~ runPlotTitle $
                       layoutlr_plots .~ ps' $

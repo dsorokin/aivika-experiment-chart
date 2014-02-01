@@ -276,7 +276,15 @@ finaliseDeviationChart st =
                 axis = plotBottomAxis $
                        laxis_title .~ "time" $
                        def
-                chart = plotLayout $
+                updateLeftAxis =
+                  if null $ lefts ps
+                  then layoutlr_left_axis_visibility .~ AxisVisibility False False False
+                  else id
+                updateRightAxis =
+                  if null $ rights ps
+                  then layoutlr_right_axis_visibility .~ AxisVisibility False False False
+                  else id
+                chart = plotLayout . updateLeftAxis . updateRightAxis $
                         layoutlr_x_axis .~ axis $
                         layoutlr_title .~ plotTitle $
                         layoutlr_plots .~ ps $

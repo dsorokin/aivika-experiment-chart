@@ -1,10 +1,7 @@
 
 {-# LANGUAGE RecursiveDo #-}
 
-import Simulation.Aivika.Specs
-import Simulation.Aivika.Simulation
-import Simulation.Aivika.Dynamics
-import Simulation.Aivika.Dynamics.Random
+import Simulation.Aivika
 import Simulation.Aivika.SystemDynamics
 
 import Simulation.Aivika.Experiment
@@ -16,7 +13,8 @@ import Simulation.Aivika.Experiment.TimingStatsView
 specs = Specs { spcStartTime = 0, 
                 spcStopTime = 10000, 
                 spcDT = 1,
-                spcMethod = RungeKutta4 }
+                spcMethod = RungeKutta4,
+                spcGeneratorType = SimpleGenerator }
 
 experiment :: Experiment
 experiment =
@@ -45,13 +43,13 @@ experiment =
 
 model :: Simulation ExperimentData
 model =
-  mdo x <- newNormalDynamics 3 0.8
-      sumX <- sumDynamics x 0
-      sumX2 <- sumDynamics (x * x) 0
+  mdo x <- memoRandomNormalDynamics 3 0.8
+      sumX <- diffsum x 0
+      sumX2 <- diffsum (x * x) 0
       
       -- it would be much more efficient to say:
       --   let n = fmap fromIntegral integIteration
-      n <- sumDynamics 1 0
+      n <- diffsum 1 0
 
       let avg = ifDynamics (n .>. 0) (sumX / n) 0
       let std = ifDynamics (n .>. 1) (sqrt ((sumX2 - sumX * avg) / (n - 1))) 0

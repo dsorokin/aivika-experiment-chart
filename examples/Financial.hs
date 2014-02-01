@@ -20,11 +20,8 @@
 import Control.Monad
 
 -- from package aivika
-import Simulation.Aivika.Specs
-import Simulation.Aivika.Simulation
-import Simulation.Aivika.Dynamics
+import Simulation.Aivika
 import Simulation.Aivika.SystemDynamics
-import Simulation.Aivika.Parameter.Random
 
 -- from package aivika-experiment
 import Simulation.Aivika.Experiment
@@ -39,20 +36,20 @@ import Simulation.Aivika.Experiment.TimeSeriesView
 
 -- | The model parameters.
 data Parameters =
-  Parameters { paramsTaxDepreciationTime    :: Simulation Double,
-               paramsTaxRate                :: Simulation Double,
-               paramsAveragePayableDelay    :: Simulation Double,
-               paramsBillingProcessingTime  :: Simulation Double,
-               paramsBuildingTime           :: Simulation Double,
-               paramsDebtFinancingFraction  :: Simulation Double,
-               paramsDebtRetirementTime     :: Simulation Double,
-               paramsDiscountRate           :: Simulation Double,
-               paramsFractionalLossRate     :: Simulation Double,
-               paramsInterestRate           :: Simulation Double,
-               paramsPrice                  :: Simulation Double,
-               paramsProductionCapacity     :: Simulation Double,
-               paramsRequiredInvestment     :: Simulation Double,
-               paramsVariableProductionCost :: Simulation Double }
+  Parameters { paramsTaxDepreciationTime    :: Parameter Double,
+               paramsTaxRate                :: Parameter Double,
+               paramsAveragePayableDelay    :: Parameter Double,
+               paramsBillingProcessingTime  :: Parameter Double,
+               paramsBuildingTime           :: Parameter Double,
+               paramsDebtFinancingFraction  :: Parameter Double,
+               paramsDebtRetirementTime     :: Parameter Double,
+               paramsDiscountRate           :: Parameter Double,
+               paramsFractionalLossRate     :: Parameter Double,
+               paramsInterestRate           :: Parameter Double,
+               paramsPrice                  :: Parameter Double,
+               paramsProductionCapacity     :: Parameter Double,
+               paramsRequiredInvestment     :: Parameter Double,
+               paramsVariableProductionCost :: Parameter Double }
 
 -- | The default model parameters.
 defaultParams :: Parameters
@@ -75,15 +72,15 @@ defaultParams =
 -- | Random parameters for the Monte-Carlo simulation.
 randomParams :: IO Parameters
 randomParams =
-  do averagePayableDelay    <- newRandomParameter 0.07 0.11
-     billingProcessingTime  <- newRandomParameter 0.03 0.05
-     buildingTime           <- newRandomParameter 0.8 1.2
-     fractionalLossRate     <- newRandomParameter 0.05 0.08
-     interestRate           <- newRandomParameter 0.09 0.15
-     price                  <- newRandomParameter 0.9 1.2
-     productionCapacity     <- newRandomParameter 2200 2600
-     requiredInvestment     <- newRandomParameter 1800 2200
-     variableProductionCost <- newRandomParameter 0.5 0.7
+  do averagePayableDelay    <- memoParameter $ randomUniform 0.07 0.11
+     billingProcessingTime  <- memoParameter $ randomUniform 0.03 0.05
+     buildingTime           <- memoParameter $ randomUniform 0.8 1.2
+     fractionalLossRate     <- memoParameter $ randomUniform 0.05 0.08
+     interestRate           <- memoParameter $ randomUniform 0.09 0.15
+     price                  <- memoParameter $ randomUniform 0.9 1.2
+     productionCapacity     <- memoParameter $ randomUniform 2200 2600
+     requiredInvestment     <- memoParameter $ randomUniform 1800 2200
+     variableProductionCost <- memoParameter $ randomUniform 0.5 0.7
      return defaultParams { paramsAveragePayableDelay    = averagePayableDelay,
                             paramsBillingProcessingTime  = billingProcessingTime,
                             paramsBuildingTime           = buildingTime,
@@ -97,8 +94,7 @@ randomParams =
 -- | This is the model itself that returns experimental data.
 model :: Parameters -> Simulation ExperimentData
 model params =
-  mdo let liftParam :: (Parameters -> Simulation a) -> Dynamics a
-          liftParam f = liftSimulation $ f params
+  mdo let getParameter f = liftParameter $ f params
 
       -- the equations below are given in an arbitrary order!
 
@@ -109,30 +105,28 @@ model params =
           production = availableCapacity
           availableCapacity = ifDynamics (time .>=. buildingTime)
                               productionCapacity 0
-          taxDepreciationTime = liftParam paramsTaxDepreciationTime
-          taxRate = liftParam paramsTaxRate
+          taxDepreciationTime = getParameter paramsTaxDepreciationTime
+          taxRate = getParameter paramsTaxRate
       accountsReceivable <- integ (billings - cashReceipts - losses)
                             (billings / (1 / averagePayableDelay
                                          + fractionalLossRate))
-      let averagePayableDelay =
-            liftParam paramsAveragePayableDelay
+      let averagePayableDelay = getParameter paramsAveragePayableDelay
       awaitingBilling <- integ (price * production - billings)
                          (price * production * billingProcessingTime)
-      let billingProcessingTime =
-            liftParam paramsBillingProcessingTime
+      let billingProcessingTime = getParameter paramsBillingProcessingTime
           billings = awaitingBilling / billingProcessingTime
           borrowing = newInvestment * debtFinancingFraction
-          buildingTime = liftParam paramsBuildingTime
+          buildingTime = getParameter paramsBuildingTime
           cashReceipts = accountsReceivable / averagePayableDelay
       debt <- integ (borrowing - principalRepayment) 0
-      let debtFinancingFraction = liftParam paramsDebtFinancingFraction
-          debtRetirementTime = liftParam paramsDebtRetirementTime
+      let debtFinancingFraction = getParameter paramsDebtFinancingFraction
+          debtRetirementTime = getParameter paramsDebtRetirementTime
           directCosts = production * variableProductionCost
-          discountRate = liftParam paramsDiscountRate
-          fractionalLossRate = liftParam paramsFractionalLossRate
+          discountRate = getParameter paramsDiscountRate
+          fractionalLossRate = getParameter paramsFractionalLossRate
           grossIncome = billings
           interestPayments = debt * interestRate
-          interestRate = liftParam paramsInterestRate
+          interestRate = getParameter paramsInterestRate
           losses = accountsReceivable * fractionalLossRate
           netCashFlow = cashReceipts + borrowing - newInvestment
                         - directCosts - interestPayments
@@ -142,12 +136,12 @@ model params =
                           0 (requiredInvestment / buildingTime)
       npvCashFlow <- npv netCashFlow discountRate 0 1
       npvIncome <- npv netIncome discountRate 0 1
-      let price = liftParam paramsPrice
+      let price = getParameter paramsPrice
           principalRepayment = debt / debtRetirementTime
-          productionCapacity = liftParam paramsProductionCapacity
-          requiredInvestment = liftParam paramsRequiredInvestment
+          productionCapacity = getParameter paramsProductionCapacity
+          requiredInvestment = getParameter paramsRequiredInvestment
           taxes = taxableIncome * taxRate
-          variableProductionCost = liftParam paramsVariableProductionCost
+          variableProductionCost = getParameter paramsVariableProductionCost
 
       experimentDataInStartTime
         [(netIncomeName, seriesEntity "Net income" netIncome),
@@ -162,7 +156,7 @@ npvIncomeName   = "npvIncome"
 npvCashFlowName = "npvCashFlow"
 
 -- the simulation specs
-specs = Specs 0 5 0.015625 RungeKutta4
+specs = Specs 0 5 0.015625 RungeKutta4 SimpleGenerator
 
 -- | The experiment for the Monte-Carlo simulation.
 monteCarloExperiment :: Experiment

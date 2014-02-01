@@ -1,9 +1,7 @@
 
 {-# LANGUAGE RecursiveDo #-}
 
-import Simulation.Aivika.Specs
-import Simulation.Aivika.Simulation
-import Simulation.Aivika.Dynamics
+import Simulation.Aivika
 import Simulation.Aivika.SystemDynamics
 
 import Simulation.Aivika.Experiment
@@ -16,7 +14,8 @@ import Simulation.Aivika.Experiment.ExperimentSpecsView
 specs = Specs { spcStartTime = 0, 
                 spcStopTime = 13, 
                 spcDT = 0.01,
-                spcMethod = RungeKutta4 }
+                spcMethod = RungeKutta4,
+                spcGeneratorType = SimpleGenerator }
 
 experiment :: Experiment
 experiment =

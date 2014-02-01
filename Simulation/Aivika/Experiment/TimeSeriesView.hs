@@ -1,7 +1,7 @@
 
 -- |
 -- Module     : Simulation.Aivika.Experiment.TimeSeriesView
--- Copyright  : Copyright (c) 2012, David Sorokin <david.sorokin@gmail.com>
+-- Copyright  : Copyright (c) 2012-2014, David Sorokin <david.sorokin@gmail.com>
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
 -- Stability  : experimental
@@ -233,7 +233,15 @@ simulateTimeSeries st expdata =
               axis  = plotBottomAxis $
                       laxis_title .~ "time" $
                       def
-              chart = plotLayout $
+              updateLeftAxis =
+                if null leftPs
+                then layoutlr_left_axis_visibility .~ AxisVisibility False False False
+                else id
+              updateRightAxis =
+                if null rightPs
+                then layoutlr_right_axis_visibility .~ AxisVisibility False False False
+                else id
+              chart = plotLayout . updateLeftAxis . updateRightAxis $
                       layoutlr_x_axis .~ axis $
                       layoutlr_title .~ runPlotTitle $
                       layoutlr_plots .~ ps' $
