@@ -17,14 +17,7 @@ import System.Random
 import Control.Monad
 import Control.Monad.Trans
 
-import Simulation.Aivika.Specs
-import Simulation.Aivika.Simulation
-import Simulation.Aivika.Dynamics
-import Simulation.Aivika.Event
-import Simulation.Aivika.Ref
-import Simulation.Aivika.QueueStrategy
-import Simulation.Aivika.Resource
-import Simulation.Aivika.Process
+import Simulation.Aivika
 
 import Simulation.Aivika.Experiment
 import Simulation.Aivika.Experiment.Histogram
@@ -37,10 +30,14 @@ import Simulation.Aivika.Experiment.FinalXYChartView
 import Simulation.Aivika.Experiment.ExperimentSpecsView
 import Simulation.Aivika.Experiment.FinalStatsView
 
+meanUpTime = 1.0
+meanRepairTime = 0.5
+
 specs = Specs { spcStartTime = 0.0,
                 spcStopTime = 1000.0,
                 spcDT = 1.0,
-                spcMethod = RungeKutta4 }
+                spcMethod = RungeKutta4,
+                spcGeneratorType = SimpleGenerator }
 
 experiment :: Experiment
 experiment =
@@ -57,7 +54,7 @@ experiment =
          finalXYChartXSeries = Just "n",
          finalXYChartYSeries = [Right "x"], 
          finalXYChartPredicate =
-           do i <- liftSimulation simulationIndex
+           do i <- liftParameter simulationIndex
               return $ (i < 50) || (i > 100) },
        outputView $ defaultFinalHistogramView {
          finalHistogramPlotTitle  = "Final Histogram (Default)",
@@ -95,14 +92,6 @@ experiment =
          finalHistogramBuild  = histogram binScott,
          finalHistogramSeries = ["x"] } ] }
 
-upRate = 1.0 / 1.0       -- reciprocal of mean up time
-repairRate = 1.0 / 0.5   -- reciprocal of mean repair time
-
-exprnd :: Double -> IO Double
-exprnd lambda =
-  do x <- getStdRandom random
-     return (- log x / lambda)
-     
 model :: Simulation ExperimentData
 model =
   do -- number of machines currently up
@@ -118,14 +107,15 @@ model =
      
      let machine :: ProcessId -> Process ()
          machine pid =
-           do startUpTime <- liftDynamics time
-              upTime <- liftIO $ exprnd upRate
+           do upTime <-
+                liftParameter $
+                randomExponential meanUpTime
               holdProcess upTime
-              finishUpTime <- liftDynamics time
-              liftEvent $ modifyRef totalUpTime 
-                (+ (finishUpTime - startUpTime))
-                
-              liftEvent $ modifyRef nUp $ \a -> a - 1
+              liftEvent $
+                modifyRef totalUpTime (+ upTime) 
+              
+              liftEvent $
+                modifyRef nUp (+ (-1))
               nUp' <- liftEvent $ readRef nUp
               if nUp' == 1
                 then passivateProcess
@@ -135,17 +125,20 @@ model =
                           reactivateProcess pid
               
               requestResource repairPerson
-              repairTime <- liftIO $ exprnd repairRate
+              repairTime <-
+                liftParameter $
+                randomExponential meanRepairTime
               holdProcess repairTime
-              liftEvent $ modifyRef nUp $ \a -> a + 1
+              liftEvent $
+                modifyRef nUp (+ 1)
               releaseResource repairPerson
               
               machine pid
 
-     runProcessInStartTime IncludingCurrentEvents
+     runProcessInStartTimeUsingId IncludingCurrentEvents
        pid1 (machine pid2)
 
-     runProcessInStartTime IncludingCurrentEvents
+     runProcessInStartTimeUsingId IncludingCurrentEvents
        pid2 (machine pid1)
      
      let result = 
