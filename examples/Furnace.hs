@@ -37,16 +37,8 @@ import System.Random
 import Control.Monad
 import Control.Monad.Trans
 
-import Simulation.Aivika.Specs
-import Simulation.Aivika.Simulation
-import Simulation.Aivika.Dynamics
-import Simulation.Aivika.Event
-import Simulation.Aivika.Ref
-import Simulation.Aivika.Process
-import Simulation.Aivika.Random
-import Simulation.Aivika.Signal
+import Simulation.Aivika
 import Simulation.Aivika.Queue.Infinite
-import Simulation.Aivika.Statistics
 
 import qualified Simulation.Aivika.DoubleLinkedList as DLL
 
@@ -61,26 +53,16 @@ specs = Specs { spcStartTime = 0.0,
                 spcStopTime = 1000.0,
                 -- spcStopTime = 300.0,
                 spcDT = 0.1,
-                spcMethod = RungeKutta4 }
+                spcMethod = RungeKutta4,
+                spcGeneratorType = SimpleGenerator }
         
--- | Return an exponentially distributed random value with mean 
--- 1 / @lambda@, where @lambda@ is a parameter of the function.
-exprnd :: Double -> IO Double
-exprnd lambda =
-  do x <- getStdRandom random
-     return (- log x / lambda)
-     
 -- | Return a random initial temperature of the item.     
-temprnd :: IO Double
-temprnd =
-  do x <- getStdRandom random
-     return (400.0 + (600.0 - 400.0) * x)
+randomTemp :: Parameter Double
+randomTemp = randomUniform 400 600
 
 -- | Represents the furnace.
 data Furnace = 
-  Furnace { furnaceNormalGen :: IO Double,
-            -- ^ The normal random number generator.
-            furnacePits :: [Pit],
+  Furnace { furnacePits :: [Pit],
             -- ^ The pits for ingots.
             furnacePitCount :: Ref Int,
             -- ^ The count of active pits with ingots.
@@ -129,8 +111,7 @@ data Ingot =
 -- | Create a furnace.
 newFurnace :: Simulation Furnace
 newFurnace =
-  do normalGen <- liftIO newNormalGen
-     pits <- sequence [newPit | i <- [1..10]]
+  do pits <- sequence [newPit | i <- [1..10]]
      pitCount <- newRef 0
      queue <- newFCFSQueue
      heatingTime <- newRef emptySamplingStats
@@ -138,8 +119,7 @@ newFurnace =
      readyCount <- newRef 0
      readyTemps <- newRef []
      s <- newSignalSource
-     return Furnace { furnaceNormalGen = normalGen,
-                      furnacePits = pits,
+     return Furnace { furnacePits = pits,
                       furnacePitCount = pitCount,
                       furnaceQueue = queue,
                       furnaceUnloadedSource = s,
@@ -160,9 +140,9 @@ newPit =
 newIngot :: Furnace -> Event Ingot
 newIngot furnace =
   do t  <- liftDynamics time
-     xi <- liftIO $ furnaceNormalGen furnace
-     h' <- liftIO temprnd
-     let c = 0.1 + (0.05 + xi * 0.01)
+     xi <- liftParameter $ randomNormal 0.05 0.01
+     h' <- liftParameter randomTemp
+     let c = 0.1 + xi
      return Ingot { ingotFurnace = furnace,
                     ingotReceiveTime = t,
                     ingotReceiveTemp = h',
@@ -181,7 +161,7 @@ heatPitUp pit =
          
          -- update the temperature of the ingot.
          let furnace = ingotFurnace ingot
-         dt' <- liftDynamics dt
+         dt' <- liftParameter dt
          h'  <- readRef (pitTemp pit)
          h   <- readRef (furnaceTemp furnace)
          writeRef (pitTemp pit) $ 
@@ -266,7 +246,7 @@ startIteratingFurnace furnace =
         mapM_ heatPitUp pits
         
         -- update the temperature of the furnace
-        dt' <- liftDynamics dt
+        dt' <- liftParameter dt
         h   <- readRef (furnaceTemp furnace)
         writeRef (furnaceTemp furnace) $
           h + dt' * (2600.0 - h) * 0.2
@@ -286,7 +266,7 @@ loadingProcess furnace =
          wait =
            do count <- liftEvent $ readRef (furnacePitCount furnace)
               when (count >= 10) $
-                do awaitSignal (furnaceUnloaded furnace)
+                do processAwait (furnaceUnloaded furnace)
                    wait
      wait
      --  take any empty pit and load it
@@ -299,7 +279,8 @@ loadingProcess furnace =
 -- | The input process that adds new ingots to the queue.
 inputProcess :: Furnace -> Process ()
 inputProcess furnace =
-  do delay <- liftIO $ exprnd (1.0 / 2.5)
+  do delay <- liftParameter $
+              randomExponential 2.5
      holdProcess delay
      -- we have got a new ingot
      liftEvent $
@@ -331,8 +312,6 @@ initializeFurnace furnace =
 model :: Simulation ExperimentData
 model =
   do furnace <- newFurnace
-     pid1 <- newProcessId
-     pid2 <- newProcessId
   
      -- initialize the furnace and start its iterating in start time
      runEventInStartTime IncludingCurrentEvents $
@@ -340,12 +319,12 @@ model =
           startIteratingFurnace furnace
      
      -- generate randomly new input ingots
-     runProcessInStartTime IncludingCurrentEvents
-       pid1 (inputProcess furnace)
+     runProcessInStartTime IncludingCurrentEvents $
+       inputProcess furnace
 
      -- load permanently the input ingots in the furnace
-     runProcessInStartTime IncludingCurrentEvents
-       pid2 (loadingProcess furnace)
+     runProcessInStartTime IncludingCurrentEvents $
+       loadingProcess furnace
      
      experimentDataInStartTime
        [(totalIngotCountName,
