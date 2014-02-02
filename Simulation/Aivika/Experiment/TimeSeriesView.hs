@@ -129,17 +129,17 @@ defaultTimeSeriesView =
                    timeSeriesBottomAxis  = id,
                    timeSeriesLayout      = id }
 
-instance View TimeSeriesView where
+instance ExperimentView TimeSeriesView where
   
   outputView v = 
     let reporter exp dir =
           do st <- newTimeSeries v exp dir
-             return Reporter { reporterInitialise = return (),
-                               reporterFinalise   = return (),
-                               reporterSimulate   = simulateTimeSeries st,
-                               reporterTOCHtml    = timeSeriesTOCHtml st,
-                               reporterHtml       = timeSeriesHtml st }
-    in Generator { generateReporter = reporter }
+             return ExperimentReporter { reporterInitialise = return (),
+                                         reporterFinalise   = return (),
+                                         reporterSimulate   = simulateTimeSeries st,
+                                         reporterTOCHtml    = timeSeriesTOCHtml st,
+                                         reporterHtml       = timeSeriesHtml st }
+    in ExperimentGenerator { generateReporter = reporter }
   
 -- | The state of the view.
 data TimeSeriesViewState =

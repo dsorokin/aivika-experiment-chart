@@ -124,17 +124,17 @@ defaultFinalXYChartView =
                      finalXYChartBottomAxis  = id,
                      finalXYChartLayout      = id }
 
-instance View FinalXYChartView where
+instance ExperimentView FinalXYChartView where
   
   outputView v = 
     let reporter exp dir =
           do st <- newFinalXYChart v exp dir
-             return Reporter { reporterInitialise = return (),
-                               reporterFinalise   = finaliseFinalXYChart st,
-                               reporterSimulate   = simulateFinalXYChart st,
-                               reporterTOCHtml    = finalXYChartTOCHtml st,
-                               reporterHtml       = finalXYChartHtml st }
-    in Generator { generateReporter = reporter }
+             return ExperimentReporter { reporterInitialise = return (),
+                                         reporterFinalise   = finaliseFinalXYChart st,
+                                         reporterSimulate   = simulateFinalXYChart st,
+                                         reporterTOCHtml    = finalXYChartTOCHtml st,
+                                         reporterHtml       = finalXYChartHtml st }
+    in ExperimentGenerator { generateReporter = reporter }
   
 -- | The state of the view.
 data FinalXYChartViewState =

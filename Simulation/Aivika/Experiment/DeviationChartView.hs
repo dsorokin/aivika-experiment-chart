@@ -123,17 +123,17 @@ defaultDeviationChartView =
                        deviationChartBottomAxis  = id,
                        deviationChartLayout      = id }
 
-instance View DeviationChartView where
+instance ExperimentView DeviationChartView where
   
   outputView v = 
     let reporter exp dir =
           do st <- newDeviationChart v exp dir
-             return Reporter { reporterInitialise = return (),
-                               reporterFinalise   = finaliseDeviationChart st,
-                               reporterSimulate   = simulateDeviationChart st,
-                               reporterTOCHtml    = deviationChartTOCHtml st,
-                               reporterHtml       = deviationChartHtml st }
-    in Generator { generateReporter = reporter }
+             return ExperimentReporter { reporterInitialise = return (),
+                                         reporterFinalise   = finaliseDeviationChart st,
+                                         reporterSimulate   = simulateDeviationChart st,
+                                         reporterTOCHtml    = deviationChartTOCHtml st,
+                                         reporterHtml       = deviationChartHtml st }
+    in ExperimentGenerator { generateReporter = reporter }
   
 -- | The state of the view.
 data DeviationChartViewState =

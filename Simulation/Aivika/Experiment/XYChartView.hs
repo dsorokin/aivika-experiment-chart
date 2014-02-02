@@ -136,17 +136,17 @@ defaultXYChartView =
                 xyChartBottomAxis  = id,
                 xyChartLayout      = id }
 
-instance View XYChartView where
+instance ExperimentView XYChartView where
   
   outputView v = 
     let reporter exp dir =
           do st <- newXYChart v exp dir
-             return Reporter { reporterInitialise = return (),
-                               reporterFinalise   = return (),
-                               reporterSimulate   = simulateXYChart st,
-                               reporterTOCHtml    = xyChartTOCHtml st,
-                               reporterHtml       = xyChartHtml st }
-    in Generator { generateReporter = reporter }
+             return ExperimentReporter { reporterInitialise = return (),
+                                         reporterFinalise   = return (),
+                                         reporterSimulate   = simulateXYChart st,
+                                         reporterTOCHtml    = xyChartTOCHtml st,
+                                         reporterHtml       = xyChartHtml st }
+    in ExperimentGenerator { generateReporter = reporter }
   
 -- | The state of the view.
 data XYChartViewState =

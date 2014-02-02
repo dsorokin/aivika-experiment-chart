@@ -117,17 +117,17 @@ defaultFinalHistogramView =
                        finalHistogramPlotBars    = colourisePlotBars,
                        finalHistogramLayout      = id }
 
-instance View FinalHistogramView where
+instance ExperimentView FinalHistogramView where
   
   outputView v = 
     let reporter exp dir =
           do st <- newFinalHistogram v exp dir
-             return Reporter { reporterInitialise = return (),
-                               reporterFinalise   = finaliseFinalHistogram st,
-                               reporterSimulate   = simulateFinalHistogram st,
-                               reporterTOCHtml    = finalHistogramTOCHtml st,
-                               reporterHtml       = finalHistogramHtml st }
-    in Generator { generateReporter = reporter }
+             return ExperimentReporter { reporterInitialise = return (),
+                                         reporterFinalise   = finaliseFinalHistogram st,
+                                         reporterSimulate   = simulateFinalHistogram st,
+                                         reporterTOCHtml    = finalHistogramTOCHtml st,
+                                         reporterHtml       = finalHistogramHtml st }
+    in ExperimentGenerator { generateReporter = reporter }
   
 -- | The state of the view.
 data FinalHistogramViewState =

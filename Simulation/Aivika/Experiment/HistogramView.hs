@@ -127,17 +127,17 @@ defaultHistogramView =
                   histogramPlotBars    = colourisePlotBars,
                   histogramLayout      = id }
 
-instance View HistogramView where
+instance ExperimentView HistogramView where
   
   outputView v = 
     let reporter exp dir =
           do st <- newHistogram v exp dir
-             return Reporter { reporterInitialise = return (),
-                               reporterFinalise   = return (),
-                               reporterSimulate   = simulateHistogram st,
-                               reporterTOCHtml    = histogramTOCHtml st,
-                               reporterHtml       = histogramHtml st }
-    in Generator { generateReporter = reporter }
+             return ExperimentReporter { reporterInitialise = return (),
+                                         reporterFinalise   = return (),
+                                         reporterSimulate   = simulateHistogram st,
+                                         reporterTOCHtml    = histogramTOCHtml st,
+                                         reporterHtml       = histogramHtml st }
+    in ExperimentGenerator { generateReporter = reporter }
   
 -- | The state of the view.
 data HistogramViewState =
