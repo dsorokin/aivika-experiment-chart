@@ -226,7 +226,16 @@ finaliseFinalHistogram st =
                      plot_bars_values .~ zs $
                      plot_bars_titles .~ names $
                      def
-            let chart = layout $
+                updateAxes =
+                  if null zs
+                  then let v = AxisVisibility True False False
+                       in \l -> layout_top_axis_visibility .~ v $
+                                layout_bottom_axis_visibility .~ v $
+                                layout_left_axis_visibility .~ v $
+                                layout_right_axis_visibility .~ v $
+                                l
+                  else id
+                chart = layout . updateAxes $
                         layout_title .~ plotTitle $
                         layout_plots .~ [p] $
                         def
