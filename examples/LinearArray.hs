@@ -16,17 +16,8 @@ import qualified Data.Vector as V
 
 import Simulation.Aivika
 import Simulation.Aivika.SystemDynamics
-
 import Simulation.Aivika.Experiment
-import Simulation.Aivika.Experiment.TableView
-import Simulation.Aivika.Experiment.ExperimentSpecsView
-
-import Simulation.Aivika.Experiment.TimeSeriesView
-import Simulation.Aivika.Experiment.DeviationChartView
-import Simulation.Aivika.Experiment.FinalHistogramView
-import Simulation.Aivika.Experiment.FinalXYChartView
-import Simulation.Aivika.Experiment.HistogramView
-import Simulation.Aivika.Experiment.XYChartView
+import Simulation.Aivika.Experiment.Chart
 
 specs = Specs { spcStartTime = 0, 
                 spcStopTime = 500, 

@@ -18,17 +18,8 @@ import Control.Monad
 import Control.Monad.Trans
 
 import Simulation.Aivika
-
 import Simulation.Aivika.Experiment
-import Simulation.Aivika.Experiment.Histogram
-import Simulation.Aivika.Experiment.LastValueView
-import Simulation.Aivika.Experiment.TableView
-import Simulation.Aivika.Experiment.TimeSeriesView
-import Simulation.Aivika.Experiment.DeviationChartView
-import Simulation.Aivika.Experiment.FinalHistogramView
-import Simulation.Aivika.Experiment.FinalXYChartView
-import Simulation.Aivika.Experiment.ExperimentSpecsView
-import Simulation.Aivika.Experiment.FinalStatsView
+import Simulation.Aivika.Experiment.Chart
 
 meanUpTime = 1.0
 meanRepairTime = 0.5

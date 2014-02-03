@@ -19,20 +19,10 @@
 
 import Control.Monad
 
--- from package aivika
 import Simulation.Aivika
 import Simulation.Aivika.SystemDynamics
-
--- from package aivika-experiment
 import Simulation.Aivika.Experiment
-import Simulation.Aivika.Experiment.ExperimentSpecsView
-import Simulation.Aivika.Experiment.TableView
-import Simulation.Aivika.Experiment.FinalStatsView
-
--- from package aivika-experiment-chart
-import Simulation.Aivika.Experiment.DeviationChartView
-import Simulation.Aivika.Experiment.FinalHistogramView
-import Simulation.Aivika.Experiment.TimeSeriesView
+import Simulation.Aivika.Experiment.Chart
 
 -- | The model parameters.
 data Parameters =

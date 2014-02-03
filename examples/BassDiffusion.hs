@@ -4,18 +4,9 @@ import Data.Array
 import Control.Monad
 import Control.Monad.Trans
 
-import Simulation.Aivika.Generator
-import Simulation.Aivika.Specs
-import Simulation.Aivika.Simulation
-import Simulation.Aivika.Event
-import Simulation.Aivika.Dynamics
-import Simulation.Aivika.Agent
-import Simulation.Aivika.Ref
-
+import Simulation.Aivika
 import Simulation.Aivika.Experiment
-import Simulation.Aivika.Experiment.DeviationChartView
-import Simulation.Aivika.Experiment.TimeSeriesView
-import Simulation.Aivika.Experiment.ExperimentSpecsView
+import Simulation.Aivika.Experiment.Chart
 
 n = 100    -- the number of agents
 

@@ -3,12 +3,8 @@
 
 import Simulation.Aivika
 import Simulation.Aivika.SystemDynamics
-
 import Simulation.Aivika.Experiment
-import Simulation.Aivika.Experiment.TableView
-import Simulation.Aivika.Experiment.TimeSeriesView
-import Simulation.Aivika.Experiment.ExperimentSpecsView
-import Simulation.Aivika.Experiment.TimingStatsView
+import Simulation.Aivika.Experiment.Chart
 
 specs = Specs { spcStartTime = 0, 
                 spcStopTime = 10000, 

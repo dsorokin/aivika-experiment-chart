@@ -43,10 +43,7 @@ import Simulation.Aivika.Queue.Infinite
 import qualified Simulation.Aivika.DoubleLinkedList as DLL
 
 import Simulation.Aivika.Experiment
-import Simulation.Aivika.Experiment.ExperimentSpecsView
-import Simulation.Aivika.Experiment.FinalStatsView
-import Simulation.Aivika.Experiment.DeviationChartView
-import Simulation.Aivika.Experiment.FinalHistogramView
+import Simulation.Aivika.Experiment.Chart
 
 -- | The simulation specs.
 specs = Specs { spcStartTime = 0.0,
