@@ -1,6 +1,6 @@
 
 -- |
--- Module     : Simulation.Aivika.Experiment.TimeSeriesView
+-- Module     : Simulation.Aivika.Experiment.Chart.TimeSeriesView
 -- Copyright  : Copyright (c) 2012-2014, David Sorokin <david.sorokin@gmail.com>
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
@@ -11,7 +11,7 @@
 -- charts as the PNG files.
 --
 
-module Simulation.Aivika.Experiment.TimeSeriesView
+module Simulation.Aivika.Experiment.Chart.TimeSeriesView
        (TimeSeriesView(..), 
         defaultTimeSeriesView) where
 
@@ -36,7 +36,7 @@ import Graphics.Rendering.Chart.Backend.Cairo
 import Simulation.Aivika.Experiment
 import Simulation.Aivika.Experiment.HtmlWriter
 import Simulation.Aivika.Experiment.Utils (divideBy, replace)
-import Simulation.Aivika.Experiment.Chart (colourisePlotLines)
+import Simulation.Aivika.Experiment.Chart.Utils (colourisePlotLines)
 
 import Simulation.Aivika.Specs
 import Simulation.Aivika.Parameter

@@ -1,7 +1,7 @@
 
 -- |
--- Module     : Simulation.Aivika.Experiment.FinalHistogramView
--- Copyright  : Copyright (c) 2012, David Sorokin <david.sorokin@gmail.com>
+-- Module     : Simulation.Aivika.Experiment.Chart.FinalHistogramView
+-- Copyright  : Copyright (c) 2012-2014, David Sorokin <david.sorokin@gmail.com>
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
 -- Stability  : experimental
@@ -12,7 +12,7 @@
 -- simulation runs.
 --
 
-module Simulation.Aivika.Experiment.FinalHistogramView
+module Simulation.Aivika.Experiment.Chart.FinalHistogramView
        (FinalHistogramView(..), 
         defaultFinalHistogramView) where
 
@@ -38,7 +38,7 @@ import Graphics.Rendering.Chart.Backend.Cairo
 import Simulation.Aivika.Experiment
 import Simulation.Aivika.Experiment.HtmlWriter
 import Simulation.Aivika.Experiment.Utils (divideBy, replace)
-import Simulation.Aivika.Experiment.Chart (colourisePlotBars)
+import Simulation.Aivika.Experiment.Chart.Utils (colourisePlotBars)
 import Simulation.Aivika.Experiment.Histogram
 import Simulation.Aivika.Experiment.ListSource
 

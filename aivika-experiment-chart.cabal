@@ -31,13 +31,14 @@ extra-source-files:  examples/MachRep3.hs
 
 library
 
-    exposed-modules: Simulation.Aivika.Experiment.TimeSeriesView
-                     Simulation.Aivika.Experiment.XYChartView
-                     Simulation.Aivika.Experiment.FinalXYChartView
-                     Simulation.Aivika.Experiment.DeviationChartView
-                     Simulation.Aivika.Experiment.HistogramView
-                     Simulation.Aivika.Experiment.FinalHistogramView
-                     Simulation.Aivika.Experiment.Chart
+    exposed-modules: Simulation.Aivika.Experiment.Chart
+                     Simulation.Aivika.Experiment.Chart.TimeSeriesView
+                     Simulation.Aivika.Experiment.Chart.XYChartView
+                     Simulation.Aivika.Experiment.Chart.FinalXYChartView
+                     Simulation.Aivika.Experiment.Chart.DeviationChartView
+                     Simulation.Aivika.Experiment.Chart.HistogramView
+                     Simulation.Aivika.Experiment.Chart.FinalHistogramView
+                     Simulation.Aivika.Experiment.Chart.Utils
 
     build-depends:   base >= 3 && < 6,
                      mtl >= 1.1.0.2,

@@ -1,7 +1,7 @@
 
 -- |
--- Module     : Simulation.Aivika.Experiment.DeviationChartView
--- Copyright  : Copyright (c) 2012-2013, David Sorokin <david.sorokin@gmail.com>
+-- Module     : Simulation.Aivika.Experiment.Chart.DeviationChartView
+-- Copyright  : Copyright (c) 2012-2014, David Sorokin <david.sorokin@gmail.com>
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
 -- Stability  : experimental
@@ -11,7 +11,7 @@
 -- chart in the PNG file.
 --
 
-module Simulation.Aivika.Experiment.DeviationChartView
+module Simulation.Aivika.Experiment.Chart.DeviationChartView
        (DeviationChartView(..), 
         defaultDeviationChartView) where
 
@@ -37,7 +37,7 @@ import Graphics.Rendering.Chart.Backend.Cairo
 import Simulation.Aivika.Experiment
 import Simulation.Aivika.Experiment.HtmlWriter
 import Simulation.Aivika.Experiment.Utils (divideBy, replace)
-import Simulation.Aivika.Experiment.Chart (colourisePlotLines, colourisePlotFillBetween)
+import Simulation.Aivika.Experiment.Chart.Utils (colourisePlotLines, colourisePlotFillBetween)
 import Simulation.Aivika.Experiment.SamplingStatsSource
 
 import Simulation.Aivika.Specs

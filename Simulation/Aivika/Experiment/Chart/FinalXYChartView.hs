@@ -1,7 +1,7 @@
 
 -- |
--- Module     : Simulation.Aivika.Experiment.FinalXYChartView
--- Copyright  : Copyright (c) 2012, David Sorokin <david.sorokin@gmail.com>
+-- Module     : Simulation.Aivika.Experiment.Chart.FinalXYChartView
+-- Copyright  : Copyright (c) 2012-2014, David Sorokin <david.sorokin@gmail.com>
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
 -- Stability  : experimental
@@ -11,7 +11,7 @@
 -- by final time points for all simulation runs sequentially.
 --
 
-module Simulation.Aivika.Experiment.FinalXYChartView
+module Simulation.Aivika.Experiment.Chart.FinalXYChartView
        (FinalXYChartView(..), 
         defaultFinalXYChartView) where
 
@@ -37,7 +37,7 @@ import Graphics.Rendering.Chart.Backend.Cairo
 import Simulation.Aivika.Experiment
 import Simulation.Aivika.Experiment.HtmlWriter
 import Simulation.Aivika.Experiment.Utils (divideBy, replace)
-import Simulation.Aivika.Experiment.Chart (colourisePlotLines)
+import Simulation.Aivika.Experiment.Chart.Utils (colourisePlotLines)
 
 import Simulation.Aivika.Specs
 import Simulation.Aivika.Parameter
