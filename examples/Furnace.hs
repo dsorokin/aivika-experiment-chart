@@ -40,8 +40,6 @@ import Control.Monad.Trans
 import Simulation.Aivika
 import Simulation.Aivika.Queue.Infinite
 
-import qualified Simulation.Aivika.DoubleLinkedList as DLL
-
 import Simulation.Aivika.Experiment
 import Simulation.Aivika.Experiment.Chart
 
