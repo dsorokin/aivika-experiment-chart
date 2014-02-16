@@ -13,7 +13,6 @@
 -- until both machines are down. We find the proportion of up time. It
 -- should come out to about 0.45.
 
-import System.Random
 import Control.Monad
 import Control.Monad.Trans
 
@@ -126,10 +125,10 @@ model =
               
               machine pid
 
-     runProcessInStartTimeUsingId IncludingCurrentEvents
+     runProcessInStartTimeUsingId
        pid1 (machine pid2)
 
-     runProcessInStartTimeUsingId IncludingCurrentEvents
+     runProcessInStartTimeUsingId
        pid2 (machine pid1)
      
      let result = 

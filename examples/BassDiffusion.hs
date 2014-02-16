@@ -1,6 +1,7 @@
 
 import System.Random
 import Data.Array
+
 import Control.Monad
 import Control.Monad.Trans
 
@@ -36,16 +37,6 @@ experiment =
                        Left "adopters"] } ]
     }
 
-exprnd :: Double -> IO Double
-exprnd lambda =
-  do x <- getStdRandom random
-     return (- log x / lambda)
-     
-boolrnd :: Double -> IO Bool
-boolrnd p =
-  do x <- getStdRandom random
-     return (x <= p)
-
 data Person = Person { personAgent :: Agent,
                        personPotentialAdopter :: AgentState,
                        personAdopter :: AgentState }
@@ -71,20 +62,23 @@ definePerson p ps potentialAdopters adopters =
   do setStateActivation (personPotentialAdopter p) $
        do modifyRef potentialAdopters $ \a -> a + 1
           -- add a timeout
-          t <- liftIO $ exprnd advertisingEffectiveness 
+          t <- liftParameter $
+               randomExponential (1 / advertisingEffectiveness)
           let st  = personPotentialAdopter p
               st' = personAdopter p
           addTimeout st t $ selectState st'
      setStateActivation (personAdopter p) $ 
        do modifyRef adopters  $ \a -> a + 1
           -- add a timer that works while the state is active
-          let t = liftIO $ exprnd contactRate    -- many times!
+          let t = liftParameter $
+                  randomExponential (1 / contactRate)    -- many times!
           addTimer (personAdopter p) t $
             do i <- liftIO $ getStdRandom $ randomR (1, n)
                let p' = ps ! i
                st <- selectedState (personAgent p')
                when (st == Just (personPotentialAdopter p')) $
-                 do b <- liftIO $ boolrnd adoptionFraction
+                 do b <- liftParameter $
+                         randomTrue adoptionFraction
                     when b $ selectState (personAdopter p')
      setStateDeactivation (personPotentialAdopter p) $
        modifyRef potentialAdopters $ \a -> a - 1
@@ -109,7 +103,7 @@ model =
      adopters <- newRef 0
      ps <- createPersons
      definePersons ps potentialAdopters adopters
-     runEventInStartTime IncludingCurrentEvents $
+     runEventInStartTime $
        activatePersons ps
      experimentDataInStartTime
        [("potentialAdopters",

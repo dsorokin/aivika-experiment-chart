@@ -33,7 +33,7 @@
 -- processor.
 
 import Data.Maybe
-import System.Random
+
 import Control.Monad
 import Control.Monad.Trans
 
@@ -309,26 +309,26 @@ model =
   do furnace <- newFurnace
   
      -- initialize the furnace and start its iterating in start time
-     runEventInStartTime IncludingCurrentEvents $
+     runEventInStartTime $
        do initializeFurnace furnace
           startIteratingFurnace furnace
      
      -- generate randomly new input ingots
-     runProcessInStartTime IncludingCurrentEvents $
+     runProcessInStartTime $
        inputProcess furnace
 
      -- load permanently the input ingots in the furnace
-     runProcessInStartTime IncludingCurrentEvents $
+     runProcessInStartTime $
        loadingProcess furnace
      
      experimentDataInStartTime
        [(totalIngotCountName,
          seriesEntity "total ingot count" $
-         queueStoreCount (furnaceQueue furnace)),
+         enqueueStoreCount (furnaceQueue furnace)),
              
         (loadedIngotCountName,
          seriesEntity "loaded ingot count" $  -- actually, +/- 1
-         queueOutputCount (furnaceQueue furnace)),
+         dequeueCount (furnaceQueue furnace)),
              
         (readyIngotCountName,
          seriesEntity "ready ingot count" $
