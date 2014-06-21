@@ -1,4 +1,6 @@
 
+{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses #-}
+
 -- |
 -- Module     : Simulation.Aivika.Experiment.Chart.TimeSeriesView
 -- Copyright  : Copyright (c) 2012-2014, David Sorokin <david.sorokin@gmail.com>
@@ -7,8 +9,7 @@
 -- Stability  : experimental
 -- Tested with: GHC 7.6.3
 --
--- The module defines 'TimeSeriesView' that saves the time series
--- charts as the PNG files.
+-- The module defines 'TimeSeriesView' that saves the time series charts.
 --
 
 module Simulation.Aivika.Experiment.Chart.TimeSeriesView
@@ -31,11 +32,11 @@ import System.IO
 import System.FilePath
 
 import Graphics.Rendering.Chart
-import Graphics.Rendering.Chart.Backend.Cairo
 
 import Simulation.Aivika.Experiment
 import Simulation.Aivika.Experiment.HtmlWriter
 import Simulation.Aivika.Experiment.Utils (divideBy, replace)
+import Simulation.Aivika.Experiment.Chart.ChartRenderer
 import Simulation.Aivika.Experiment.Chart.Utils (colourisePlotLines)
 
 import Simulation.Aivika.Specs
@@ -44,8 +45,7 @@ import Simulation.Aivika.Simulation
 import Simulation.Aivika.Event
 import Simulation.Aivika.Signal
 
--- | Defines the 'View' that saves the time series charts
--- in the PNG files.
+-- | Defines the 'View' that saves the time series charts.
 data TimeSeriesView =
   TimeSeriesView { timeSeriesTitle       :: String,
                    -- ^ This is a title used in HTML.
@@ -129,11 +129,11 @@ defaultTimeSeriesView =
                    timeSeriesBottomAxis  = id,
                    timeSeriesLayout      = id }
 
-instance ExperimentView TimeSeriesView where
+instance ChartRenderer r => ExperimentView TimeSeriesView r where
   
   outputView v = 
-    let reporter exp dir =
-          do st <- newTimeSeries v exp dir
+    let reporter exp renderer dir =
+          do st <- newTimeSeries v exp renderer dir
              return ExperimentReporter { reporterInitialise = return (),
                                          reporterFinalise   = return (),
                                          reporterSimulate   = simulateTimeSeries st,
@@ -142,15 +142,16 @@ instance ExperimentView TimeSeriesView where
     in ExperimentGenerator { generateReporter = reporter }
   
 -- | The state of the view.
-data TimeSeriesViewState =
+data TimeSeriesViewState r =
   TimeSeriesViewState { timeSeriesView       :: TimeSeriesView,
-                        timeSeriesExperiment :: Experiment,
+                        timeSeriesExperiment :: Experiment r,
+                        timeSeriesRenderer   :: r,
                         timeSeriesDir        :: FilePath, 
                         timeSeriesMap        :: M.Map Int FilePath }
   
 -- | Create a new state of the view.
-newTimeSeries :: TimeSeriesView -> Experiment -> FilePath -> IO TimeSeriesViewState
-newTimeSeries view exp dir =
+newTimeSeries :: TimeSeriesView -> Experiment r -> r -> FilePath -> IO (TimeSeriesViewState r)
+newTimeSeries view exp renderer dir =
   do let n = experimentRunCount exp
      fs <- forM [0..(n - 1)] $ \i -> 
        resolveFileName (Just dir) (timeSeriesFileName view) $
@@ -161,11 +162,12 @@ newTimeSeries view exp dir =
      let m = M.fromList $ zip [0..(n - 1)] fs
      return TimeSeriesViewState { timeSeriesView       = view,
                                   timeSeriesExperiment = exp,
-                                  timeSeriesDir          = dir, 
-                                  timeSeriesMap          = m }
+                                  timeSeriesRenderer   = renderer,
+                                  timeSeriesDir        = dir, 
+                                  timeSeriesMap        = m }
        
 -- | Plot the time series chart during the simulation.
-simulateTimeSeries :: TimeSeriesViewState -> ExperimentData -> Event (Event ())
+simulateTimeSeries :: ChartRenderer r => TimeSeriesViewState r -> ExperimentData -> Event (Event ())
 simulateTimeSeries st expdata =
   do let labels = timeSeries $ timeSeriesView st
          (leftLabels, rightLabels) = partitionEithers labels 
@@ -246,9 +248,12 @@ simulateTimeSeries st expdata =
                       layoutlr_title .~ runPlotTitle $
                       layoutlr_plots .~ ps' $
                       def
-          liftIO $ 
-            do let opts = FileOptions (width, height) PNG
-               renderableToFile opts (toRenderable chart) file
+          liftIO $
+            do renderChart
+                 (timeSeriesRenderer st)
+                 (width, height)
+                 (toRenderable chart)
+                 file
                when (experimentVerbose $ timeSeriesExperiment st) $
                  putStr "Generated file " >> putStrLn file
      
@@ -259,7 +264,7 @@ filterPlotLinesValues =
   divideBy (\(t, x) -> isNaN x || isInfinite x)
 
 -- | Get the HTML code.     
-timeSeriesHtml :: TimeSeriesViewState -> Int -> HtmlWriter ()     
+timeSeriesHtml :: TimeSeriesViewState r -> Int -> HtmlWriter ()     
 timeSeriesHtml st index =
   let n = experimentRunCount $ timeSeriesExperiment st
   in if n == 1
@@ -267,7 +272,7 @@ timeSeriesHtml st index =
      else timeSeriesHtmlMultiple st index
      
 -- | Get the HTML code for a single run.
-timeSeriesHtmlSingle :: TimeSeriesViewState -> Int -> HtmlWriter ()
+timeSeriesHtmlSingle :: TimeSeriesViewState r -> Int -> HtmlWriter ()
 timeSeriesHtmlSingle st index =
   do header st index
      let f = fromJust $ M.lookup 0 (timeSeriesMap st)
@@ -275,7 +280,7 @@ timeSeriesHtmlSingle st index =
        writeHtmlImage (makeRelative (timeSeriesDir st) f)
 
 -- | Get the HTML code for multiple runs.
-timeSeriesHtmlMultiple :: TimeSeriesViewState -> Int -> HtmlWriter ()
+timeSeriesHtmlMultiple :: TimeSeriesViewState r -> Int -> HtmlWriter ()
 timeSeriesHtmlMultiple st index =
   do header st index
      let n = experimentRunCount $ timeSeriesExperiment st
@@ -284,7 +289,7 @@ timeSeriesHtmlMultiple st index =
        in writeHtmlParagraph $
           writeHtmlImage (makeRelative (timeSeriesDir st) f)
 
-header :: TimeSeriesViewState -> Int -> HtmlWriter ()
+header :: TimeSeriesViewState r -> Int -> HtmlWriter ()
 header st index =
   do writeHtmlHeader3WithId ("id" ++ show index) $ 
        writeHtmlText (timeSeriesTitle $ timeSeriesView st)
@@ -294,7 +299,7 @@ header st index =
        writeHtmlText description
 
 -- | Get the TOC item.
-timeSeriesTOCHtml :: TimeSeriesViewState -> Int -> HtmlWriter ()
+timeSeriesTOCHtml :: TimeSeriesViewState r -> Int -> HtmlWriter ()
 timeSeriesTOCHtml st index =
   writeHtmlListItem $
   writeHtmlLink ("#id" ++ show index) $

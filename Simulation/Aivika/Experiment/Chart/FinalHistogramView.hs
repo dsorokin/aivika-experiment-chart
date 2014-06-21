@@ -1,4 +1,6 @@
 
+{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses #-}
+
 -- |
 -- Module     : Simulation.Aivika.Experiment.Chart.FinalHistogramView
 -- Copyright  : Copyright (c) 2012-2014, David Sorokin <david.sorokin@gmail.com>
@@ -33,11 +35,11 @@ import System.IO
 import System.FilePath
 
 import Graphics.Rendering.Chart
-import Graphics.Rendering.Chart.Backend.Cairo
 
 import Simulation.Aivika.Experiment
 import Simulation.Aivika.Experiment.HtmlWriter
 import Simulation.Aivika.Experiment.Utils (divideBy, replace)
+import Simulation.Aivika.Experiment.Chart.ChartRenderer
 import Simulation.Aivika.Experiment.Chart.Utils (colourisePlotBars)
 import Simulation.Aivika.Experiment.Histogram
 import Simulation.Aivika.Experiment.ListSource
@@ -50,9 +52,8 @@ import Simulation.Aivika.Event
 import Simulation.Aivika.Signal
 
 -- | Defines the 'View' that saves the histogram
--- in the PNG file by the specified series in
--- final time points collected from different
--- simulation runs.
+-- for the specified series in final time points
+-- collected from different simulation runs.
 data FinalHistogramView =
   FinalHistogramView { finalHistogramTitle       :: String,
                        -- ^ This is a title used in HTML.
@@ -117,11 +118,11 @@ defaultFinalHistogramView =
                        finalHistogramPlotBars    = colourisePlotBars,
                        finalHistogramLayout      = id }
 
-instance ExperimentView FinalHistogramView where
+instance ChartRenderer r => ExperimentView FinalHistogramView r where
   
   outputView v = 
-    let reporter exp dir =
-          do st <- newFinalHistogram v exp dir
+    let reporter exp renderer dir =
+          do st <- newFinalHistogram v exp renderer dir
              return ExperimentReporter { reporterInitialise = return (),
                                          reporterFinalise   = finaliseFinalHistogram st,
                                          reporterSimulate   = simulateFinalHistogram st,
@@ -130,9 +131,10 @@ instance ExperimentView FinalHistogramView where
     in ExperimentGenerator { generateReporter = reporter }
   
 -- | The state of the view.
-data FinalHistogramViewState =
+data FinalHistogramViewState r =
   FinalHistogramViewState { finalHistogramView       :: FinalHistogramView,
-                            finalHistogramExperiment :: Experiment,
+                            finalHistogramExperiment :: Experiment r,
+                            finalHistogramRenderer   :: r,
                             finalHistogramDir        :: FilePath, 
                             finalHistogramFile       :: IORef (Maybe FilePath),
                             finalHistogramLock       :: MVar (),
@@ -144,27 +146,28 @@ data FinalHistogramResults =
                           finalHistogramValues :: [ListRef Double] }
   
 -- | Create a new state of the view.
-newFinalHistogram :: FinalHistogramView -> Experiment -> FilePath -> IO FinalHistogramViewState
-newFinalHistogram view exp dir =
+newFinalHistogram :: FinalHistogramView -> Experiment r -> r -> FilePath -> IO (FinalHistogramViewState r)
+newFinalHistogram view exp renderer dir =
   do f <- newIORef Nothing
      l <- newMVar () 
      r <- newIORef Nothing
      return FinalHistogramViewState { finalHistogramView       = view,
                                       finalHistogramExperiment = exp,
+                                      finalHistogramRenderer   = renderer,
                                       finalHistogramDir        = dir, 
                                       finalHistogramFile       = f,
                                       finalHistogramLock       = l, 
                                       finalHistogramResults    = r }
        
 -- | Create new histogram results.
-newFinalHistogramResults :: [String] -> Experiment -> IO FinalHistogramResults
+newFinalHistogramResults :: [String] -> Experiment r -> IO FinalHistogramResults
 newFinalHistogramResults names exp =
   do values <- forM names $ \_ -> liftIO newListRef
      return FinalHistogramResults { finalHistogramNames  = names,
                                     finalHistogramValues = values }
        
 -- | Simulation of the specified series.
-simulateFinalHistogram :: FinalHistogramViewState -> ExperimentData -> Event (Event ())
+simulateFinalHistogram :: FinalHistogramViewState r -> ExperimentData -> Event (Event ())
 simulateFinalHistogram st expdata =
   do let labels = finalHistogramSeries $ finalHistogramView st
          providers = experimentSeriesProviders expdata labels
@@ -201,7 +204,7 @@ simulateFinalHistogram st expdata =
      return $ return ()
      
 -- | Plot the histogram after the simulation is complete.
-finaliseFinalHistogram :: FinalHistogramViewState -> IO ()
+finaliseFinalHistogram :: ChartRenderer r => FinalHistogramViewState r -> IO ()
 finaliseFinalHistogram st =
   do let title = finalHistogramTitle $ finalHistogramView st
          plotTitle = 
@@ -243,8 +246,11 @@ finaliseFinalHistogram st =
                     (Just $ finalHistogramDir st)
                     (finalHistogramFileName $ finalHistogramView st) $
                     M.fromList [("$TITLE", title)]
-            let opts = FileOptions (width, height) PNG
-            renderableToFile opts (toRenderable chart) file
+            renderChart
+              (finalHistogramRenderer st)
+              (width, height)
+              (toRenderable chart)
+              file
             when (experimentVerbose $ finalHistogramExperiment st) $
               putStr "Generated file " >> putStrLn file
             writeIORef (finalHistogramFile st) $ Just file
@@ -262,7 +268,7 @@ histogramToBars :: [(Double, [Int])] -> [(Double, [Double])]
 histogramToBars = map $ \(x, ns) -> (x, map fromIntegral ns)
 
 -- | Get the HTML code.     
-finalHistogramHtml :: FinalHistogramViewState -> Int -> HtmlWriter ()
+finalHistogramHtml :: FinalHistogramViewState r -> Int -> HtmlWriter ()
 finalHistogramHtml st index =
   do header st index
      file <- liftIO $ readIORef (finalHistogramFile st)
@@ -272,7 +278,7 @@ finalHistogramHtml st index =
          writeHtmlParagraph $
          writeHtmlImage (makeRelative (finalHistogramDir st) f)
 
-header :: FinalHistogramViewState -> Int -> HtmlWriter ()
+header :: FinalHistogramViewState r -> Int -> HtmlWriter ()
 header st index =
   do writeHtmlHeader3WithId ("id" ++ show index) $ 
        writeHtmlText (finalHistogramTitle $ finalHistogramView st)
@@ -282,7 +288,7 @@ header st index =
        writeHtmlText description
 
 -- | Get the TOC item.
-finalHistogramTOCHtml :: FinalHistogramViewState -> Int -> HtmlWriter ()
+finalHistogramTOCHtml :: FinalHistogramViewState r -> Int -> HtmlWriter ()
 finalHistogramTOCHtml st index =
   writeHtmlListItem $
   writeHtmlLink ("#id" ++ show index) $

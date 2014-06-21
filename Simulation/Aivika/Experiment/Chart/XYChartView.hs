@@ -1,4 +1,6 @@
 
+{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses #-}
+
 -- |
 -- Module     : Simulation.Aivika.Experiment.Chart.XYChartView
 -- Copyright  : Copyright (c) 2012-2014, David Sorokin <david.sorokin@gmail.com>
@@ -7,8 +9,7 @@
 -- Stability  : experimental
 -- Tested with: GHC 7.6.3
 --
--- The module defines 'XYChartView' that saves the XY charts 
--- in the PNG files.
+-- The module defines 'XYChartView' that saves the XY charts.
 --
 
 module Simulation.Aivika.Experiment.Chart.XYChartView
@@ -32,11 +33,11 @@ import System.IO
 import System.FilePath
 
 import Graphics.Rendering.Chart
-import Graphics.Rendering.Chart.Backend.Cairo
 
 import Simulation.Aivika.Experiment
 import Simulation.Aivika.Experiment.HtmlWriter
 import Simulation.Aivika.Experiment.Utils (divideBy, replace)
+import Simulation.Aivika.Experiment.Chart.ChartRenderer
 import Simulation.Aivika.Experiment.Chart.Utils (colourisePlotLines)
 
 import Simulation.Aivika.Specs
@@ -45,8 +46,7 @@ import Simulation.Aivika.Simulation
 import Simulation.Aivika.Event
 import Simulation.Aivika.Signal
 
--- | Defines the 'View' that saves the XY charts
--- in the PNG files.
+-- | Defines the 'View' that saves the XY charts.
 data XYChartView =
   XYChartView { xyChartTitle       :: String,
                 -- ^ This is a title used in HTML.
@@ -136,11 +136,11 @@ defaultXYChartView =
                 xyChartBottomAxis  = id,
                 xyChartLayout      = id }
 
-instance ExperimentView XYChartView where
+instance ChartRenderer r => ExperimentView XYChartView r where
   
   outputView v = 
-    let reporter exp dir =
-          do st <- newXYChart v exp dir
+    let reporter exp renderer dir =
+          do st <- newXYChart v exp renderer dir
              return ExperimentReporter { reporterInitialise = return (),
                                          reporterFinalise   = return (),
                                          reporterSimulate   = simulateXYChart st,
@@ -149,15 +149,16 @@ instance ExperimentView XYChartView where
     in ExperimentGenerator { generateReporter = reporter }
   
 -- | The state of the view.
-data XYChartViewState =
+data XYChartViewState r =
   XYChartViewState { xyChartView       :: XYChartView,
-                     xyChartExperiment :: Experiment,
+                     xyChartExperiment :: Experiment r,
+                     xyChartRenderer   :: r,
                      xyChartDir        :: FilePath, 
                      xyChartMap        :: M.Map Int FilePath }
   
 -- | Create a new state of the view.
-newXYChart :: XYChartView -> Experiment -> FilePath -> IO XYChartViewState
-newXYChart view exp dir =
+newXYChart :: XYChartView -> Experiment r -> r -> FilePath -> IO (XYChartViewState r)
+newXYChart view exp renderer dir =
   do let n = experimentRunCount exp
      fs <- forM [0..(n - 1)] $ \i -> 
        resolveFileName (Just dir) (xyChartFileName view) $
@@ -168,11 +169,12 @@ newXYChart view exp dir =
      let m = M.fromList $ zip [0..(n - 1)] fs
      return XYChartViewState { xyChartView       = view,
                                xyChartExperiment = exp,
+                               xyChartRenderer   = renderer,
                                xyChartDir        = dir, 
                                xyChartMap        = m }
        
 -- | Plot the XY chart during the simulation.
-simulateXYChart :: XYChartViewState -> ExperimentData -> Event (Event ())
+simulateXYChart :: ChartRenderer r => XYChartViewState r -> ExperimentData -> Event (Event ())
 simulateXYChart st expdata =
   do let ylabels = xyChartYSeries $ xyChartView st
          xlabels = xyChartXSeries $ xyChartView st
@@ -265,9 +267,12 @@ simulateXYChart st expdata =
                       layoutlr_title .~ runPlotTitle $
                       layoutlr_plots .~ ps' $
                       def
-          liftIO $ 
-            do let opts = FileOptions (width, height) PNG
-               renderableToFile opts (toRenderable chart) file
+          liftIO $
+            do renderChart
+                 (xyChartRenderer st)
+                 (width, height)
+                 (toRenderable chart)
+                 file
                when (experimentVerbose $ xyChartExperiment st) $
                  putStr "Generated file " >> putStrLn file
      
@@ -278,7 +283,7 @@ filterPlotLinesValues =
   divideBy (\(x, y) -> isNaN x || isInfinite x || isNaN y || isInfinite y)
 
 -- | Get the HTML code.     
-xyChartHtml :: XYChartViewState -> Int -> HtmlWriter ()     
+xyChartHtml :: XYChartViewState r -> Int -> HtmlWriter ()     
 xyChartHtml st index =
   let n = experimentRunCount $ xyChartExperiment st
   in if n == 1
@@ -286,7 +291,7 @@ xyChartHtml st index =
      else xyChartHtmlMultiple st index
      
 -- | Get the HTML code for a single run.
-xyChartHtmlSingle :: XYChartViewState -> Int -> HtmlWriter ()
+xyChartHtmlSingle :: XYChartViewState r -> Int -> HtmlWriter ()
 xyChartHtmlSingle st index =
   do header st index
      let f = fromJust $ M.lookup 0 (xyChartMap st)
@@ -294,7 +299,7 @@ xyChartHtmlSingle st index =
        writeHtmlImage (makeRelative (xyChartDir st) f)
 
 -- | Get the HTML code for multiple runs.
-xyChartHtmlMultiple :: XYChartViewState -> Int -> HtmlWriter ()
+xyChartHtmlMultiple :: XYChartViewState r -> Int -> HtmlWriter ()
 xyChartHtmlMultiple st index =
   do header st index
      let n = experimentRunCount $ xyChartExperiment st
@@ -303,7 +308,7 @@ xyChartHtmlMultiple st index =
        in writeHtmlParagraph $
           writeHtmlImage (makeRelative (xyChartDir st) f)
 
-header :: XYChartViewState -> Int -> HtmlWriter ()
+header :: XYChartViewState r -> Int -> HtmlWriter ()
 header st index =
   do writeHtmlHeader3WithId ("id" ++ show index) $ 
        writeHtmlText (xyChartTitle $ xyChartView st)
@@ -313,7 +318,7 @@ header st index =
        writeHtmlText description
 
 -- | Get the TOC item.
-xyChartTOCHtml :: XYChartViewState -> Int -> HtmlWriter ()
+xyChartTOCHtml :: XYChartViewState r -> Int -> HtmlWriter ()
 xyChartTOCHtml st index =
   writeHtmlListItem $
   writeHtmlLink ("#id" ++ show index) $

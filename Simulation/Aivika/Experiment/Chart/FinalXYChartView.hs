@@ -1,4 +1,6 @@
 
+{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses #-}
+
 -- |
 -- Module     : Simulation.Aivika.Experiment.Chart.FinalXYChartView
 -- Copyright  : Copyright (c) 2012-2014, David Sorokin <david.sorokin@gmail.com>
@@ -8,7 +10,7 @@
 -- Tested with: GHC 7.6.3
 --
 -- The module defines 'FinalXYChartView' that saves the XY chart
--- by final time points for all simulation runs sequentially.
+-- in final time points for all simulation runs sequentially.
 --
 
 module Simulation.Aivika.Experiment.Chart.FinalXYChartView
@@ -32,11 +34,11 @@ import System.IO
 import System.FilePath
 
 import Graphics.Rendering.Chart
-import Graphics.Rendering.Chart.Backend.Cairo
 
 import Simulation.Aivika.Experiment
 import Simulation.Aivika.Experiment.HtmlWriter
 import Simulation.Aivika.Experiment.Utils (divideBy, replace)
+import Simulation.Aivika.Experiment.Chart.ChartRenderer
 import Simulation.Aivika.Experiment.Chart.Utils (colourisePlotLines)
 
 import Simulation.Aivika.Specs
@@ -47,8 +49,8 @@ import Simulation.Aivika.Event
 import Simulation.Aivika.Signal
 
 -- | Defines the 'View' that saves the XY chart
--- in the PNG file by final time points for all
--- simulation runs sequentially.
+-- in final time points for all simulation runs
+-- sequentially.
 data FinalXYChartView =
   FinalXYChartView { finalXYChartTitle       :: String,
                      -- ^ This is a title used HTML.
@@ -124,11 +126,11 @@ defaultFinalXYChartView =
                      finalXYChartBottomAxis  = id,
                      finalXYChartLayout      = id }
 
-instance ExperimentView FinalXYChartView where
+instance ChartRenderer r => ExperimentView FinalXYChartView r where
   
   outputView v = 
-    let reporter exp dir =
-          do st <- newFinalXYChart v exp dir
+    let reporter exp renderer dir =
+          do st <- newFinalXYChart v exp renderer dir
              return ExperimentReporter { reporterInitialise = return (),
                                          reporterFinalise   = finaliseFinalXYChart st,
                                          reporterSimulate   = simulateFinalXYChart st,
@@ -137,9 +139,10 @@ instance ExperimentView FinalXYChartView where
     in ExperimentGenerator { generateReporter = reporter }
   
 -- | The state of the view.
-data FinalXYChartViewState =
+data FinalXYChartViewState r =
   FinalXYChartViewState { finalXYChartView       :: FinalXYChartView,
-                          finalXYChartExperiment :: Experiment,
+                          finalXYChartExperiment :: Experiment r,
+                          finalXYChartRenderer   :: r,
                           finalXYChartDir        :: FilePath, 
                           finalXYChartFile       :: IORef (Maybe FilePath),
                           finalXYChartLock       :: MVar (),
@@ -152,20 +155,21 @@ data FinalXYChartResults =
                         finalXYChartXY     :: [IOArray Int (Maybe (Double, Double))] }
   
 -- | Create a new state of the view.
-newFinalXYChart :: FinalXYChartView -> Experiment -> FilePath -> IO FinalXYChartViewState
-newFinalXYChart view exp dir =
+newFinalXYChart :: FinalXYChartView -> Experiment r -> r -> FilePath -> IO (FinalXYChartViewState r)
+newFinalXYChart view exp renderer dir =
   do f <- newIORef Nothing
      l <- newMVar () 
      r <- newIORef Nothing
      return FinalXYChartViewState { finalXYChartView       = view,
                                     finalXYChartExperiment = exp,
+                                    finalXYChartRenderer   = renderer,
                                     finalXYChartDir        = dir, 
                                     finalXYChartFile       = f,
                                     finalXYChartLock       = l, 
                                     finalXYChartResults    = r }
        
 -- | Create new chart results.
-newFinalXYChartResults :: String -> [Either String String] -> Experiment -> IO FinalXYChartResults
+newFinalXYChartResults :: String -> [Either String String] -> Experiment r -> IO FinalXYChartResults
 newFinalXYChartResults xname ynames exp =
   do let n = experimentRunCount exp
      xy <- forM ynames $ \_ -> 
@@ -175,7 +179,7 @@ newFinalXYChartResults xname ynames exp =
                                   finalXYChartXY     = xy }
        
 -- | Simulation.
-simulateFinalXYChart :: FinalXYChartViewState -> ExperimentData -> Event (Event ())
+simulateFinalXYChart :: FinalXYChartViewState r -> ExperimentData -> Event (Event ())
 simulateFinalXYChart st expdata =
   do let ylabels = finalXYChartYSeries $ finalXYChartView st
          xlabels = finalXYChartXSeries $ finalXYChartView st
@@ -237,7 +241,7 @@ simulateFinalXYChart st expdata =
      return $ return ()
      
 -- | Plot the XY chart after the simulation is complete.
-finaliseFinalXYChart :: FinalXYChartViewState -> IO ()
+finaliseFinalXYChart :: ChartRenderer r => FinalXYChartViewState r -> IO ()
 finaliseFinalXYChart st =
   do let title = finalXYChartTitle $ finalXYChartView st
          plotTitle = 
@@ -286,8 +290,11 @@ finaliseFinalXYChart st =
                     (Just $ finalXYChartDir st)
                     (finalXYChartFileName $ finalXYChartView st) $
                     M.fromList [("$TITLE", title)]
-            let opts = FileOptions (width, height) PNG
-            renderableToFile opts (toRenderable chart) file
+            renderChart
+              (finalXYChartRenderer st)
+              (width, height)
+              (toRenderable chart)
+              file
             when (experimentVerbose $ finalXYChartExperiment st) $
               putStr "Generated file " >> putStrLn file
             writeIORef (finalXYChartFile st) $ Just file
@@ -301,7 +308,7 @@ filterPlotLinesValues =
                                isNaN y || isInfinite y
 
 -- | Get the HTML code.     
-finalXYChartHtml :: FinalXYChartViewState -> Int -> HtmlWriter ()
+finalXYChartHtml :: FinalXYChartViewState r -> Int -> HtmlWriter ()
 finalXYChartHtml st index =
   do header st index
      file <- liftIO $ readIORef (finalXYChartFile st)
@@ -311,7 +318,7 @@ finalXYChartHtml st index =
          writeHtmlParagraph $
          writeHtmlImage (makeRelative (finalXYChartDir st) f)
 
-header :: FinalXYChartViewState -> Int -> HtmlWriter ()
+header :: FinalXYChartViewState r -> Int -> HtmlWriter ()
 header st index =
   do writeHtmlHeader3WithId ("id" ++ show index) $ 
        writeHtmlText (finalXYChartTitle $ finalXYChartView st)
@@ -321,7 +328,7 @@ header st index =
        writeHtmlText description
 
 -- | Get the TOC item.
-finalXYChartTOCHtml :: FinalXYChartViewState -> Int -> HtmlWriter ()
+finalXYChartTOCHtml :: FinalXYChartViewState r -> Int -> HtmlWriter ()
 finalXYChartTOCHtml st index =
   writeHtmlListItem $
   writeHtmlLink ("#id" ++ show index) $

@@ -12,6 +12,7 @@
 
 module Simulation.Aivika.Experiment.Chart
        (-- * Modules
+        module Simulation.Aivika.Experiment.Chart.ChartRenderer, 
         module Simulation.Aivika.Experiment.Chart.TimeSeriesView,
         module Simulation.Aivika.Experiment.Chart.XYChartView,
         module Simulation.Aivika.Experiment.Chart.FinalXYChartView,
@@ -20,6 +21,7 @@ module Simulation.Aivika.Experiment.Chart
         module Simulation.Aivika.Experiment.Chart.FinalHistogramView,
         module Simulation.Aivika.Experiment.Chart.Utils) where
 
+import Simulation.Aivika.Experiment.Chart.ChartRenderer
 import Simulation.Aivika.Experiment.Chart.TimeSeriesView
 import Simulation.Aivika.Experiment.Chart.XYChartView
 import Simulation.Aivika.Experiment.Chart.FinalXYChartView
