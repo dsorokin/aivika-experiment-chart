@@ -15,8 +15,10 @@ module Simulation.Aivika.Experiment.Chart.ChartRenderer
 
 import Graphics.Rendering.Chart
 
+import Simulation.Aivika.Experiment
+
 -- | A type class of chart renderers.
-class ChartRenderer r where
+class FileRenderer r => ChartRenderer r where
 
   -- | Generate an image file for the given chart, at the specified path.
   -- The width and height are passed in the second argument to the function.

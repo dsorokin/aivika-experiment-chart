@@ -59,15 +59,14 @@ data HistogramView =
                   -- ^ The width of the histogram.
                   histogramHeight      :: Int,
                   -- ^ The height of the histogram.
-                  histogramFileName    :: FileName,
-                  -- ^ It defines the file name for each PNG file. 
-                  -- It may include special variables @$TITLE@, 
-                  -- @$RUN_INDEX@ and @$RUN_COUNT@.
+                  histogramFileName    :: ExperimentFilePath,
+                  -- ^ It defines the file name with optional extension for each image to be saved.
+                  -- It may include special variables @$TITLE@, @$RUN_INDEX@ and @$RUN_COUNT@.
                   --
                   -- An example is
                   --
                   -- @
-                  --   histogramFileName = UniqueFileName \"$TITLE - $RUN_INDEX\" \".png\"
+                  --   histogramFileName = UniqueFilePath \"$TITLE - $RUN_INDEX\"
                   -- @
                   histogramPredicate   :: Event Bool,
                   -- ^ It specifies the predicate that defines
@@ -119,7 +118,7 @@ defaultHistogramView =
                   histogramDescription = "It shows the histogram(s) by data gathered in the integration time points.",
                   histogramWidth       = 640,
                   histogramHeight      = 480,
-                  histogramFileName    = UniqueFileName "$TITLE - $RUN_INDEX" ".png",
+                  histogramFileName    = UniqueFilePath "$TITLE - $RUN_INDEX",
                   histogramPredicate   = return True,
                   histogramBuild       = histogram binSturges,
                   histogramSeries      = [], 
@@ -152,8 +151,9 @@ data HistogramViewState r =
 newHistogram :: HistogramView -> Experiment r -> r -> FilePath -> IO (HistogramViewState r)
 newHistogram view exp renderer dir =
   do let n = experimentRunCount exp
-     fs <- forM [0..(n - 1)] $ \i -> 
-       resolveFileName (Just dir) (histogramFileName view) $
+     fs <- forM [0..(n - 1)] $ \i ->
+       resolveFilePath dir $
+       expandFilePath (histogramFileName view) $
        M.fromList [("$TITLE", histogramTitle view),
                    ("$RUN_INDEX", show $ i + 1),
                    ("$RUN_COUNT", show n)]

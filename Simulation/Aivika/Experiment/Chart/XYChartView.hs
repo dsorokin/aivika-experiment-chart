@@ -56,15 +56,14 @@ data XYChartView =
                 -- ^ The width of the chart.
                 xyChartHeight      :: Int,
                 -- ^ The height of the chart.
-                xyChartFileName    :: FileName,
-                -- ^ It defines the file name for each PNG file. 
-                -- It may include special variables @$TITLE@, 
-                -- @$RUN_INDEX@ and @$RUN_COUNT@.
+                xyChartFileName    :: ExperimentFilePath,
+                -- ^ It defines the file name with optional extension for each image to be saved.
+                -- It may include special variables @$TITLE@, @$RUN_INDEX@ and @$RUN_COUNT@.
                 --
                 -- An example is
                 --
                 -- @
-                --   xyChartFileName = UniqueFileName \"$TITLE - $RUN_INDEX\" \".png\"
+                --   xyChartFileName = UniqueFilePath \"$TITLE - $RUN_INDEX\"
                 -- @
                 xyChartPredicate   :: Event Bool,
                 -- ^ It specifies the predicate that defines
@@ -126,7 +125,7 @@ defaultXYChartView =
                 xyChartDescription = "It shows the XY chart(s).",
                 xyChartWidth       = 640,
                 xyChartHeight      = 480,
-                xyChartFileName    = UniqueFileName "$TITLE - $RUN_INDEX" ".png",
+                xyChartFileName    = UniqueFilePath "$TITLE - $RUN_INDEX",
                 xyChartPredicate   = return True,
                 xyChartXSeries     = Nothing, 
                 xyChartYSeries     = [],
@@ -160,8 +159,9 @@ data XYChartViewState r =
 newXYChart :: XYChartView -> Experiment r -> r -> FilePath -> IO (XYChartViewState r)
 newXYChart view exp renderer dir =
   do let n = experimentRunCount exp
-     fs <- forM [0..(n - 1)] $ \i -> 
-       resolveFileName (Just dir) (xyChartFileName view) $
+     fs <- forM [0..(n - 1)] $ \i ->
+       resolveFilePath dir $
+       expandFilePath (xyChartFileName view) $
        M.fromList [("$TITLE", xyChartTitle view),
                    ("$RUN_INDEX", show $ i + 1),
                    ("$RUN_COUNT", show n)]

@@ -63,14 +63,14 @@ data FinalHistogramView =
                        -- ^ The width of the histogram.
                        finalHistogramHeight      :: Int,
                        -- ^ The height of the histogram.
-                       finalHistogramFileName    :: FileName,
-                       -- ^ It defines the file name for the PNG file. 
+                       finalHistogramFileName    :: ExperimentFilePath,
+                       -- ^ It defines the file name with optional extension for each image to be saved.
                        -- It may include special variable @$TITLE@.
                        --
                        -- An example is
                        --
                        -- @
-                       --   finalHistogramFileName = UniqueFileName \"$TITLE\" \".png\"
+                       --   finalHistogramFileName = UniqueFilePath \"$TITLE\"
                        -- @
                        finalHistogramPredicate   :: Event Bool,
                        -- ^ It specifies the predicate that defines
@@ -110,7 +110,7 @@ defaultFinalHistogramView =
                        finalHistogramDescription = "It shows a histogram by data gathered in the final time points.",
                        finalHistogramWidth       = 640,
                        finalHistogramHeight      = 480,
-                       finalHistogramFileName    = UniqueFileName "$TITLE" ".png",
+                       finalHistogramFileName    = UniqueFilePath "$TITLE",
                        finalHistogramPredicate   = return True,
                        finalHistogramBuild       = histogram binSturges,
                        finalHistogramSeries      = [], 
@@ -242,9 +242,8 @@ finaliseFinalHistogram st =
                         layout_title .~ plotTitle $
                         layout_plots .~ [p] $
                         def
-            file <- resolveFileName 
-                    (Just $ finalHistogramDir st)
-                    (finalHistogramFileName $ finalHistogramView st) $
+            file <- resolveFilePath (finalHistogramDir st) $
+                    expandFilePath (finalHistogramFileName $ finalHistogramView st) $
                     M.fromList [("$TITLE", title)]
             renderChart
               (finalHistogramRenderer st)

@@ -59,14 +59,14 @@ data DeviationChartView =
                        -- ^ The width of the chart.
                        deviationChartHeight      :: Int,
                        -- ^ The height of the chart.
-                       deviationChartFileName    :: FileName,
-                       -- ^ It defines the file name for the PNG file. 
+                       deviationChartFileName    :: ExperimentFilePath,
+                       -- ^ It defines the file name with optional extension for each image to be saved.
                        -- It may include special variable @$TITLE@.
                        --
                        -- An example is
                        --
                        -- @
-                       --   deviationChartFileName = UniqueFileName \"$TITLE\" \".png\"
+                       --   deviationChartFileName = UniqueFilePath \"$TITLE\"
                        -- @
                        deviationChartSeries      :: [Either String String],
                        -- ^ It contains the labels of data plotted
@@ -115,7 +115,7 @@ defaultDeviationChartView =
                        deviationChartDescription = "It shows the Deviation chart by rule 3-sigma.",
                        deviationChartWidth       = 640,
                        deviationChartHeight      = 480,
-                       deviationChartFileName    = UniqueFileName "$TITLE" ".png",
+                       deviationChartFileName    = UniqueFilePath "$TITLE",
                        deviationChartSeries      = [], 
                        deviationChartPlotTitle   = "$TITLE",
                        deviationChartPlotLines   = colourisePlotLines,
@@ -291,9 +291,8 @@ finaliseDeviationChart st =
                         layoutlr_title .~ plotTitle $
                         layoutlr_plots .~ ps $
                         def
-            file <- resolveFileName 
-                    (Just $ deviationChartDir st)
-                    (deviationChartFileName $ deviationChartView st) $
+            file <- resolveFilePath (deviationChartDir st) $
+                    expandFilePath (deviationChartFileName $ deviationChartView st) $
                     M.fromList [("$TITLE", title)]
             renderChart
               (deviationChartRenderer st)

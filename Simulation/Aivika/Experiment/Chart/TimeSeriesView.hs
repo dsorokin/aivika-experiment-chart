@@ -55,15 +55,14 @@ data TimeSeriesView =
                    -- ^ The width of the chart.
                    timeSeriesHeight      :: Int,
                    -- ^ The height of the chart.
-                   timeSeriesFileName    :: FileName,
-                   -- ^ It defines the file name for each PNG file. 
-                   -- It may include special variables @$TITLE@, 
-                   -- @$RUN_INDEX@ and @$RUN_COUNT@.
+                   timeSeriesFileName    :: ExperimentFilePath,
+                   -- ^ It defines the file name with optional extension for each image to be saved.
+                   -- It may include special variables @$TITLE@, @$RUN_INDEX@ and @$RUN_COUNT@.
                    --
                    -- An example is
                    --
                    -- @
-                   --   timeSeriesFileName = UniqueFileName \"$TITLE - $RUN_INDEX\" \".png\"
+                   --   timeSeriesFileName = UniqueFilePath \"$TITLE - $RUN_INDEX\"
                    -- @
                    timeSeriesPredicate   :: Event Bool,
                    -- ^ It specifies the predicate that defines
@@ -120,7 +119,7 @@ defaultTimeSeriesView =
                    timeSeriesDescription = "It shows the Time Series chart(s).",
                    timeSeriesWidth       = 640,
                    timeSeriesHeight      = 480,
-                   timeSeriesFileName    = UniqueFileName "$TITLE - $RUN_INDEX" ".png",
+                   timeSeriesFileName    = UniqueFilePath "$TITLE - $RUN_INDEX",
                    timeSeriesPredicate   = return True,
                    timeSeries            = [], 
                    timeSeriesPlotTitle   = "$TITLE",
@@ -154,7 +153,8 @@ newTimeSeries :: TimeSeriesView -> Experiment r -> r -> FilePath -> IO (TimeSeri
 newTimeSeries view exp renderer dir =
   do let n = experimentRunCount exp
      fs <- forM [0..(n - 1)] $ \i -> 
-       resolveFileName (Just dir) (timeSeriesFileName view) $
+       resolveFilePath dir $
+       expandFilePath (timeSeriesFileName view) $
        M.fromList [("$TITLE", timeSeriesTitle view),
                    ("$RUN_INDEX", show $ i + 1),
                    ("$RUN_COUNT", show n)]

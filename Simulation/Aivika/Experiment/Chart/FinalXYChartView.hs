@@ -60,14 +60,14 @@ data FinalXYChartView =
                      -- ^ The width of the chart.
                      finalXYChartHeight      :: Int,
                      -- ^ The height of the chart.
-                     finalXYChartFileName    :: FileName,
-                     -- ^ It defines the file name for the PNG file. 
+                     finalXYChartFileName    :: ExperimentFilePath,
+                     -- ^ It defines the file name with optional extension for each image to be saved.
                      -- It may include special variable @$TITLE@.
                      --
                      -- An example is
                      --
                      -- @
-                     --   finalXYChartFileName = UniqueFileName \"$TITLE\" \".png\"
+                     --   finalXYChartFileName = UniqueFilePath \"$TITLE\"
                      -- @
                      finalXYChartPredicate   :: Event Bool,
                      -- ^ It specifies the predicate that defines
@@ -117,7 +117,7 @@ defaultFinalXYChartView =
                      finalXYChartDescription = "It shows the XY chart for the results in the final time points.",
                      finalXYChartWidth       = 640,
                      finalXYChartHeight      = 480,
-                     finalXYChartFileName    = UniqueFileName "$TITLE" ".png",
+                     finalXYChartFileName    = UniqueFilePath "$TITLE",
                      finalXYChartPredicate   = return True,
                      finalXYChartXSeries     = Nothing,
                      finalXYChartYSeries     = [], 
@@ -286,9 +286,8 @@ finaliseFinalXYChart st =
                         layoutlr_title .~ plotTitle $
                         layoutlr_plots .~ ps $
                         def
-            file <- resolveFileName 
-                    (Just $ finalXYChartDir st)
-                    (finalXYChartFileName $ finalXYChartView st) $
+            file <- resolveFilePath (finalXYChartDir st) $
+                    expandFilePath (finalXYChartFileName $ finalXYChartView st) $
                     M.fromList [("$TITLE", title)]
             renderChart
               (finalXYChartRenderer st)
