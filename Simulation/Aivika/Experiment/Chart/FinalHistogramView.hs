@@ -215,6 +215,7 @@ finaliseFinalHistogram st =
          histogram = finalHistogramBuild $ finalHistogramView st
          bars = finalHistogramPlotBars $ finalHistogramView st
          layout = finalHistogramLayout $ finalHistogramView st
+         renderer = finalHistogramRenderer st
      results <- readIORef $ finalHistogramResults st
      case results of
        Nothing -> return ()
@@ -242,14 +243,11 @@ finaliseFinalHistogram st =
                         layout_title .~ plotTitle $
                         layout_plots .~ [p] $
                         def
-            file <- resolveFilePath (finalHistogramDir st) $
+            file <- fmap (flip replaceExtension $ renderableFileExtension renderer) $
+                    resolveFilePath (finalHistogramDir st) $
                     expandFilePath (finalHistogramFileName $ finalHistogramView st) $
                     M.fromList [("$TITLE", title)]
-            renderChart
-              (finalHistogramRenderer st)
-              (width, height)
-              (toRenderable chart)
-              file
+            renderChart renderer (width, height) (toRenderable chart) file
             when (experimentVerbose $ finalHistogramExperiment st) $
               putStr "Generated file " >> putStrLn file
             writeIORef (finalHistogramFile st) $ Just file

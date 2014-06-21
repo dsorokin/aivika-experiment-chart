@@ -20,6 +20,9 @@ import Simulation.Aivika.Experiment
 -- | A type class of chart renderers.
 class FileRenderer r => ChartRenderer r where
 
+  -- | The file extension used when rendering.
+  renderableFileExtension :: r -> String
+
   -- | Generate an image file for the given chart, at the specified path.
   -- The width and height are passed in the second argument to the function.
   renderChart :: r -> (Int, Int) -> Renderable a -> FilePath -> IO (PickFn a)

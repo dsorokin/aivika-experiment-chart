@@ -239,6 +239,7 @@ finaliseDeviationChart st =
          plotFillBetween = deviationChartPlotFillBetween $ deviationChartView st
          plotBottomAxis = deviationChartBottomAxis $ deviationChartView st
          plotLayout = deviationChartLayout $ deviationChartView st
+         renderer = deviationChartRenderer st
      results <- readIORef $ deviationChartResults st
      case results of
        Nothing -> return ()
@@ -291,14 +292,11 @@ finaliseDeviationChart st =
                         layoutlr_title .~ plotTitle $
                         layoutlr_plots .~ ps $
                         def
-            file <- resolveFilePath (deviationChartDir st) $
+            file <- fmap (flip replaceExtension $ renderableFileExtension renderer) $
+                    resolveFilePath (deviationChartDir st) $
                     expandFilePath (deviationChartFileName $ deviationChartView st) $
                     M.fromList [("$TITLE", title)]
-            renderChart
-              (deviationChartRenderer st)
-              (width, height)
-              (toRenderable chart)
-              file
+            renderChart renderer (width, height) (toRenderable chart) file
             when (experimentVerbose $ deviationChartExperiment st) $
               putStr "Generated file " >> putStrLn file
             writeIORef (deviationChartFile st) $ Just file

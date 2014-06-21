@@ -149,10 +149,12 @@ data TimeSeriesViewState r =
                         timeSeriesMap        :: M.Map Int FilePath }
   
 -- | Create a new state of the view.
-newTimeSeries :: TimeSeriesView -> Experiment r -> r -> FilePath -> IO (TimeSeriesViewState r)
+newTimeSeries :: ChartRenderer r =>
+                 TimeSeriesView -> Experiment r -> r -> FilePath -> IO (TimeSeriesViewState r)
 newTimeSeries view exp renderer dir =
   do let n = experimentRunCount exp
-     fs <- forM [0..(n - 1)] $ \i -> 
+     fs <- forM [0..(n - 1)] $ \i ->
+       fmap (flip replaceExtension $ renderableFileExtension renderer) $
        resolveFilePath dir $
        expandFilePath (timeSeriesFileName view) $
        M.fromList [("$TITLE", timeSeriesTitle view),
@@ -191,6 +193,7 @@ simulateTimeSeries st expdata =
          plotLines = timeSeriesPlotLines $ timeSeriesView st
          plotBottomAxis = timeSeriesBottomAxis $ timeSeriesView st
          plotLayout = timeSeriesLayout $ timeSeriesView st
+         renderer = timeSeriesRenderer st
      i <- liftParameter simulationIndex
      let file = fromJust $ M.lookup (i - 1) (timeSeriesMap st)
          title = timeSeriesTitle $ timeSeriesView st
@@ -249,11 +252,7 @@ simulateTimeSeries st expdata =
                       layoutlr_plots .~ ps' $
                       def
           liftIO $
-            do renderChart
-                 (timeSeriesRenderer st)
-                 (width, height)
-                 (toRenderable chart)
-                 file
+            do renderChart renderer (width, height) (toRenderable chart) file
                when (experimentVerbose $ timeSeriesExperiment st) $
                  putStr "Generated file " >> putStrLn file
      

@@ -148,10 +148,12 @@ data HistogramViewState r =
                        histogramMap        :: M.Map Int FilePath }
   
 -- | Create a new state of the view.
-newHistogram :: HistogramView -> Experiment r -> r -> FilePath -> IO (HistogramViewState r)
+newHistogram :: ChartRenderer r =>
+                HistogramView -> Experiment r -> r -> FilePath -> IO (HistogramViewState r)
 newHistogram view exp renderer dir =
   do let n = experimentRunCount exp
      fs <- forM [0..(n - 1)] $ \i ->
+       fmap (flip replaceExtension $ renderableFileExtension renderer) $
        resolveFilePath dir $
        expandFilePath (histogramFileName view) $
        M.fromList [("$TITLE", histogramTitle view),
@@ -186,6 +188,7 @@ simulateHistogram st expdata =
          bars = histogramPlotBars $ histogramView st
          layout = histogramLayout $ histogramView st
          build = histogramBuild $ histogramView st
+         renderer = histogramRenderer st
      i <- liftParameter simulationIndex
      let file = fromJust $ M.lookup (i - 1) (histogramMap st)
          title = histogramTitle $ histogramView st
@@ -227,11 +230,7 @@ simulateHistogram st expdata =
                       layout_plots .~ [p] $
                       def
           liftIO $
-            do renderChart
-                 (histogramRenderer st)
-                 (width, height)
-                 (toRenderable chart)
-                 file
+            do renderChart renderer (width, height) (toRenderable chart) file
                when (experimentVerbose $ histogramExperiment st) $
                  putStr "Generated file " >> putStrLn file
      

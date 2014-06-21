@@ -252,6 +252,7 @@ finaliseFinalXYChart st =
          plotLines = finalXYChartPlotLines $ finalXYChartView st
          plotBottomAxis = finalXYChartBottomAxis $ finalXYChartView st
          plotLayout = finalXYChartLayout $ finalXYChartView st
+         renderer = finalXYChartRenderer st
      results <- readIORef $ finalXYChartResults st
      case results of
        Nothing -> return ()
@@ -286,14 +287,11 @@ finaliseFinalXYChart st =
                         layoutlr_title .~ plotTitle $
                         layoutlr_plots .~ ps $
                         def
-            file <- resolveFilePath (finalXYChartDir st) $
+            file <- fmap (flip replaceExtension $ renderableFileExtension renderer) $
+                    resolveFilePath (finalXYChartDir st) $
                     expandFilePath (finalXYChartFileName $ finalXYChartView st) $
                     M.fromList [("$TITLE", title)]
-            renderChart
-              (finalXYChartRenderer st)
-              (width, height)
-              (toRenderable chart)
-              file
+            renderChart renderer (width, height) (toRenderable chart) file
             when (experimentVerbose $ finalXYChartExperiment st) $
               putStr "Generated file " >> putStrLn file
             writeIORef (finalXYChartFile st) $ Just file

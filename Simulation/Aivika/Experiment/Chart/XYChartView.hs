@@ -156,10 +156,12 @@ data XYChartViewState r =
                      xyChartMap        :: M.Map Int FilePath }
   
 -- | Create a new state of the view.
-newXYChart :: XYChartView -> Experiment r -> r -> FilePath -> IO (XYChartViewState r)
+newXYChart :: ChartRenderer r =>
+              XYChartView -> Experiment r -> r -> FilePath -> IO (XYChartViewState r)
 newXYChart view exp renderer dir =
   do let n = experimentRunCount exp
      fs <- forM [0..(n - 1)] $ \i ->
+       fmap (flip replaceExtension $ renderableFileExtension renderer) $
        resolveFilePath dir $
        expandFilePath (xyChartFileName view) $
        M.fromList [("$TITLE", xyChartTitle view),
@@ -207,6 +209,7 @@ simulateXYChart st expdata =
          plotLines = xyChartPlotLines $ xyChartView st
          plotBottomAxis = xyChartBottomAxis $ xyChartView st
          plotLayout = xyChartLayout $ xyChartView st
+         renderer = xyChartRenderer st
      i <- liftParameter simulationIndex
      let file = fromJust $ M.lookup (i - 1) (xyChartMap st)
          title = xyChartTitle $ xyChartView st
@@ -268,11 +271,7 @@ simulateXYChart st expdata =
                       layoutlr_plots .~ ps' $
                       def
           liftIO $
-            do renderChart
-                 (xyChartRenderer st)
-                 (width, height)
-                 (toRenderable chart)
-                 file
+            do renderChart renderer (width, height) (toRenderable chart) file
                when (experimentVerbose $ xyChartExperiment st) $
                  putStr "Generated file " >> putStrLn file
      
