@@ -23,6 +23,47 @@ cabal-version:   >= 1.2.0
 build-type:      Simple
 tested-with:     GHC == 7.6.3
 
+extra-source-files:  examples/BassDiffusion/Model.hs
+                     examples/BassDiffusion/Experiment.hs
+                     examples/BassDiffusion/MainUsingCairo.hs
+                     examples/BassDiffusion/MainUsingDiagrams.hs
+                     examples/BassDiffusion/README
+                     examples/ChemicalReaction/Model.hs
+                     examples/ChemicalReaction/Experiment.hs
+                     examples/ChemicalReaction/MainUsingCairo.hs
+                     examples/ChemicalReaction/MainUsingDiagrams.hs
+                     examples/ChemicalReaction/README
+                     examples/DifferenceEquations/Model.hs
+                     examples/DifferenceEquations/Experiment.hs
+                     examples/DifferenceEquations/MainUsingCairo.hs
+                     examples/DifferenceEquations/MainUsingDiagrams.hs
+                     examples/DifferenceEquations/README
+                     examples/Financial/Model.hs
+                     examples/Financial/Experiment.hs
+                     examples/Financial/MainUsingCairo.hs
+                     examples/Financial/MainUsingDiagrams.hs
+                     examples/Financial/README
+                     examples/Furnace/Model.hs
+                     examples/Furnace/Experiment.hs
+                     examples/Furnace/MainUsingCairo.hs
+                     examples/Furnace/MainUsingDiagrams.hs
+                     examples/Furnace/README
+                     examples/InspectionAdjustmentStations/Model.hs
+                     examples/InspectionAdjustmentStations/Experiment.hs
+                     examples/InspectionAdjustmentStations/MainUsingCairo.hs
+                     examples/InspectionAdjustmentStations/MainUsingDiagrams.hs
+                     examples/InspectionAdjustmentStations/README
+                     examples/LinearArray/Model.hs
+                     examples/LinearArray/Experiment.hs
+                     examples/LinearArray/MainUsingCairo.hs
+                     examples/LinearArray/MainUsingDiagrams.hs
+                     examples/LinearArray/README
+                     examples/MachRep3/Model.hs
+                     examples/MachRep3/Experiment.hs
+                     examples/MachRep3/MainUsingCairo.hs
+                     examples/MachRep3/MainUsingDiagrams.hs
+                     examples/MachRep3/README
+
 library
 
     exposed-modules: Simulation.Aivika.Experiment.Chart
