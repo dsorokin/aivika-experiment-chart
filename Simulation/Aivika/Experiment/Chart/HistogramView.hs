@@ -153,8 +153,8 @@ newHistogram :: ChartRenderer r =>
 newHistogram view exp renderer dir =
   do let n = experimentRunCount exp
      fs <- forM [0..(n - 1)] $ \i ->
-       fmap (flip replaceExtension $ renderableFileExtension renderer) $
        resolveFilePath dir $
+       mapFilePath (flip replaceExtension $ renderableFileExtension renderer) $
        expandFilePath (histogramFileName view) $
        M.fromList [("$TITLE", histogramTitle view),
                    ("$RUN_INDEX", show $ i + 1),

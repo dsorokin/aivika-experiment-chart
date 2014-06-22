@@ -287,8 +287,8 @@ finaliseFinalXYChart st =
                         layoutlr_title .~ plotTitle $
                         layoutlr_plots .~ ps $
                         def
-            file <- fmap (flip replaceExtension $ renderableFileExtension renderer) $
-                    resolveFilePath (finalXYChartDir st) $
+            file <- resolveFilePath (finalXYChartDir st) $
+                    mapFilePath (flip replaceExtension $ renderableFileExtension renderer) $
                     expandFilePath (finalXYChartFileName $ finalXYChartView st) $
                     M.fromList [("$TITLE", title)]
             renderChart renderer (width, height) (toRenderable chart) file

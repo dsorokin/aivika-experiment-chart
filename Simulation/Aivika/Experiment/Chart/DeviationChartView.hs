@@ -292,8 +292,8 @@ finaliseDeviationChart st =
                         layoutlr_title .~ plotTitle $
                         layoutlr_plots .~ ps $
                         def
-            file <- fmap (flip replaceExtension $ renderableFileExtension renderer) $
-                    resolveFilePath (deviationChartDir st) $
+            file <- resolveFilePath (deviationChartDir st) $
+                    mapFilePath (flip replaceExtension $ renderableFileExtension renderer) $
                     expandFilePath (deviationChartFileName $ deviationChartView st) $
                     M.fromList [("$TITLE", title)]
             renderChart renderer (width, height) (toRenderable chart) file

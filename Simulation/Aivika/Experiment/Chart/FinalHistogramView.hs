@@ -243,8 +243,8 @@ finaliseFinalHistogram st =
                         layout_title .~ plotTitle $
                         layout_plots .~ [p] $
                         def
-            file <- fmap (flip replaceExtension $ renderableFileExtension renderer) $
-                    resolveFilePath (finalHistogramDir st) $
+            file <- resolveFilePath (finalHistogramDir st) $
+                    mapFilePath (flip replaceExtension $ renderableFileExtension renderer) $
                     expandFilePath (finalHistogramFileName $ finalHistogramView st) $
                     M.fromList [("$TITLE", title)]
             renderChart renderer (width, height) (toRenderable chart) file
