@@ -1,0 +1,14 @@
+
+It corresponds to model MachRep3 described in document 
+Introduction to Discrete-Event Simulation and the SimPy Language
+[http://heather.cs.ucdavis.edu/~matloff/156/PLN/DESimIntro.pdf]. 
+SimPy is available on [http://simpy.sourceforge.net/].
+  
+The model description is as follows.
+
+Variation of models MachRep1, MachRep2. Two machines, but
+sometimes break down. Up time is exponentially distributed with mean
+1.0, and repair time is exponentially distributed with mean 0.5. In
+this example, there is only one repairperson, and she is not summoned
+until both machines are down. We find the proportion of up time. It
+should come out to about 0.45.
