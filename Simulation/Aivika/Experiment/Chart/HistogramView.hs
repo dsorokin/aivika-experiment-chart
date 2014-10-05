@@ -7,11 +7,11 @@
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
 -- Stability  : experimental
--- Tested with: GHC 7.6.3
+-- Tested with: GHC 7.8.3
 --
--- The module defines 'HistogramView' that saves the histogram
--- collecting statistics for all integration time points for each 
--- simulation run separately.
+-- The module defines 'HistogramView' that plots the histogram
+-- collecting statistics in all integration time points and does
+-- it for every simulation run separately.
 --
 
 module Simulation.Aivika.Experiment.Chart.HistogramView
@@ -26,6 +26,7 @@ import qualified Data.Map as M
 import Data.IORef
 import Data.Maybe
 import Data.Either
+import Data.Monoid
 import Data.Array
 import Data.Default.Class
 
@@ -34,22 +35,14 @@ import System.FilePath
 
 import Graphics.Rendering.Chart
 
+import Simulation.Aivika
 import Simulation.Aivika.Experiment
-import Simulation.Aivika.Experiment.HtmlWriter
-import Simulation.Aivika.Experiment.Utils (divideBy, replace)
-import Simulation.Aivika.Experiment.Chart.ChartRenderer
+import Simulation.Aivika.Experiment.Chart.Types
 import Simulation.Aivika.Experiment.Chart.Utils (colourisePlotBars)
 import Simulation.Aivika.Experiment.Histogram
-import Simulation.Aivika.Experiment.ListSource
 
-import Simulation.Aivika.Specs
-import Simulation.Aivika.Parameter
-import Simulation.Aivika.Simulation
-import Simulation.Aivika.Event
-import Simulation.Aivika.Signal
-
--- | Defines the 'View' that saves the histogram collecting statistics
--- for all integration time points for each simulation run separately.
+-- | Defines the 'View' that plots the histogram collecting statistics
+-- for all integration time points but for each simulation run separately.
 data HistogramView =
   HistogramView { histogramTitle       :: String,
                   -- ^ This is a title used in HTML.
@@ -74,9 +67,10 @@ data HistogramView =
                   histogramBuild       :: [[Double]] -> Histogram, 
                   -- ^ Builds a histogram by the specified list of 
                   -- data series.
-                  histogramSeries      :: [String],
-                  -- ^ It contains the labels of data for which
-                  -- the histogram is plotted.
+                  histogramTransform   :: ResultTransform,
+                  -- ^ The transform applied to the results before receiving series.
+                  histogramSeries      :: ResultTransform, 
+                  -- ^ It defines the series to be plotted on the histogram.
                   histogramPlotTitle   :: String,
                   -- ^ This is a title used in the histogram when
                   -- simulating a single run. It may include 
@@ -121,40 +115,47 @@ defaultHistogramView =
                   histogramFileName    = UniqueFilePath "$TITLE - $RUN_INDEX",
                   histogramPredicate   = return True,
                   histogramBuild       = histogram binSturges,
-                  histogramSeries      = [], 
+                  histogramTransform   = id,
+                  histogramSeries      = mempty, 
                   histogramPlotTitle   = "$TITLE",
                   histogramRunPlotTitle = "$PLOT_TITLE / Run $RUN_INDEX of $RUN_COUNT",
                   histogramPlotBars    = colourisePlotBars,
                   histogramLayout      = id }
 
-instance ChartRenderer r => ExperimentView HistogramView r where
+instance WebPageCharting r => ExperimentView HistogramView r WebPageWriter where
   
   outputView v = 
     let reporter exp renderer dir =
           do st <- newHistogram v exp renderer dir
+             let writer =
+                   WebPageWriter { reporterWriteTOCHtml = histogramTOCHtml st,
+                                   reporterWriteHtml    = histogramHtml st }
              return ExperimentReporter { reporterInitialise = return (),
                                          reporterFinalise   = return (),
                                          reporterSimulate   = simulateHistogram st,
-                                         reporterTOCHtml    = histogramTOCHtml st,
-                                         reporterHtml       = histogramHtml st }
+                                         reporterRequest    = writer }
     in ExperimentGenerator { generateReporter = reporter }
   
 -- | The state of the view.
-data HistogramViewState r =
+data HistogramViewState r a =
   HistogramViewState { histogramView       :: HistogramView,
-                       histogramExperiment :: Experiment r,
+                       histogramExperiment :: Experiment r a,
                        histogramRenderer   :: r,
                        histogramDir        :: FilePath, 
                        histogramMap        :: M.Map Int FilePath }
   
 -- | Create a new state of the view.
-newHistogram :: ChartRenderer r =>
-                HistogramView -> Experiment r -> r -> FilePath -> IO (HistogramViewState r)
+newHistogram :: WebPageCharting r
+                => HistogramView
+                -> Experiment r WebPageWriter
+                -> r
+                -> FilePath
+                -> IO (HistogramViewState r WebPageWriter)
 newHistogram view exp renderer dir =
   do let n = experimentRunCount exp
      fs <- forM [0..(n - 1)] $ \i ->
        resolveFilePath dir $
-       mapFilePath (flip replaceExtension $ renderableFileExtension renderer) $
+       mapFilePath (flip replaceExtension $ renderableChartExtension renderer) $
        expandFilePath (histogramFileName view) $
        M.fromList [("$TITLE", histogramTitle view),
                    ("$RUN_INDEX", show $ i + 1),
@@ -168,46 +169,48 @@ newHistogram view exp renderer dir =
                                  histogramMap        = m }
        
 -- | Plot the histogram during the simulation.
-simulateHistogram :: ChartRenderer r => HistogramViewState r -> ExperimentData -> Event (Event ())
+simulateHistogram :: WebPageCharting r
+                     => HistogramViewState r WebPageWriter
+                     -> ExperimentData
+                     -> Event DisposableEvent
 simulateHistogram st expdata =
-  do let labels = histogramSeries $ histogramView st
-         providers = experimentSeriesProviders expdata labels
-         names = map providerName providers
-         input =
-           flip map providers $ \provider ->
-           case providerToDoubleListSource provider of
-             Nothing -> error $
-                        "Cannot represent series " ++
-                        providerName provider ++ 
-                        " as a source of double values: simulateHistogram"
-             Just input -> fmap listDataList $ listSourceData input
+  do let view    = histogramView st
+         rs      = histogramSeries view $
+                   histogramTransform view $
+                   experimentResults expdata
+         exts    = extractDoubleListResults rs
+         names   = map resultExtractName exts
+         signals = experimentPredefinedSignals expdata
          n = experimentRunCount $ histogramExperiment st
-         width = histogramWidth $ histogramView st
-         height = histogramHeight $ histogramView st
-         predicate = histogramPredicate $ histogramView st
-         bars = histogramPlotBars $ histogramView st
-         layout = histogramLayout $ histogramView st
-         build = histogramBuild $ histogramView st
-         renderer = histogramRenderer st
+         build   = histogramBuild view
+         width   = histogramWidth view
+         height  = histogramHeight view
+         predicate  = histogramPredicate view
+         title   = histogramTitle view
+         plotTitle  = histogramPlotTitle view
+         runPlotTitle = histogramRunPlotTitle view
+         bars       = histogramPlotBars view
+         layout     = histogramLayout view
+         renderer   = histogramRenderer st
      i <- liftParameter simulationIndex
      let file = fromJust $ M.lookup (i - 1) (histogramMap st)
-         title = histogramTitle $ histogramView st
-         plotTitle = 
+         plotTitle' = 
            replace "$TITLE" title
-           (histogramPlotTitle $ histogramView st)
-         runPlotTitle =
+           plotTitle
+         runPlotTitle' =
            if n == 1
-           then plotTitle
+           then plotTitle'
            else replace "$RUN_INDEX" (show i) $
                 replace "$RUN_COUNT" (show n) $
-                replace "$PLOT_TITLE" plotTitle
-                (histogramRunPlotTitle $ histogramView st)
-     hs <- forM (zip providers input) $ \(provider, input) ->
+                replace "$PLOT_TITLE" plotTitle'
+                runPlotTitle
+     hs <- forM exts $ \ext ->
        newSignalHistory $
-       mapSignalM (const input) $
+       mapSignalM (const $ resultExtractData ext) $
        filterSignalM (const predicate) $
-       experimentSignalInIntegTimes expdata
+       resultSignalInIntegTimes signals
      return $
+       DisposableEvent $
        do xs <- forM hs readSignalHistory
           let zs = histogramToBars . filterHistogram . build $ 
                    map (filterData . concat . elems . snd) xs
@@ -226,11 +229,11 @@ simulateHistogram st expdata =
                               l
                 else id
               chart = layout . updateAxes $
-                      layout_title .~ runPlotTitle $
+                      layout_title .~ runPlotTitle' $
                       layout_plots .~ [p] $
                       def
           liftIO $
-            do renderChart renderer (width, height) (toRenderable chart) file
+            do renderChart renderer (width, height) file (toRenderable chart)
                when (experimentVerbose $ histogramExperiment st) $
                  putStr "Generated file " >> putStrLn file
      
@@ -247,7 +250,7 @@ histogramToBars :: [(Double, [Int])] -> [(Double, [Double])]
 histogramToBars = map $ \(x, ns) -> (x, map fromIntegral ns)
 
 -- | Get the HTML code.     
-histogramHtml :: HistogramViewState r -> Int -> HtmlWriter ()     
+histogramHtml :: HistogramViewState r a -> Int -> HtmlWriter ()     
 histogramHtml st index =
   let n = experimentRunCount $ histogramExperiment st
   in if n == 1
@@ -255,7 +258,7 @@ histogramHtml st index =
      else histogramHtmlMultiple st index
      
 -- | Get the HTML code for a single run.
-histogramHtmlSingle :: HistogramViewState r -> Int -> HtmlWriter ()
+histogramHtmlSingle :: HistogramViewState r a -> Int -> HtmlWriter ()
 histogramHtmlSingle st index =
   do header st index
      let f = fromJust $ M.lookup 0 (histogramMap st)
@@ -263,7 +266,7 @@ histogramHtmlSingle st index =
        writeHtmlImage (makeRelative (histogramDir st) f)
 
 -- | Get the HTML code for multiple runs.
-histogramHtmlMultiple :: HistogramViewState r -> Int -> HtmlWriter ()
+histogramHtmlMultiple :: HistogramViewState r a -> Int -> HtmlWriter ()
 histogramHtmlMultiple st index =
   do header st index
      let n = experimentRunCount $ histogramExperiment st
@@ -272,7 +275,7 @@ histogramHtmlMultiple st index =
        in writeHtmlParagraph $
           writeHtmlImage (makeRelative (histogramDir st) f)
 
-header :: HistogramViewState r -> Int -> HtmlWriter ()
+header :: HistogramViewState r a -> Int -> HtmlWriter ()
 header st index =
   do writeHtmlHeader3WithId ("id" ++ show index) $ 
        writeHtmlText (histogramTitle $ histogramView st)
@@ -282,7 +285,7 @@ header st index =
        writeHtmlText description
 
 -- | Get the TOC item.
-histogramTOCHtml :: HistogramViewState r -> Int -> HtmlWriter ()
+histogramTOCHtml :: HistogramViewState r a -> Int -> HtmlWriter ()
 histogramTOCHtml st index =
   writeHtmlListItem $
   writeHtmlLink ("#id" ++ show index) $

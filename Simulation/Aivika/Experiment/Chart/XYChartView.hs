@@ -7,9 +7,9 @@
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
 -- Stability  : experimental
--- Tested with: GHC 7.6.3
+-- Tested with: GHC 7.8.3
 --
--- The module defines 'XYChartView' that saves the XY charts.
+-- The module defines 'XYChartView' that plots the XY charts.
 --
 
 module Simulation.Aivika.Experiment.Chart.XYChartView
@@ -34,19 +34,12 @@ import System.FilePath
 
 import Graphics.Rendering.Chart
 
+import Simulation.Aivika
 import Simulation.Aivika.Experiment
-import Simulation.Aivika.Experiment.HtmlWriter
-import Simulation.Aivika.Experiment.Utils (divideBy, replace)
-import Simulation.Aivika.Experiment.Chart.ChartRenderer
+import Simulation.Aivika.Experiment.Chart.Types
 import Simulation.Aivika.Experiment.Chart.Utils (colourisePlotLines)
 
-import Simulation.Aivika.Specs
-import Simulation.Aivika.Parameter
-import Simulation.Aivika.Simulation
-import Simulation.Aivika.Event
-import Simulation.Aivika.Signal
-
--- | Defines the 'View' that saves the XY charts.
+-- | Defines the 'View' that plots the XY charts.
 data XYChartView =
   XYChartView { xyChartTitle       :: String,
                 -- ^ This is a title used in HTML.
@@ -68,15 +61,21 @@ data XYChartView =
                 xyChartPredicate   :: Event Bool,
                 -- ^ It specifies the predicate that defines
                 -- when we plot data in the chart.
-                xyChartXSeries     :: Maybe String,
-                -- ^ This is a label of the X series.
+                xyChartTransform   :: ResultTransform,
+                -- ^ The transform applied to the results before receiving series.
+                xyChartXSeries     :: ResultTransform,
+                -- ^ This is the X series.
                 --
-                -- You must define it, because it is 'Nothing' 
-                -- by default.
-                xyChartYSeries      :: [Either String String],
-                -- ^ It contains the labels of Y series plotted
-                -- on the XY chart.
-                xyChartPlotTitle :: String,
+                -- You must define it, because it is 'mempty' 
+                -- by default. Also it must return exactly
+                -- one 'ResultExtract' item when calling
+                -- function 'extractDoubleResults' by the specified
+                -- result set.
+                xyChartLeftYSeries  :: ResultTransform, 
+                -- ^ It defines the series plotted basing on the left Y axis.
+                xyChartRightYSeries :: ResultTransform, 
+                -- ^ It defines the series plotted basing on the right Y axis.
+                xyChartPlotTitle   :: String,
                 -- ^ This is a title used in the chart when
                 -- simulating a single run. It may include 
                 -- special variable @$TITLE@.
@@ -127,42 +126,50 @@ defaultXYChartView =
                 xyChartHeight      = 480,
                 xyChartFileName    = UniqueFilePath "$TITLE - $RUN_INDEX",
                 xyChartPredicate   = return True,
-                xyChartXSeries     = Nothing, 
-                xyChartYSeries     = [],
+                xyChartTransform    = id,
+                xyChartXSeries      = mempty, 
+                xyChartLeftYSeries  = mempty,
+                xyChartRightYSeries = mempty,
                 xyChartPlotTitle   = "$TITLE",
                 xyChartRunPlotTitle  = "$PLOT_TITLE / Run $RUN_INDEX of $RUN_COUNT",
                 xyChartPlotLines   = colourisePlotLines,
                 xyChartBottomAxis  = id,
                 xyChartLayout      = id }
 
-instance ChartRenderer r => ExperimentView XYChartView r where
+instance WebPageCharting r => ExperimentView XYChartView r WebPageWriter where
   
   outputView v = 
     let reporter exp renderer dir =
           do st <- newXYChart v exp renderer dir
+             let writer =
+                   WebPageWriter { reporterWriteTOCHtml = xyChartTOCHtml st,
+                                   reporterWriteHtml    = xyChartHtml st }
              return ExperimentReporter { reporterInitialise = return (),
                                          reporterFinalise   = return (),
                                          reporterSimulate   = simulateXYChart st,
-                                         reporterTOCHtml    = xyChartTOCHtml st,
-                                         reporterHtml       = xyChartHtml st }
+                                         reporterRequest    = writer }
     in ExperimentGenerator { generateReporter = reporter }
   
 -- | The state of the view.
-data XYChartViewState r =
+data XYChartViewState r a =
   XYChartViewState { xyChartView       :: XYChartView,
-                     xyChartExperiment :: Experiment r,
+                     xyChartExperiment :: Experiment r a,
                      xyChartRenderer   :: r,
                      xyChartDir        :: FilePath, 
                      xyChartMap        :: M.Map Int FilePath }
   
 -- | Create a new state of the view.
-newXYChart :: ChartRenderer r =>
-              XYChartView -> Experiment r -> r -> FilePath -> IO (XYChartViewState r)
+newXYChart :: WebPageCharting r
+              => XYChartView
+              -> Experiment r WebPageWriter
+              -> r
+              -> FilePath
+              -> IO (XYChartViewState r WebPageWriter)
 newXYChart view exp renderer dir =
   do let n = experimentRunCount exp
      fs <- forM [0..(n - 1)] $ \i ->
        resolveFilePath dir $
-       mapFilePath (flip replaceExtension $ renderableFileExtension renderer) $
+       mapFilePath (flip replaceExtension $ renderableChartExtension renderer) $
        expandFilePath (xyChartFileName view) $
        M.fromList [("$TITLE", xyChartTitle view),
                    ("$RUN_INDEX", show $ i + 1),
@@ -176,102 +183,105 @@ newXYChart view exp renderer dir =
                                xyChartMap        = m }
        
 -- | Plot the XY chart during the simulation.
-simulateXYChart :: ChartRenderer r => XYChartViewState r -> ExperimentData -> Event (Event ())
+simulateXYChart :: WebPageCharting r
+                   => XYChartViewState r WebPageWriter
+                   -> ExperimentData
+                   -> Event DisposableEvent
 simulateXYChart st expdata =
-  do let ylabels = xyChartYSeries $ xyChartView st
-         xlabels = xyChartXSeries $ xyChartView st
-         xlabel  = flip fromMaybe xlabels $
-                   error "X series is not provided: simulateXYChart"
-         (leftYLabels, rightYLabels) = partitionEithers ylabels
-         leftYProviders  = experimentSeriesProviders expdata leftYLabels
-         rightYProviders = experimentSeriesProviders expdata rightYLabels
-         xprovider  = 
-           case experimentSeriesProviders expdata [xlabel] of
-             [provider] -> provider
-             _ -> error $
-                  "Only a single X series must be" ++
-                  " provided: simulateXYChart"
-         providerInput providers =
-           flip map providers $ \provider ->
-           case providerToDouble provider of
-             Nothing -> error $
-                        "Cannot represent series " ++
-                        providerName provider ++ 
-                        " as double values: simulateXYChart"
-             Just input -> (providerName provider, provider, input)
-         leftYInput  = providerInput leftYProviders
-         rightYInput = providerInput rightYProviders
-         [(xname, _, x)] = providerInput [xprovider]
+  do let view    = xyChartView st
+         rs0     = xyChartXSeries view $
+                   xyChartTransform view $
+                   experimentResults expdata
+         rs1     = xyChartLeftYSeries view $
+                   xyChartTransform view $
+                   experimentResults expdata
+         rs2     = xyChartRightYSeries view $
+                   xyChartTransform view $
+                   experimentResults expdata
+         ext0    =
+           case extractDoubleResults rs0 of
+             [x] -> x
+             _   -> error "Expected to see a single X series: simulateXYChart"
+         exts1   = extractDoubleResults rs1
+         exts2   = extractDoubleResults rs2
+         signals = experimentPredefinedSignals expdata
          n = experimentRunCount $ xyChartExperiment st
-         width = xyChartWidth $ xyChartView st
-         height = xyChartHeight $ xyChartView st
-         predicate = xyChartPredicate $ xyChartView st
-         plotLines = xyChartPlotLines $ xyChartView st
-         plotBottomAxis = xyChartBottomAxis $ xyChartView st
-         plotLayout = xyChartLayout $ xyChartView st
-         renderer = xyChartRenderer st
+         width   = xyChartWidth view
+         height  = xyChartHeight view
+         predicate  = xyChartPredicate view
+         title   = xyChartTitle view
+         plotTitle  = xyChartPlotTitle view
+         runPlotTitle = xyChartRunPlotTitle view
+         plotLines  = xyChartPlotLines view
+         plotBottomAxis = xyChartBottomAxis view
+         plotLayout = xyChartLayout view
+         renderer   = xyChartRenderer st
      i <- liftParameter simulationIndex
-     let file = fromJust $ M.lookup (i - 1) (xyChartMap st)
-         title = xyChartTitle $ xyChartView st
-         plotTitle = 
+     let file  = fromJust $ M.lookup (i - 1) (xyChartMap st)
+         plotTitle' = 
            replace "$TITLE" title
-           (xyChartPlotTitle $ xyChartView st)
-         runPlotTitle =
+           plotTitle
+         runPlotTitle' =
            if n == 1
-           then plotTitle
+           then plotTitle'
            else replace "$RUN_INDEX" (show i) $
                 replace "$RUN_COUNT" (show n) $
-                replace "$PLOT_TITLE" plotTitle
-                (xyChartRunPlotTitle $ xyChartView st)
-         inputHistory input = 
-           forM input $ \(name, provider, y) ->
-           let transform () =
+                replace "$PLOT_TITLE" plotTitle'
+                runPlotTitle
+         inputHistory exts = 
+           forM exts $ \ext ->
+           let x = resultExtractData ext0
+               y = resultExtractData ext
+               transform () =
                  do p <- predicate
                     if p
                       then liftM2 (,) x y
                       else return (1/0, 1/0)  -- such values will be ignored then
+               signalx = resultExtractSignal ext0
+               signaly = resultExtractSignal ext
            in newSignalHistory $
               mapSignalM transform $
-              experimentMixedSignal expdata [provider] <>
-              experimentMixedSignal expdata [xprovider]
-     leftHs  <- inputHistory leftYInput
-     rightHs <- inputHistory rightYInput
+              pureResultSignal signals $
+              signalx <> signaly
+     hs1 <- inputHistory exts1
+     hs2 <- inputHistory exts2
      return $
-       do let plots hs input plotLineTails =
+       DisposableEvent $
+       do let plots hs exts plotLineTails =
                 do ps <-
-                     forM (zip3 hs input (head plotLineTails)) $
-                     \(h, (name, provider, input), plotLines) ->
+                     forM (zip3 hs exts (head plotLineTails)) $
+                     \(h, ext, plotLines) ->
                      do (ts, zs) <- readSignalHistory h 
                         return $
                           toPlot $
                           plotLines $
                           plot_lines_values .~ filterPlotLinesValues (elems zs) $
-                          plot_lines_title .~ name $
+                          plot_lines_title .~ resultExtractName ext $
                           def
                    return (ps, drop (length hs) plotLineTails)     
-          (leftPs, plotLineTails) <- plots leftHs leftYInput (tails plotLines)
-          (rightPs, plotLineTails) <- plots rightHs rightYInput plotLineTails
-          let leftPs' = map Left leftPs
-              rightPs' = map Right rightPs
-              ps' = leftPs' ++ rightPs'
-              axis  = plotBottomAxis $
-                      laxis_title .~ providerName xprovider $
+          (ps1, plotLineTails) <- plots hs1 exts1 (tails plotLines)
+          (ps2, plotLineTails) <- plots hs2 exts2 plotLineTails
+          let ps1' = map Left ps1
+              ps2' = map Right ps2
+              ps'  = ps1' ++ ps2'
+              axis = plotBottomAxis $
+                      laxis_title .~ resultExtractName ext0 $
                       def
               updateLeftAxis =
-                if null leftPs
+                if null ps1
                 then layoutlr_left_axis_visibility .~ AxisVisibility False False False
                 else id
               updateRightAxis =
-                if null rightPs
+                if null ps2
                 then layoutlr_right_axis_visibility .~ AxisVisibility False False False
                 else id
               chart = plotLayout . updateLeftAxis . updateRightAxis $
                       layoutlr_x_axis .~ axis $
-                      layoutlr_title .~ runPlotTitle $
+                      layoutlr_title .~ runPlotTitle' $
                       layoutlr_plots .~ ps' $
                       def
           liftIO $
-            do renderChart renderer (width, height) (toRenderable chart) file
+            do renderChart renderer (width, height) file (toRenderable chart)
                when (experimentVerbose $ xyChartExperiment st) $
                  putStr "Generated file " >> putStrLn file
      
@@ -282,7 +292,7 @@ filterPlotLinesValues =
   divideBy (\(x, y) -> isNaN x || isInfinite x || isNaN y || isInfinite y)
 
 -- | Get the HTML code.     
-xyChartHtml :: XYChartViewState r -> Int -> HtmlWriter ()     
+xyChartHtml :: XYChartViewState r a -> Int -> HtmlWriter ()     
 xyChartHtml st index =
   let n = experimentRunCount $ xyChartExperiment st
   in if n == 1
@@ -290,7 +300,7 @@ xyChartHtml st index =
      else xyChartHtmlMultiple st index
      
 -- | Get the HTML code for a single run.
-xyChartHtmlSingle :: XYChartViewState r -> Int -> HtmlWriter ()
+xyChartHtmlSingle :: XYChartViewState r a -> Int -> HtmlWriter ()
 xyChartHtmlSingle st index =
   do header st index
      let f = fromJust $ M.lookup 0 (xyChartMap st)
@@ -298,7 +308,7 @@ xyChartHtmlSingle st index =
        writeHtmlImage (makeRelative (xyChartDir st) f)
 
 -- | Get the HTML code for multiple runs.
-xyChartHtmlMultiple :: XYChartViewState r -> Int -> HtmlWriter ()
+xyChartHtmlMultiple :: XYChartViewState r a -> Int -> HtmlWriter ()
 xyChartHtmlMultiple st index =
   do header st index
      let n = experimentRunCount $ xyChartExperiment st
@@ -307,7 +317,7 @@ xyChartHtmlMultiple st index =
        in writeHtmlParagraph $
           writeHtmlImage (makeRelative (xyChartDir st) f)
 
-header :: XYChartViewState r -> Int -> HtmlWriter ()
+header :: XYChartViewState r a -> Int -> HtmlWriter ()
 header st index =
   do writeHtmlHeader3WithId ("id" ++ show index) $ 
        writeHtmlText (xyChartTitle $ xyChartView st)
@@ -317,7 +327,7 @@ header st index =
        writeHtmlText description
 
 -- | Get the TOC item.
-xyChartTOCHtml :: XYChartViewState r -> Int -> HtmlWriter ()
+xyChartTOCHtml :: XYChartViewState r a -> Int -> HtmlWriter ()
 xyChartTOCHtml st index =
   writeHtmlListItem $
   writeHtmlLink ("#id" ++ show index) $

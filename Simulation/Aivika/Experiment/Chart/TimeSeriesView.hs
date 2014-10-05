@@ -9,7 +9,7 @@
 -- Stability  : experimental
 -- Tested with: GHC 7.6.3
 --
--- The module defines 'TimeSeriesView' that saves the time series charts.
+-- The module defines 'TimeSeriesView' that plots the time series charts.
 --
 
 module Simulation.Aivika.Experiment.Chart.TimeSeriesView
@@ -26,6 +26,7 @@ import Data.Maybe
 import Data.Either
 import Data.Array
 import Data.List
+import Data.Monoid
 import Data.Default.Class
 
 import System.IO
@@ -33,19 +34,12 @@ import System.FilePath
 
 import Graphics.Rendering.Chart
 
+import Simulation.Aivika
 import Simulation.Aivika.Experiment
-import Simulation.Aivika.Experiment.HtmlWriter
-import Simulation.Aivika.Experiment.Utils (divideBy, replace)
-import Simulation.Aivika.Experiment.Chart.ChartRenderer
+import Simulation.Aivika.Experiment.Chart.Types
 import Simulation.Aivika.Experiment.Chart.Utils (colourisePlotLines)
 
-import Simulation.Aivika.Specs
-import Simulation.Aivika.Parameter
-import Simulation.Aivika.Simulation
-import Simulation.Aivika.Event
-import Simulation.Aivika.Signal
-
--- | Defines the 'View' that saves the time series charts.
+-- | Defines the 'View' that plots the time series charts.
 data TimeSeriesView =
   TimeSeriesView { timeSeriesTitle       :: String,
                    -- ^ This is a title used in HTML.
@@ -67,10 +61,13 @@ data TimeSeriesView =
                    timeSeriesPredicate   :: Event Bool,
                    -- ^ It specifies the predicate that defines
                    -- when we plot data in the chart.
-                   timeSeries      :: [Either String String],
-                   -- ^ It contains the labels of data plotted
-                   -- on the chart.
-                   timeSeriesPlotTitle :: String,
+                   timeSeriesTransform    :: ResultTransform,
+                   -- ^ The transform applied to the results before receiving series.
+                   timeSeriesLeftYSeries  :: ResultTransform, 
+                   -- ^ It defines the series plotted basing on the left Y axis.
+                   timeSeriesRightYSeries :: ResultTransform, 
+                   -- ^ It defines the series plotted basing on the right Y axis.
+                   timeSeriesPlotTitle    :: String,
                    -- ^ This is a title used in the chart when
                    -- simulating a single run. It may include 
                    -- special variable @$TITLE@.
@@ -121,41 +118,49 @@ defaultTimeSeriesView =
                    timeSeriesHeight      = 480,
                    timeSeriesFileName    = UniqueFilePath "$TITLE - $RUN_INDEX",
                    timeSeriesPredicate   = return True,
-                   timeSeries            = [], 
-                   timeSeriesPlotTitle   = "$TITLE",
+                   timeSeriesTransform   = id,
+                   timeSeriesLeftYSeries  = const mempty,
+                   timeSeriesRightYSeries = const mempty,
+                   timeSeriesPlotTitle    = "$TITLE",
                    timeSeriesRunPlotTitle = "$PLOT_TITLE / Run $RUN_INDEX of $RUN_COUNT",
                    timeSeriesPlotLines   = colourisePlotLines,
                    timeSeriesBottomAxis  = id,
                    timeSeriesLayout      = id }
 
-instance ChartRenderer r => ExperimentView TimeSeriesView r where
+instance WebPageCharting r => ExperimentView TimeSeriesView r WebPageWriter where
   
   outputView v = 
     let reporter exp renderer dir =
           do st <- newTimeSeries v exp renderer dir
+             let writer =
+                   WebPageWriter { reporterWriteTOCHtml = timeSeriesTOCHtml st,
+                                   reporterWriteHtml    = timeSeriesHtml st }
              return ExperimentReporter { reporterInitialise = return (),
                                          reporterFinalise   = return (),
                                          reporterSimulate   = simulateTimeSeries st,
-                                         reporterTOCHtml    = timeSeriesTOCHtml st,
-                                         reporterHtml       = timeSeriesHtml st }
+                                         reporterRequest    = writer }
     in ExperimentGenerator { generateReporter = reporter }
   
 -- | The state of the view.
-data TimeSeriesViewState r =
+data TimeSeriesViewState r a =
   TimeSeriesViewState { timeSeriesView       :: TimeSeriesView,
-                        timeSeriesExperiment :: Experiment r,
+                        timeSeriesExperiment :: Experiment r a,
                         timeSeriesRenderer   :: r,
                         timeSeriesDir        :: FilePath, 
                         timeSeriesMap        :: M.Map Int FilePath }
   
 -- | Create a new state of the view.
-newTimeSeries :: ChartRenderer r =>
-                 TimeSeriesView -> Experiment r -> r -> FilePath -> IO (TimeSeriesViewState r)
+newTimeSeries :: WebPageCharting r
+                 => TimeSeriesView
+                 -> Experiment r WebPageWriter
+                 -> r
+                 -> FilePath
+                 -> IO (TimeSeriesViewState r WebPageWriter)
 newTimeSeries view exp renderer dir =
   do let n = experimentRunCount exp
      fs <- forM [0..(n - 1)] $ \i ->
        resolveFilePath dir $
-       mapFilePath (flip replaceExtension $ renderableFileExtension renderer) $
+       mapFilePath (flip replaceExtension $ renderableChartExtension renderer) $
        expandFilePath (timeSeriesFileName view) $
        M.fromList [("$TITLE", timeSeriesTitle view),
                    ("$RUN_INDEX", show $ i + 1),
@@ -168,91 +173,95 @@ newTimeSeries view exp renderer dir =
                                   timeSeriesDir        = dir, 
                                   timeSeriesMap        = m }
        
--- | Plot the time series chart during the simulation.
-simulateTimeSeries :: ChartRenderer r => TimeSeriesViewState r -> ExperimentData -> Event (Event ())
+-- | Plot the time series chart within simulation.
+simulateTimeSeries :: WebPageCharting r
+                      => TimeSeriesViewState r WebPageWriter
+                      -> ExperimentData
+                      -> Event DisposableEvent
 simulateTimeSeries st expdata =
-  do let labels = timeSeries $ timeSeriesView st
-         (leftLabels, rightLabels) = partitionEithers labels 
-         (leftProviders, rightProviders) =
-           (experimentSeriesProviders expdata leftLabels,
-            experimentSeriesProviders expdata rightLabels)
-         providerInput providers =
-           flip map providers $ \provider ->
-           case providerToDouble provider of
-             Nothing -> error $
-                        "Cannot represent series " ++
-                        providerName provider ++ 
-                        " as double values: simulateTimeSeries"
-             Just input -> (providerName provider, provider, input)
-         leftInput = providerInput leftProviders
-         rightInput = providerInput rightProviders
+  do let view    = timeSeriesView st
+         rs1     = timeSeriesLeftYSeries view $
+                   timeSeriesTransform view $
+                   experimentResults expdata
+         rs2     = timeSeriesRightYSeries view $
+                   timeSeriesTransform view $
+                   experimentResults expdata
+         exts1   = extractDoubleResults rs1
+         exts2   = extractDoubleResults rs2
+         signals = experimentPredefinedSignals expdata
          n = experimentRunCount $ timeSeriesExperiment st
-         width = timeSeriesWidth $ timeSeriesView st
-         height = timeSeriesHeight $ timeSeriesView st
-         predicate = timeSeriesPredicate $ timeSeriesView st
-         plotLines = timeSeriesPlotLines $ timeSeriesView st
-         plotBottomAxis = timeSeriesBottomAxis $ timeSeriesView st
-         plotLayout = timeSeriesLayout $ timeSeriesView st
-         renderer = timeSeriesRenderer st
+         width   = timeSeriesWidth view
+         height  = timeSeriesHeight view
+         predicate  = timeSeriesPredicate view
+         title   = timeSeriesTitle view
+         plotTitle  = timeSeriesPlotTitle view
+         runPlotTitle = timeSeriesRunPlotTitle view
+         plotLines  = timeSeriesPlotLines view
+         plotBottomAxis = timeSeriesBottomAxis view
+         plotLayout = timeSeriesLayout view
+         renderer   = timeSeriesRenderer st
      i <- liftParameter simulationIndex
-     let file = fromJust $ M.lookup (i - 1) (timeSeriesMap st)
-         title = timeSeriesTitle $ timeSeriesView st
-         plotTitle = 
+     let file  = fromJust $ M.lookup (i - 1) (timeSeriesMap st)
+         plotTitle' = 
            replace "$TITLE" title
-           (timeSeriesPlotTitle $ timeSeriesView st)
-         runPlotTitle =
+           plotTitle
+         runPlotTitle' =
            if n == 1
-           then plotTitle
+           then plotTitle'
            else replace "$RUN_INDEX" (show i) $
                 replace "$RUN_COUNT" (show n) $
-                replace "$PLOT_TITLE" plotTitle
-                (timeSeriesRunPlotTitle $ timeSeriesView st)
-         inputHistory input =
-           forM input $ \(name, provider, input) ->
+                replace "$PLOT_TITLE" plotTitle'
+                runPlotTitle
+         inputHistory exts =
+           forM exts $ \ext ->
            let transform () =
                  do x <- predicate
-                    if x then input else return (1/0)  -- the infinite values will be ignored then
+                    if x
+                      then resultExtractData ext
+                      else return (1/0)  -- the infinite values will be ignored then
            in newSignalHistory $
               mapSignalM transform $
-              experimentMixedSignal expdata [provider]
-     leftHs <- inputHistory leftInput
-     rightHs <- inputHistory rightInput
+              pureResultSignal signals $
+              resultExtractSignal ext
+     hs1 <- inputHistory exts1
+     hs2 <- inputHistory exts2
      return $
-       do let plots hs input plotLineTails =
+       DisposableEvent $
+       do let plots hs exts plotLineTails =
                 do ps <-
-                     forM (zip3 hs input (head plotLineTails)) $
-                     \(h, (name, provider, input), plotLines) ->
+                     forM (zip3 hs exts (head plotLineTails)) $
+                     \(h, ext, plotLines) ->
                      do (ts, xs) <- readSignalHistory h 
                         return $
                           toPlot $
                           plotLines $
                           plot_lines_values .~ filterPlotLinesValues (zip (elems ts) (elems xs)) $
-                          plot_lines_title .~ name $
+                          plot_lines_title .~ resultExtractName ext $
                           def
                    return (ps, drop (length hs) plotLineTails)
-          (leftPs, plotLineTails) <- plots leftHs leftInput (tails plotLines)
-          (rightPs, plotLineTails) <- plots rightHs rightInput plotLineTails
-          let leftPs' = map Left leftPs
-              rightPs' = map Right rightPs
-              ps' = leftPs' ++ rightPs'
-              axis  = plotBottomAxis $
-                      laxis_title .~ "time" $
-                      def
+          (ps1, plotLineTails) <- plots hs1 exts1 (tails plotLines)
+          (ps2, plotLineTails) <- plots hs2 exts2 plotLineTails
+          let ps1' = map Left ps1
+              ps2' = map Right ps2
+              ps'  = ps1' ++ ps2'
+              axis = plotBottomAxis $
+                     laxis_title .~ "time" $
+                     def
               updateLeftAxis =
-                if null leftPs
+                if null ps1
                 then layoutlr_left_axis_visibility .~ AxisVisibility False False False
                 else id
               updateRightAxis =
-                if null rightPs
+                if null ps2
                 then layoutlr_right_axis_visibility .~ AxisVisibility False False False
                 else id
               chart = plotLayout . updateLeftAxis . updateRightAxis $
                       layoutlr_x_axis .~ axis $
-                      layoutlr_title .~ runPlotTitle $
+                      layoutlr_title .~ runPlotTitle' $
                       layoutlr_plots .~ ps' $
                       def
           liftIO $
-            do renderChart renderer (width, height) (toRenderable chart) file
+            do renderChart renderer (width, height) file (toRenderable chart)
                when (experimentVerbose $ timeSeriesExperiment st) $
                  putStr "Generated file " >> putStrLn file
      
@@ -263,7 +272,7 @@ filterPlotLinesValues =
   divideBy (\(t, x) -> isNaN x || isInfinite x)
 
 -- | Get the HTML code.     
-timeSeriesHtml :: TimeSeriesViewState r -> Int -> HtmlWriter ()     
+timeSeriesHtml :: TimeSeriesViewState r a -> Int -> HtmlWriter ()     
 timeSeriesHtml st index =
   let n = experimentRunCount $ timeSeriesExperiment st
   in if n == 1
@@ -271,7 +280,7 @@ timeSeriesHtml st index =
      else timeSeriesHtmlMultiple st index
      
 -- | Get the HTML code for a single run.
-timeSeriesHtmlSingle :: TimeSeriesViewState r -> Int -> HtmlWriter ()
+timeSeriesHtmlSingle :: TimeSeriesViewState r a -> Int -> HtmlWriter ()
 timeSeriesHtmlSingle st index =
   do header st index
      let f = fromJust $ M.lookup 0 (timeSeriesMap st)
@@ -279,7 +288,7 @@ timeSeriesHtmlSingle st index =
        writeHtmlImage (makeRelative (timeSeriesDir st) f)
 
 -- | Get the HTML code for multiple runs.
-timeSeriesHtmlMultiple :: TimeSeriesViewState r -> Int -> HtmlWriter ()
+timeSeriesHtmlMultiple :: TimeSeriesViewState r a -> Int -> HtmlWriter ()
 timeSeriesHtmlMultiple st index =
   do header st index
      let n = experimentRunCount $ timeSeriesExperiment st
@@ -288,7 +297,7 @@ timeSeriesHtmlMultiple st index =
        in writeHtmlParagraph $
           writeHtmlImage (makeRelative (timeSeriesDir st) f)
 
-header :: TimeSeriesViewState r -> Int -> HtmlWriter ()
+header :: TimeSeriesViewState r a -> Int -> HtmlWriter ()
 header st index =
   do writeHtmlHeader3WithId ("id" ++ show index) $ 
        writeHtmlText (timeSeriesTitle $ timeSeriesView st)
@@ -298,7 +307,7 @@ header st index =
        writeHtmlText description
 
 -- | Get the TOC item.
-timeSeriesTOCHtml :: TimeSeriesViewState r -> Int -> HtmlWriter ()
+timeSeriesTOCHtml :: TimeSeriesViewState r a -> Int -> HtmlWriter ()
 timeSeriesTOCHtml st index =
   writeHtmlListItem $
   writeHtmlLink ("#id" ++ show index) $

@@ -7,9 +7,9 @@
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
 -- Stability  : experimental
--- Tested with: GHC 7.6.3
+-- Tested with: GHC 7.8.3
 --
--- The module defines 'FinalHistogramView' that draws a histogram
+-- The module defines 'FinalHistogramView' that plots a histogram
 -- by the specified series in final time points collected from different 
 -- simulation runs.
 --
@@ -27,6 +27,7 @@ import qualified Data.Map as M
 import Data.IORef
 import Data.Maybe
 import Data.Either
+import Data.Monoid
 import Data.Array
 import Data.Array.IO.Safe
 import Data.Default.Class
@@ -36,22 +37,13 @@ import System.FilePath
 
 import Graphics.Rendering.Chart
 
+import Simulation.Aivika
 import Simulation.Aivika.Experiment
-import Simulation.Aivika.Experiment.HtmlWriter
-import Simulation.Aivika.Experiment.Utils (divideBy, replace)
-import Simulation.Aivika.Experiment.Chart.ChartRenderer
+import Simulation.Aivika.Experiment.MRef
+import Simulation.Aivika.Experiment.Chart.Types
 import Simulation.Aivika.Experiment.Chart.Utils (colourisePlotBars)
-import Simulation.Aivika.Experiment.Histogram
-import Simulation.Aivika.Experiment.ListSource
 
-import Simulation.Aivika.Specs
-import Simulation.Aivika.Parameter
-import Simulation.Aivika.Simulation
-import Simulation.Aivika.Dynamics
-import Simulation.Aivika.Event
-import Simulation.Aivika.Signal
-
--- | Defines the 'View' that saves the histogram
+-- | Defines the 'View' that plots the histogram
 -- for the specified series in final time points
 -- collected from different simulation runs.
 data FinalHistogramView =
@@ -78,9 +70,10 @@ data FinalHistogramView =
                        finalHistogramBuild       :: [[Double]] -> Histogram, 
                        -- ^ Builds a histogram by the specified list of 
                        -- data series.
-                       finalHistogramSeries      :: [String],
-                       -- ^ It contains the labels of data plotted
-                       -- on the histogram.
+                       finalHistogramTransform   :: ResultTransform,
+                       -- ^ The transform applied to the results before receiving series.
+                       finalHistogramSeries      :: ResultTransform, 
+                       -- ^ It defines the series to be plotted on the histogram.
                        finalHistogramPlotTitle   :: String,
                        -- ^ This is a title used in the histogram. 
                        -- It may include special variable @$TITLE@.
@@ -113,116 +106,111 @@ defaultFinalHistogramView =
                        finalHistogramFileName    = UniqueFilePath "$TITLE",
                        finalHistogramPredicate   = return True,
                        finalHistogramBuild       = histogram binSturges,
-                       finalHistogramSeries      = [], 
+                       finalHistogramTransform   = id,
+                       finalHistogramSeries      = mempty, 
                        finalHistogramPlotTitle   = "$TITLE",
                        finalHistogramPlotBars    = colourisePlotBars,
                        finalHistogramLayout      = id }
 
-instance ChartRenderer r => ExperimentView FinalHistogramView r where
+instance WebPageCharting r => ExperimentView FinalHistogramView r WebPageWriter where
   
   outputView v = 
     let reporter exp renderer dir =
           do st <- newFinalHistogram v exp renderer dir
+             let writer =
+                   WebPageWriter { reporterWriteTOCHtml = finalHistogramTOCHtml st,
+                                   reporterWriteHtml    = finalHistogramHtml st }
              return ExperimentReporter { reporterInitialise = return (),
                                          reporterFinalise   = finaliseFinalHistogram st,
                                          reporterSimulate   = simulateFinalHistogram st,
-                                         reporterTOCHtml    = finalHistogramTOCHtml st,
-                                         reporterHtml       = finalHistogramHtml st }
+                                         reporterRequest    = writer }
     in ExperimentGenerator { generateReporter = reporter }
   
 -- | The state of the view.
-data FinalHistogramViewState r =
+data FinalHistogramViewState r a =
   FinalHistogramViewState { finalHistogramView       :: FinalHistogramView,
-                            finalHistogramExperiment :: Experiment r,
+                            finalHistogramExperiment :: Experiment r a,
                             finalHistogramRenderer   :: r,
                             finalHistogramDir        :: FilePath, 
                             finalHistogramFile       :: IORef (Maybe FilePath),
-                            finalHistogramLock       :: MVar (),
-                            finalHistogramResults    :: IORef (Maybe FinalHistogramResults) }
+                            finalHistogramResults    :: MRef (Maybe FinalHistogramResults) }
 
 -- | The histogram item.
 data FinalHistogramResults =
   FinalHistogramResults { finalHistogramNames  :: [String],
-                          finalHistogramValues :: [ListRef Double] }
+                          finalHistogramValues :: [MRef [Double]] }
   
 -- | Create a new state of the view.
-newFinalHistogram :: FinalHistogramView -> Experiment r -> r -> FilePath -> IO (FinalHistogramViewState r)
+newFinalHistogram :: FinalHistogramView -> Experiment r a -> r -> FilePath -> IO (FinalHistogramViewState r a)
 newFinalHistogram view exp renderer dir =
   do f <- newIORef Nothing
-     l <- newMVar () 
-     r <- newIORef Nothing
+     r <- newMRef Nothing
      return FinalHistogramViewState { finalHistogramView       = view,
                                       finalHistogramExperiment = exp,
                                       finalHistogramRenderer   = renderer,
                                       finalHistogramDir        = dir, 
                                       finalHistogramFile       = f,
-                                      finalHistogramLock       = l, 
                                       finalHistogramResults    = r }
        
 -- | Create new histogram results.
-newFinalHistogramResults :: [String] -> Experiment r -> IO FinalHistogramResults
+newFinalHistogramResults :: [String] -> Experiment r a -> IO FinalHistogramResults
 newFinalHistogramResults names exp =
-  do values <- forM names $ \_ -> liftIO newListRef
+  do values <- forM names $ \_ -> liftIO $ newMRef []
      return FinalHistogramResults { finalHistogramNames  = names,
                                     finalHistogramValues = values }
        
+-- | Require to return unique results associated with the specified state. 
+requireFinalHistogramResults :: FinalHistogramViewState r a -> [String] -> IO FinalHistogramResults
+requireFinalHistogramResults st names =
+  maybeWriteMRef (finalHistogramResults st)
+  (newFinalHistogramResults names (finalHistogramExperiment st)) $ \results ->
+  if (names /= finalHistogramNames results)
+  then error "Series with different names are returned for different runs: requireFinalHistogramResults"
+  else results
+
 -- | Simulation of the specified series.
-simulateFinalHistogram :: FinalHistogramViewState r -> ExperimentData -> Event (Event ())
+simulateFinalHistogram :: FinalHistogramViewState r a -> ExperimentData -> Event DisposableEvent
 simulateFinalHistogram st expdata =
-  do let labels = finalHistogramSeries $ finalHistogramView st
-         providers = experimentSeriesProviders expdata labels
-         input =
-           flip map providers $ \provider ->
-           case providerToDoubleListSource provider of
-             Nothing -> error $
-                        "Cannot represent series " ++
-                        providerName provider ++ 
-                        " as a source of double values: simulateFinalHistogram"
-             Just input -> listSourceData input
-         names = map providerName providers
-         predicate = finalHistogramPredicate $ finalHistogramView st
-         exp = finalHistogramExperiment st
-         lock = finalHistogramLock st
-     results <- liftIO $ readIORef (finalHistogramResults st)
-     case results of
-       Nothing ->
-         liftIO $
-         do results <- newFinalHistogramResults names exp
-            writeIORef (finalHistogramResults st) $ Just results
-       Just results ->
-         when (names /= finalHistogramNames results) $
-         error "Series with different names are returned for different runs: simulateFinalHistogram"
-     results <- liftIO $ fmap fromJust $ readIORef (finalHistogramResults st)
+  do let view    = finalHistogramView st
+         rs      = finalHistogramSeries view $
+                   finalHistogramTransform view $
+                   experimentResults expdata
+         exts    = extractDoubleListResults rs
+         names   = map resultExtractName exts
+         signals = experimentPredefinedSignals expdata
+         signal  = filterSignalM (const predicate) $
+                   resultSignalInStopTime signals
+         predicate = finalHistogramPredicate view
+     results <- liftIO $ requireFinalHistogramResults st names
      let values = finalHistogramValues results
-         h = filterSignalM (const predicate) $
-             experimentSignalInStopTime expdata
-     handleSignal_ h $ \_ ->
-       do xs <- sequence input
-          liftIO $ withMVar lock $ \() ->
+     handleSignal signal $ \_ ->
+       do xs <- forM exts resultExtractData
+          liftIO $
             forM_ (zip xs values) $ \(x, values) ->
-            addDataToListRef values x
-     return $ return ()
+            modifyMRef values $ (++) x
      
 -- | Plot the histogram after the simulation is complete.
-finaliseFinalHistogram :: ChartRenderer r => FinalHistogramViewState r -> IO ()
+finaliseFinalHistogram :: WebPageCharting r => FinalHistogramViewState r WebPageWriter -> IO ()
 finaliseFinalHistogram st =
-  do let title = finalHistogramTitle $ finalHistogramView st
-         plotTitle = 
+  do let view = finalHistogramView st
+         title = finalHistogramTitle view
+         plotTitle = finalHistogramPlotTitle view
+         plotTitle' = 
            replace "$TITLE" title
-           (finalHistogramPlotTitle $ finalHistogramView st)
-         width = finalHistogramWidth $ finalHistogramView st
-         height = finalHistogramHeight $ finalHistogramView st
-         histogram = finalHistogramBuild $ finalHistogramView st
-         bars = finalHistogramPlotBars $ finalHistogramView st
-         layout = finalHistogramLayout $ finalHistogramView st
+           plotTitle
+         width = finalHistogramWidth view
+         height = finalHistogramHeight view
+         histogram = finalHistogramBuild view
+         bars = finalHistogramPlotBars view
+         layout = finalHistogramLayout view
          renderer = finalHistogramRenderer st
-     results <- readIORef $ finalHistogramResults st
+     results <- readMRef $ finalHistogramResults st
      case results of
        Nothing -> return ()
        Just results ->
          do let names  = finalHistogramNames results
                 values = finalHistogramValues results
-            xs <- forM values readListRef
+            xs <- forM values readMRef
             let zs = histogramToBars . filterHistogram . histogram $ 
                      map filterData xs
                 p  = plotBars $
@@ -240,14 +228,14 @@ finaliseFinalHistogram st =
                                 l
                   else id
                 chart = layout . updateAxes $
-                        layout_title .~ plotTitle $
+                        layout_title .~ plotTitle' $
                         layout_plots .~ [p] $
                         def
             file <- resolveFilePath (finalHistogramDir st) $
-                    mapFilePath (flip replaceExtension $ renderableFileExtension renderer) $
-                    expandFilePath (finalHistogramFileName $ finalHistogramView st) $
+                    mapFilePath (flip replaceExtension $ renderableChartExtension renderer) $
+                    expandFilePath (finalHistogramFileName view) $
                     M.fromList [("$TITLE", title)]
-            renderChart renderer (width, height) (toRenderable chart) file
+            renderChart renderer (width, height) file (toRenderable chart)
             when (experimentVerbose $ finalHistogramExperiment st) $
               putStr "Generated file " >> putStrLn file
             writeIORef (finalHistogramFile st) $ Just file
@@ -265,7 +253,7 @@ histogramToBars :: [(Double, [Int])] -> [(Double, [Double])]
 histogramToBars = map $ \(x, ns) -> (x, map fromIntegral ns)
 
 -- | Get the HTML code.     
-finalHistogramHtml :: FinalHistogramViewState r -> Int -> HtmlWriter ()
+finalHistogramHtml :: FinalHistogramViewState r a -> Int -> HtmlWriter ()
 finalHistogramHtml st index =
   do header st index
      file <- liftIO $ readIORef (finalHistogramFile st)
@@ -275,7 +263,7 @@ finalHistogramHtml st index =
          writeHtmlParagraph $
          writeHtmlImage (makeRelative (finalHistogramDir st) f)
 
-header :: FinalHistogramViewState r -> Int -> HtmlWriter ()
+header :: FinalHistogramViewState r a -> Int -> HtmlWriter ()
 header st index =
   do writeHtmlHeader3WithId ("id" ++ show index) $ 
        writeHtmlText (finalHistogramTitle $ finalHistogramView st)
@@ -285,7 +273,7 @@ header st index =
        writeHtmlText description
 
 -- | Get the TOC item.
-finalHistogramTOCHtml :: FinalHistogramViewState r -> Int -> HtmlWriter ()
+finalHistogramTOCHtml :: FinalHistogramViewState r a -> Int -> HtmlWriter ()
 finalHistogramTOCHtml st index =
   writeHtmlListItem $
   writeHtmlLink ("#id" ++ show index) $

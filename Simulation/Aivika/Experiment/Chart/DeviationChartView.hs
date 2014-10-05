@@ -7,9 +7,9 @@
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
 -- Stability  : experimental
--- Tested with: GHC 7.6.3
+-- Tested with: GHC 7.8.3
 --
--- The module defines 'DeviationChartView' that creates the deviation chart.
+-- The module defines 'DeviationChartView' that plots the deviation chart using rule of 3-sigma.
 --
 
 module Simulation.Aivika.Experiment.Chart.DeviationChartView
@@ -25,6 +25,7 @@ import qualified Data.Map as M
 import Data.IORef
 import Data.Maybe
 import Data.Either
+import Data.Monoid
 import Data.Array
 import Data.Array.IO.Safe
 import Data.Default.Class
@@ -34,22 +35,13 @@ import System.FilePath
 
 import Graphics.Rendering.Chart
 
+import Simulation.Aivika
 import Simulation.Aivika.Experiment
-import Simulation.Aivika.Experiment.HtmlWriter
-import Simulation.Aivika.Experiment.Utils (divideBy, replace)
-import Simulation.Aivika.Experiment.Chart.ChartRenderer
+import Simulation.Aivika.Experiment.MRef
+import Simulation.Aivika.Experiment.Chart.Types
 import Simulation.Aivika.Experiment.Chart.Utils (colourisePlotLines, colourisePlotFillBetween)
-import Simulation.Aivika.Experiment.SamplingStatsSource
 
-import Simulation.Aivika.Specs
-import Simulation.Aivika.Parameter
-import Simulation.Aivika.Simulation
-import Simulation.Aivika.Dynamics
-import Simulation.Aivika.Event
-import Simulation.Aivika.Signal
-import Simulation.Aivika.Statistics
-
--- | Defines the 'View' that creates the deviation chart.
+-- | Defines the 'View' that plots the deviation chart.
 data DeviationChartView =
   DeviationChartView { deviationChartTitle       :: String,
                        -- ^ This is a title used in HTML.
@@ -68,9 +60,12 @@ data DeviationChartView =
                        -- @
                        --   deviationChartFileName = UniqueFilePath \"$TITLE\"
                        -- @
-                       deviationChartSeries      :: [Either String String],
-                       -- ^ It contains the labels of data plotted
-                       -- on the chart.
+                       deviationChartTransform :: ResultTransform,
+                       -- ^ The transform applied to the results before receiving series.
+                       deviationChartLeftYSeries  :: ResultTransform, 
+                       -- ^ It defines the series to be plotted basing on the left Y axis.
+                       deviationChartRightYSeries :: ResultTransform, 
+                       -- ^ It defines the series to be plotted basing on the right Y axis.
                        deviationChartPlotTitle :: String,
                        -- ^ This is a title used in the chart. 
                        -- It may include special variable @$TITLE@.
@@ -116,34 +111,38 @@ defaultDeviationChartView =
                        deviationChartWidth       = 640,
                        deviationChartHeight      = 480,
                        deviationChartFileName    = UniqueFilePath "$TITLE",
-                       deviationChartSeries      = [], 
+                       deviationChartTransform   = id,
+                       deviationChartLeftYSeries  = mempty, 
+                       deviationChartRightYSeries = mempty, 
                        deviationChartPlotTitle   = "$TITLE",
                        deviationChartPlotLines   = colourisePlotLines,
                        deviationChartPlotFillBetween = colourisePlotFillBetween,
                        deviationChartBottomAxis  = id,
                        deviationChartLayout      = id }
 
-instance ChartRenderer r => ExperimentView DeviationChartView r where
+instance WebPageCharting r => ExperimentView DeviationChartView r WebPageWriter where
   
   outputView v = 
     let reporter exp renderer dir =
           do st <- newDeviationChart v exp renderer dir
+             let writer =
+                   WebPageWriter { reporterWriteTOCHtml = deviationChartTOCHtml st,
+                                   reporterWriteHtml    = deviationChartHtml st }
              return ExperimentReporter { reporterInitialise = return (),
                                          reporterFinalise   = finaliseDeviationChart st,
                                          reporterSimulate   = simulateDeviationChart st,
-                                         reporterTOCHtml    = deviationChartTOCHtml st,
-                                         reporterHtml       = deviationChartHtml st }
+                                         reporterRequest    = writer }
     in ExperimentGenerator { generateReporter = reporter }
   
 -- | The state of the view.
-data DeviationChartViewState r =
+data DeviationChartViewState r a =
   DeviationChartViewState { deviationChartView       :: DeviationChartView,
-                            deviationChartExperiment :: Experiment r,
+                            deviationChartExperiment :: Experiment r a,
                             deviationChartRenderer   :: r,
                             deviationChartDir        :: FilePath, 
                             deviationChartFile       :: IORef (Maybe FilePath),
                             deviationChartLock       :: MVar (),
-                            deviationChartResults    :: IORef (Maybe DeviationChartResults) }
+                            deviationChartResults    :: MRef (Maybe DeviationChartResults) }
 
 -- | The deviation chart item.
 data DeviationChartResults =
@@ -152,11 +151,15 @@ data DeviationChartResults =
                           deviationChartStats :: [IOArray Int (SamplingStats Double)] }
   
 -- | Create a new state of the view.
-newDeviationChart :: DeviationChartView -> Experiment r -> r -> FilePath -> IO (DeviationChartViewState r)
+newDeviationChart :: DeviationChartView
+                     -> Experiment r a
+                     -> r
+                     -> FilePath
+                     -> IO (DeviationChartViewState r a)
 newDeviationChart view exp renderer dir =
   do f <- newIORef Nothing
      l <- newMVar () 
-     r <- newIORef Nothing
+     r <- newMRef Nothing
      return DeviationChartViewState { deviationChartView       = view,
                                       deviationChartExperiment = exp,
                                       deviationChartRenderer   = renderer,
@@ -166,7 +169,7 @@ newDeviationChart view exp renderer dir =
                                       deviationChartResults    = r }
        
 -- | Create new chart results.
-newDeviationChartResults :: [Either String String] -> Experiment r -> IO DeviationChartResults
+newDeviationChartResults :: [Either String String] -> Experiment r a -> IO DeviationChartResults
 newDeviationChartResults names exp =
   do let specs = experimentSpecs exp
          bnds  = integIterationBnds specs
@@ -176,71 +179,64 @@ newDeviationChartResults names exp =
      return DeviationChartResults { deviationChartTimes = times,
                                     deviationChartNames = names,
                                     deviationChartStats = stats }
+
+-- | Require to return unique chart results associated with the specified state. 
+requireDeviationChartResults :: DeviationChartViewState r a -> [Either String String] -> IO DeviationChartResults
+requireDeviationChartResults st names =
+  maybeWriteMRef (deviationChartResults st)
+  (newDeviationChartResults names (deviationChartExperiment st)) $ \results ->
+  if (names /= deviationChartNames results)
+  then error "Series with different names are returned for different runs: requireDeviationChartResults"
+  else results
        
 -- | Simulate the specified series.
-simulateDeviationChart :: DeviationChartViewState r -> ExperimentData -> Event (Event ())
+simulateDeviationChart :: DeviationChartViewState r a -> ExperimentData -> Event DisposableEvent
 simulateDeviationChart st expdata =
-  do let labels = deviationChartSeries $ deviationChartView st
-         (leftLabels, rightLabels) = partitionEithers labels 
-         (leftProviders, rightProviders) =
-           (experimentSeriesProviders expdata leftLabels,
-            experimentSeriesProviders expdata rightLabels)
-         providerInput providers =
-           flip map providers $ \provider ->
-           case providerToDoubleStatsSource provider of
-             Nothing -> error $
-                        "Cannot represent series " ++
-                        providerName provider ++ 
-                        " as a source of double values: simulateDeviationChart"
-             Just input -> (providerName provider,
-                            provider,
-                            samplingStatsSourceData input)
-         leftInput = providerInput leftProviders
-         rightInput = providerInput rightProviders
-         leftNames = flip map leftInput $ \(x, _, _) -> Left x
-         rightNames = flip map rightInput $ \(x, _, _) -> Right x
-         input = leftInput ++ rightInput
-         names = leftNames ++ rightNames
-         source = flip map input $ \(_, _, x) -> x 
-         exp = deviationChartExperiment st
-         lock = deviationChartLock st
-     results <- liftIO $ readIORef (deviationChartResults st)
-     case results of
-       Nothing ->
-         liftIO $
-         do results <- newDeviationChartResults names exp
-            writeIORef (deviationChartResults st) $ Just results
-       Just results ->
-         when (names /= deviationChartNames results) $
-         error "Series with different names are returned for different runs: simulateDeviationChart"
-     results <- liftIO $ fmap fromJust $ readIORef (deviationChartResults st)
-     let stats = deviationChartStats results
-         h = experimentSignalInIntegTimes expdata
-     handleSignal_ h $ \_ ->
-       do xs <- sequence source
+  do let view    = deviationChartView st
+         rs1     = deviationChartLeftYSeries view $
+                   deviationChartTransform view $
+                   experimentResults expdata
+         rs2     = deviationChartRightYSeries view $
+                   deviationChartTransform view $
+                   experimentResults expdata
+         exts1   = extractDoubleStatsEitherResults rs1
+         exts2   = extractDoubleStatsEitherResults rs2
+         exts    = exts1 ++ exts2
+         names1  = map resultExtractName exts1
+         names2  = map resultExtractName exts2
+         names   = map Left names1 ++ map Right names2
+         signals = experimentPredefinedSignals expdata
+         signal  = resultSignalInIntegTimes signals
+         lock    = deviationChartLock st
+     results <- liftIO $ requireDeviationChartResults st names
+     let stats   = deviationChartStats results
+     handleSignal signal $ \_ ->
+       do xs <- forM exts resultExtractData
           i  <- liftDynamics integIteration
-          liftIO $ withMVar lock $ \() ->
+          liftIO $
             forM_ (zip xs stats) $ \(x, stats) ->
+            withMVar lock $ \() ->
             do y <- readArray stats i
-               let y' = addDataToSamplingStats x y
+               let y' = combineSamplingStatsEither x y
                y' `seq` writeArray stats i y'
-     return $ return ()
      
 -- | Plot the deviation chart after the simulation is complete.
-finaliseDeviationChart :: ChartRenderer r => DeviationChartViewState r -> IO ()
+finaliseDeviationChart :: WebPageCharting r => DeviationChartViewState r WebPageWriter -> IO ()
 finaliseDeviationChart st =
-  do let title = deviationChartTitle $ deviationChartView st
-         plotTitle = 
+  do let view = deviationChartView st
+         title = deviationChartTitle view
+         plotTitle = deviationChartPlotTitle view
+         plotTitle' = 
            replace "$TITLE" title
-           (deviationChartPlotTitle $ deviationChartView st)
-         width = deviationChartWidth $ deviationChartView st
-         height = deviationChartHeight $ deviationChartView st
-         plotLines = deviationChartPlotLines $ deviationChartView st
-         plotFillBetween = deviationChartPlotFillBetween $ deviationChartView st
-         plotBottomAxis = deviationChartBottomAxis $ deviationChartView st
-         plotLayout = deviationChartLayout $ deviationChartView st
+           plotTitle
+         width = deviationChartWidth view
+         height = deviationChartHeight view
+         plotLines = deviationChartPlotLines view
+         plotFillBetween = deviationChartPlotFillBetween view
+         plotBottomAxis = deviationChartBottomAxis view
+         plotLayout = deviationChartLayout view
          renderer = deviationChartRenderer st
-     results <- readIORef $ deviationChartResults st
+     results <- readMRef $ deviationChartResults st
      case results of
        Nothing -> return ()
        Just results ->
@@ -289,14 +285,14 @@ finaliseDeviationChart st =
                   else id
                 chart = plotLayout . updateLeftAxis . updateRightAxis $
                         layoutlr_x_axis .~ axis $
-                        layoutlr_title .~ plotTitle $
+                        layoutlr_title .~ plotTitle' $
                         layoutlr_plots .~ ps $
                         def
             file <- resolveFilePath (deviationChartDir st) $
-                    mapFilePath (flip replaceExtension $ renderableFileExtension renderer) $
-                    expandFilePath (deviationChartFileName $ deviationChartView st) $
+                    mapFilePath (flip replaceExtension $ renderableChartExtension renderer) $
+                    expandFilePath (deviationChartFileName view) $
                     M.fromList [("$TITLE", title)]
-            renderChart renderer (width, height) (toRenderable chart) file
+            renderChart renderer (width, height) file (toRenderable chart)
             when (experimentVerbose $ deviationChartExperiment st) $
               putStr "Generated file " >> putStrLn file
             writeIORef (deviationChartFile st) $ Just file
@@ -313,7 +309,7 @@ filterPlotFillBetweenValues =
   filter $ \(t, (x1, x2)) -> not $ isNaN x1 || isInfinite x1 || isNaN x2 || isInfinite x2
 
 -- | Get the HTML code.     
-deviationChartHtml :: DeviationChartViewState r -> Int -> HtmlWriter ()
+deviationChartHtml :: DeviationChartViewState r a -> Int -> HtmlWriter ()
 deviationChartHtml st index =
   do header st index
      file <- liftIO $ readIORef (deviationChartFile st)
@@ -323,7 +319,7 @@ deviationChartHtml st index =
          writeHtmlParagraph $
          writeHtmlImage (makeRelative (deviationChartDir st) f)
 
-header :: DeviationChartViewState r -> Int -> HtmlWriter ()
+header :: DeviationChartViewState r a -> Int -> HtmlWriter ()
 header st index =
   do writeHtmlHeader3WithId ("id" ++ show index) $ 
        writeHtmlText (deviationChartTitle $ deviationChartView st)
@@ -333,7 +329,7 @@ header st index =
        writeHtmlText description
 
 -- | Get the TOC item.
-deviationChartTOCHtml :: DeviationChartViewState r -> Int -> HtmlWriter ()
+deviationChartTOCHtml :: DeviationChartViewState r a -> Int -> HtmlWriter ()
 deviationChartTOCHtml st index =
   writeHtmlListItem $
   writeHtmlLink ("#id" ++ show index) $
