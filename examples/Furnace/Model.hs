@@ -5,24 +5,6 @@
 --
 -- [2] Труб И.И., Объектно-ориентированное моделирование на C++: Учебный курс. - СПб.: Питер, 2006
 --
--- This model is often used in the literature as an example of combined
--- continuous-discrete simulation but this is not a point here. It illustrates
--- how the time-driven and process-oriented simulation models can be combined
--- based on the common event queue. It still uses the differential equation but
--- it is modeled directly [3] with help of the Euler method within the time-driven
--- part of the combined model.
---
--- [3] The time bounds for such an equation are much smaller than that ones which are defined
---     by the specs. Therefore there is no sense to use the 'integ' function as it would be
---     very slow because of large allocating memory for each integral, although it is possible.
---
---     However, you can still combine the differential (and difference) equations with the DES and
---     agent-based models. The integral (as well as any 'Dynamics' computation) can be used directly
---     in the DES sub-model. But to update something from the DES sub-model that could be used aready
---     in the differential equations, you should save data with help of types 'Var' or 'UVar' as they
---     keep all the history of their past values. Also the values of these two types are managed by
---     the event queue that allows synchronizing them with the DES sub-model.
---
 -- To define the external parameters for the Monte-Carlo simulation, see the Financial model.
 --
 -- To enable the parallel simulation, you should compile it
@@ -36,25 +18,30 @@ module Model
        (-- * Simulation Model
         model,
         -- * Variable Names
-        totalIngotCountName,
+        inputIngotCountName,
         loadedIngotCountName,
-        readyIngotCountName,
-        awaitedIngotCountName,
-        readyIngotTempsName,
+        outputIngotCountName,
+        outputIngotTempName,
+        heatingTimeName,
         pitCountName,
-        queueCountName,
-        meanWaitTimeName,
-        meanHeatingTimeName) where
+        furnaceQueueName) where
 
 import Data.Maybe
-
+import System.Random
 import Control.Monad
 import Control.Monad.Trans
 
 import Simulation.Aivika
 import Simulation.Aivika.Queue.Infinite
-import Simulation.Aivika.Experiment
 
+-- | The simulation specs.
+specs = Specs { spcStartTime = 0.0,
+                -- spcStopTime = 1000.0,
+                spcStopTime = 300.0,
+                spcDT = 0.1,
+                spcMethod = RungeKutta4,
+                spcGeneratorType = SimpleGenerator }
+        
 -- | Return a random initial temperature of the item.     
 randomTemp :: Parameter Double
 randomTemp = randomUniform 400 600
@@ -112,7 +99,7 @@ newFurnace :: Simulation Furnace
 newFurnace =
   do pits <- sequence [newPit | i <- [1..10]]
      pitCount <- newRef 0
-     queue <- newFCFSQueue
+     queue <- runEventInStartTime newFCFSQueue
      heatingTime <- newRef emptySamplingStats
      h <- newRef 1650.0
      readyCount <- newRef 0
@@ -307,8 +294,8 @@ initializeFurnace furnace =
      loadIngot furnace (x6 { ingotLoadTemp = 800.0 }) p6
      writeRef (furnaceTemp furnace) 1650.0
      
--- | The simulation model that returns experimental data.
-model :: Simulation ExperimentData
+-- | The simulation model.
+model :: Simulation Results
 model =
   do furnace <- newFurnace
   
@@ -324,46 +311,35 @@ model =
      -- load permanently the input ingots in the furnace
      runProcessInStartTime $
        loadingProcess furnace
-     
-     experimentDataInStartTime
-       [(totalIngotCountName,
-         seriesEntity "total ingot count" $
-         enqueueStoreCount (furnaceQueue furnace)),
-             
-        (loadedIngotCountName,
-         seriesEntity "loaded ingot count" $  -- actually, +/- 1
-         dequeueCount (furnaceQueue furnace)),
-             
-        (readyIngotCountName,
-         seriesEntity "ready ingot count" $
-         furnaceReadyCount furnace),
 
-        (readyIngotTempsName,
-         seriesEntity "the temperature of ready ingot" $
-         furnaceReadyTemps furnace),
-                
-        (pitCountName,
-         seriesEntity "the used pit count" $
-         furnacePitCount furnace),
-              
-        (queueCountName,
-         seriesEntity "the queue size" $
-         queueCount (furnaceQueue furnace)),
-              
-        (meanWaitTimeName,
-         seriesEntity "the mean wait time" $
-         queueWaitTime (furnaceQueue furnace)),
+     -- return the simulation results
+     return $
+       results
+       [resultSource inputIngotCountName "the input ingot count" $
+        enqueueStoreCount (furnaceQueue furnace),
+        --
+        resultSource loadedIngotCountName "the loaded ingot count" $
+        dequeueCount (furnaceQueue furnace),
+        --
+        resultSource outputIngotCountName "the output ingot count" $
+        furnaceReadyCount furnace,
+        --
+        resultSource outputIngotTempName "the output ingot temperature" $
+        furnaceReadyTemps furnace,
+        --
+        resultSource heatingTimeName "the heating time" $
+        furnaceHeatingTime furnace,
+        --
+        resultSource pitCountName "the number of ingots in pits" $
+        furnacePitCount furnace,
+        --
+        resultSource furnaceQueueName "the furnace queue" $
+        furnaceQueue furnace]
 
-        (meanHeatingTimeName,
-         seriesEntity "the mean heating time" $
-         furnaceHeatingTime furnace) ]
-              
-totalIngotCountName    = "totalIngotCount"
-loadedIngotCountName   = "loadedIngotCount"
-readyIngotCountName    = "readyIngotCount"
-awaitedIngotCountName  = "awaitedIngotCount"
-readyIngotTempsName    = "readyIngotTemps"
-pitCountName           = "pitCount"
-queueCountName         = "queueCount"
-meanWaitTimeName       = "the mean wait time in the queue"
-meanHeatingTimeName    = "the mean heating time"
+inputIngotCountName  = "inputIngotCount"
+loadedIngotCountName = "loadedIngotCount"
+outputIngotCountName = "outputIngotCount"
+outputIngotTempName  = "outputIngotTemp"
+heatingTimeName      = "heatingTime"
+pitCountName         = "pitCount"
+furnaceQueueName     = "furnaceQueue"
