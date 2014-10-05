@@ -2,11 +2,11 @@
 -- To run, package aivika-experiment-cairo must be installed.
 
 import Simulation.Aivika.Experiment
-import Simulation.Aivika.Experiment.CairoRenderer
+import Simulation.Aivika.Experiment.Chart.Backend.Cairo
 
 import Graphics.Rendering.Chart.Backend.Cairo
 
 import Model
 import Experiment
 
-main = runExperiment experiment (CairoRenderer PNG) model
+main = runExperiment experiment generators (CairoRenderer PNG) model
