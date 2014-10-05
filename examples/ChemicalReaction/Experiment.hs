@@ -1,5 +1,7 @@
 
-module Experiment (experiment) where
+module Experiment (experiment, generators) where
+
+import Data.Monoid
 
 import Simulation.Aivika
 import Simulation.Aivika.Experiment
@@ -11,35 +13,59 @@ specs = Specs { spcStartTime = 0,
                 spcMethod = RungeKutta4,
                 spcGeneratorType = SimpleGenerator }
 
-experiment :: ChartRenderer r => Experiment r
+experiment :: Experiment
 experiment =
   defaultExperiment {
     experimentSpecs = specs,
     experimentRunCount = 1,
     experimentTitle = "Chemical Reaction",
     experimentDescription = "Chemical Reaction as described in " ++
-                            "the 5-minute tutorial of Berkeley-Madonna",
-    experimentGenerators = 
-      [outputView defaultExperimentSpecsView,
-       outputView $ defaultLastValueView {
-         lastValueSeries = ["t", "a", "b", "c"] },
-       outputView $ defaultTableView {
-         tableSeries = ["t", "a", "b", "c"] }, 
-       outputView $ defaultTimeSeriesView {
-         timeSeriesTitle = "Time Series",
-         timeSeries = [Left "a", Left "b", Left "c"] },
-       outputView $ defaultXYChartView {
-         xyChartTitle = "XYChart - 1",
-         xyChartPlotTitle = "b=b(a), c=c(a)",
-         xyChartXSeries = Just "a",
-         xyChartYSeries = [Left "b", Right "c"] },
-       outputView $ defaultXYChartView {
-         xyChartTitle = "XYChart - 2",
-         xyChartPlotTitle = "a=a(b), c=c(b)",
-         xyChartXSeries = Just "b",
-         xyChartYSeries = [Right "a", Right "c"] },
-       outputView $ defaultXYChartView {
-         xyChartTitle = "XYChart - 3",
-         xyChartPlotTitle = "a=a(c), b=b(c)",
-         xyChartXSeries = Just "c",
-         xyChartYSeries = [Right "a", Left "b"] } ] }
+                            "the 5-minute tutorial of Berkeley-Madonna" }
+
+generators :: WebPageCharting r => [ExperimentGenerator r WebPageWriter]
+generators =
+  [outputView defaultExperimentSpecsView,
+   outputView $ defaultLastValueView {
+     lastValueSeries =
+        resultByName "t" <>
+        resultByName "a" <>
+        resultByName "b" <>
+        resultByName "c" },
+   outputView $ defaultTableView {
+     tableSeries =
+        resultByName "t" <>
+        resultByName "a" <>
+        resultByName "b" <>
+        resultByName "c" },
+   outputView $ defaultTimeSeriesView {
+     timeSeriesTitle = "Time Series",
+     timeSeriesLeftYSeries =
+        resultByName "a" <>
+        resultByName "b" <>
+        resultByName "c" },
+   outputView $ defaultXYChartView {
+     xyChartTitle = "XYChart - 1",
+     xyChartPlotTitle = "b=b(a), c=c(a)",
+     xyChartXSeries =
+       resultByName "a",
+     xyChartLeftYSeries =
+       resultByName "b",
+     xyChartRightYSeries =
+       resultByName "c" },
+   outputView $ defaultXYChartView {
+     xyChartTitle = "XYChart - 2",
+     xyChartPlotTitle = "a=a(b), c=c(b)",
+     xyChartXSeries =
+       resultByName "b",
+     xyChartRightYSeries =
+       resultByName "a" <>
+       resultByName "c" },
+   outputView $ defaultXYChartView {
+     xyChartTitle = "XYChart - 3",
+     xyChartPlotTitle = "a=a(c), b=b(c)",
+     xyChartXSeries =
+       resultByName "c",
+     xyChartLeftYSeries =
+       resultByName "b",
+     xyChartRightYSeries =
+       resultByName "a" } ]
