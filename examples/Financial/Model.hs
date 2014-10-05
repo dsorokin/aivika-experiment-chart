@@ -93,7 +93,7 @@ randomParams =
                             paramsVariableProductionCost = variableProductionCost }
 
 -- | This is the model itself that returns experimental data.
-model :: Parameters -> Simulation ExperimentData
+model :: Parameters -> Simulation Results
 model params =
   mdo let getParameter f = liftParameter $ f params
 
@@ -144,11 +144,12 @@ model params =
           taxes = taxableIncome * taxRate
           variableProductionCost = getParameter paramsVariableProductionCost
 
-      experimentDataInStartTime
-        [(netIncomeName, seriesEntity "Net income" netIncome),
-         (netCashFlowName, seriesEntity "Net cash flow" netCashFlow),
-         (npvIncomeName, seriesEntity "NPV income" npvIncome),
-         (npvCashFlowName, seriesEntity "NPV cash flow" npvCashFlow)]
+      return $
+        results 
+        [resultSource netIncomeName "Net income" netIncome,
+         resultSource netCashFlowName "Net cash flow" netCashFlow,
+         resultSource npvIncomeName "NPV income" npvIncome,
+         resultSource npvCashFlowName "NPV cash flow" npvCashFlow]
 
 -- the names of the variables we are interested in
 netIncomeName   = "netIncome"
