@@ -1,7 +1,7 @@
 
-{-# LANGUAGE RecursiveDo #-}
+module Experiment (experiment, generators) where
 
-module Experiment (experiment) where
+import Data.Monoid
 
 import Simulation.Aivika
 import Simulation.Aivika.Experiment
@@ -13,7 +13,7 @@ specs = Specs { spcStartTime = 0,
                 spcMethod = RungeKutta4,
                 spcGeneratorType = SimpleGenerator }
 
-experiment :: ChartRenderer r => Experiment r
+experiment :: Experiment
 experiment =
   defaultExperiment {
     experimentSpecs = specs,
@@ -21,19 +21,30 @@ experiment =
     experimentTitle = "Difference Equations",
     experimentDescription = "Difference Equations as described in " ++
                             "the corresponded tutorial of Berkeley-Madonna " ++
-                            "with small modification for calculating std.",
-    experimentGenerators = 
-      [outputView defaultExperimentSpecsView,
-       outputView $ defaultTableView {
-         tableSeries = ["t", "x", "sumX", "sumX2", "avg", "std"] }, 
-       outputView $ defaultTimeSeriesView {
-         timeSeriesTitle = "Time Series",
-         timeSeries = [Left "x", Left "avg"] },
-       outputView $ defaultTimingStatsView {
-         timingStatsSeries = ["x"] },
-       outputView $ defaultTimeSeriesView {
-         timeSeriesTitle = "Sums",
-         timeSeries = [Left "sumX", Right "sumX2"] },
-       outputView $ defaultTimeSeriesView {
-         timeSeriesTitle = "Standard Deviation",
-         timeSeries = [Left "std"] } ] }
+                            "with small modification for calculating std." }
+
+generators :: WebPageCharting r => [ExperimentGenerator r WebPageWriter]
+generators =
+  [outputView defaultExperimentSpecsView,
+   outputView $ defaultTableView {
+     tableSeries =
+        mconcat $ map resultByName $
+        ["t", "x", "sumX", "sumX2", "avg", "std"] }, 
+   outputView $ defaultTimeSeriesView {
+     timeSeriesTitle = "Time Series",
+     timeSeriesLeftYSeries =
+       resultByName "x" <>
+       resultByName "avg" },
+   outputView $ defaultTimingStatsView {
+     timingStatsSeries =
+        resultByName "x" },
+   outputView $ defaultTimeSeriesView {
+     timeSeriesTitle = "Sums",
+     timeSeriesLeftYSeries =
+       resultByName "sumX",
+     timeSeriesRightYSeries =
+       resultByName "sumX2" },
+   outputView $ defaultTimeSeriesView {
+     timeSeriesTitle = "Standard Deviation",
+     timeSeriesLeftYSeries =
+       resultByName "std" } ]

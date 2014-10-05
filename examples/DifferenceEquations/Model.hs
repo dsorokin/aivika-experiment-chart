@@ -7,7 +7,7 @@ import Simulation.Aivika
 import Simulation.Aivika.SystemDynamics
 import Simulation.Aivika.Experiment
 
-model :: Simulation ExperimentData
+model :: Simulation Results
 model =
   mdo x <- memoRandomNormalDynamics 3 0.8
       sumX <- diffsum x 0
@@ -19,12 +19,13 @@ model =
 
       let avg = ifDynamics (n .>. 0) (sumX / n) 0
       let std = ifDynamics (n .>. 1) (sqrt ((sumX2 - sumX * avg) / (n - 1))) 0
-      
-      experimentDataInStartTime
-        [("t", seriesEntity "time" time),
-         ("n", seriesEntity "n" n),
-         ("x", seriesEntity "x" x),
-         ("sumX", seriesEntity "sumX" sumX),
-         ("sumX2", seriesEntity "sumX2" sumX2),
-         ("avg", seriesEntity "avg" avg),
-         ("std", seriesEntity "std" std)]
+
+      return $
+        results
+        [resultSource "t" "time" time,
+         resultSource "n" "n" n,
+         resultSource "x" "x" x,
+         resultSource "sumX" "sum x" sumX,
+         resultSource "sumX2" "sum x^2" sumX2,
+         resultSource "avg" "Ex" avg,
+         resultSource "std" "sqrt(Dx)" std]
