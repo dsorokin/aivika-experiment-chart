@@ -76,7 +76,7 @@ activatePersons :: Array Int Person -> Event ()
 activatePersons ps =
   forM_ (elems ps) $ \p -> activatePerson p
 
-model :: Simulation ExperimentData
+model :: Simulation Results
 model =
   do potentialAdopters <- newRef 0
      adopters <- newRef 0
@@ -84,10 +84,11 @@ model =
      definePersons ps potentialAdopters adopters
      runEventInStartTime $
        activatePersons ps
-     experimentDataInStartTime
-       [("potentialAdopters",
-         seriesEntity "Potential Adopters" 
-         potentialAdopters),
-        ("adopters",
-         seriesEntity "Adopters"
-         adopters)]
+     return $
+       results
+       [resultSource
+        "potentialAdopters" "Potential Adopters"
+        potentialAdopters,
+        resultSource
+        "adopters" "Adopters"
+        adopters]

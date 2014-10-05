@@ -1,5 +1,7 @@
 
-module Experiment (experiment) where
+module Experiment (experiment, generators) where
+
+import Data.Monoid
 
 import Simulation.Aivika
 import Simulation.Aivika.Experiment
@@ -11,18 +13,21 @@ specs = Specs { spcStartTime = 0.0,
                 spcMethod = RungeKutta4,
                 spcGeneratorType = SimpleGenerator }
 
-experiment :: ChartRenderer r => Experiment r
+experiment :: Experiment
 experiment =
   defaultExperiment {
     experimentSpecs = specs,
     experimentRunCount = 20,
-    experimentDescription = "This is the famous Bass Diffusion model solved with help of the agent-based modelling.",
-    experimentGenerators =
-      [outputView defaultExperimentSpecsView,
-       outputView $ defaultDeviationChartView {
-         deviationChartSeries = [Left "potentialAdopters", 
-                                 Left "adopters"] },
-       outputView $ defaultTimeSeriesView {
-         timeSeries = [Left "potentialAdopters", 
-                       Left "adopters"] } ]
-    }
+    experimentDescription = "This is the famous Bass Diffusion model solved with help of the agent-based modelling." }
+
+generators :: WebPageCharting r => [ExperimentGenerator r WebPageWriter]
+generators =
+  [outputView defaultExperimentSpecsView,
+   outputView $ defaultDeviationChartView {
+     deviationChartLeftYSeries = 
+        resultByName "potentialAdopters" <>
+        resultByName "adopters" },
+    outputView $ defaultTimeSeriesView {
+      timeSeriesLeftYSeries =
+         resultByName "potentialAdopters" <>
+         resultByName "adopters" } ]
