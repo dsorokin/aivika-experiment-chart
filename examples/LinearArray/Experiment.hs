@@ -1,5 +1,7 @@
 
-module Experiment (experiment) where
+module Experiment (experiment, generators) where
+
+import Data.Monoid
 
 import Simulation.Aivika
 import Simulation.Aivika.Experiment
@@ -11,43 +13,60 @@ specs = Specs { spcStartTime = 0,
                 spcMethod = RungeKutta4,
                 spcGeneratorType = SimpleGenerator }
 
-experiment :: ChartRenderer r => Experiment r
+experiment :: Experiment
 experiment =
   defaultExperiment {
     experimentSpecs = specs,
     experimentRunCount = 1,
     experimentTitle = "Linear Array",
     experimentDescription = "Model Linear Array as described in " ++
-                            "the examples included in Berkeley-Madonna.",
-    experimentGenerators = 
-      [outputView defaultExperimentSpecsView,
-       outputView $ defaultTableView {
-         tableSeries = ["t", "m", "c"] },
-       outputView $ defaultTimeSeriesView {
-         timeSeries = [Left "m"],
-         timeSeriesWidth = 800,
-         timeSeriesHeight = 800 },
-       outputView $ defaultTimeSeriesView {
-         timeSeries = [Right "c"],
-         timeSeriesWidth = 800,
-         timeSeriesHeight = 800 },
-       outputView $ defaultTimeSeriesView {
-         timeSeries = [Left "m", Right "c"],
-         timeSeriesWidth = 800,
-         timeSeriesHeight = 800 },
-       outputView $ defaultXYChartView {
-         xyChartXSeries = Just "t",
-         xyChartYSeries = [Left "m"],
-         xyChartWidth = 800,
-         xyChartHeight = 800 },
-       outputView $ defaultXYChartView {
-         xyChartXSeries = Just "t",
-         xyChartYSeries = [Right "c"],
-         xyChartWidth = 800,
-         xyChartHeight = 800 },
-       outputView $ defaultXYChartView {
-         xyChartXSeries = Just "t",
-         xyChartYSeries = [Left "m", Right "c"],
-         xyChartWidth = 800,
-         xyChartHeight = 800 }
-       ] }
+                            "the examples included in Berkeley-Madonna." }
+
+generators :: WebPageCharting r => [WebPageGenerator r]
+generators = 
+  [outputView defaultExperimentSpecsView,
+   outputView $ defaultTableView {
+     tableSeries =
+        resultByName "t" <>
+        resultByName "m" <>
+        resultByName "c" },
+   outputView $ defaultTimeSeriesView {
+     timeSeriesLeftYSeries =
+        resultByName "m",
+     timeSeriesWidth = 800,
+     timeSeriesHeight = 800 },
+   outputView $ defaultTimeSeriesView {
+     timeSeriesRightYSeries =
+        resultByName "c",
+     timeSeriesWidth = 800,
+     timeSeriesHeight = 800 },
+   outputView $ defaultTimeSeriesView {
+     timeSeriesLeftYSeries =
+        resultByName "m",
+     timeSeriesRightYSeries =
+       resultByName "c",
+     timeSeriesWidth = 800,
+     timeSeriesHeight = 800 },
+   outputView $ defaultXYChartView {
+     xyChartXSeries =
+        resultByName "t",
+     xyChartLeftYSeries =
+       resultByName "m",
+     xyChartWidth = 800,
+     xyChartHeight = 800 },
+   outputView $ defaultXYChartView {
+     xyChartXSeries =
+        resultByName "t",
+     xyChartRightYSeries =
+       resultByName "c",
+     xyChartWidth = 800,
+     xyChartHeight = 800 },
+   outputView $ defaultXYChartView {
+     xyChartXSeries =
+        resultByName "t",
+     xyChartLeftYSeries =
+       resultByName "m",
+     xyChartRightYSeries =
+       resultByName "c",
+     xyChartWidth = 800,
+     xyChartHeight = 800 } ]
