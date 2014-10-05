@@ -142,20 +142,15 @@ instance WebPageCharting r => ExperimentView TimeSeriesView r WebPageWriter wher
     in ExperimentGenerator { generateReporter = reporter }
   
 -- | The state of the view.
-data TimeSeriesViewState r a =
+data TimeSeriesViewState r =
   TimeSeriesViewState { timeSeriesView       :: TimeSeriesView,
-                        timeSeriesExperiment :: Experiment r a,
+                        timeSeriesExperiment :: Experiment,
                         timeSeriesRenderer   :: r,
                         timeSeriesDir        :: FilePath, 
                         timeSeriesMap        :: M.Map Int FilePath }
   
 -- | Create a new state of the view.
-newTimeSeries :: WebPageCharting r
-                 => TimeSeriesView
-                 -> Experiment r WebPageWriter
-                 -> r
-                 -> FilePath
-                 -> IO (TimeSeriesViewState r WebPageWriter)
+newTimeSeries :: WebPageCharting r => TimeSeriesView -> Experiment -> r -> FilePath -> IO (TimeSeriesViewState r)
 newTimeSeries view exp renderer dir =
   do let n = experimentRunCount exp
      fs <- forM [0..(n - 1)] $ \i ->
@@ -174,10 +169,7 @@ newTimeSeries view exp renderer dir =
                                   timeSeriesMap        = m }
        
 -- | Plot the time series chart within simulation.
-simulateTimeSeries :: WebPageCharting r
-                      => TimeSeriesViewState r WebPageWriter
-                      -> ExperimentData
-                      -> Event DisposableEvent
+simulateTimeSeries :: WebPageCharting r => TimeSeriesViewState r -> ExperimentData -> Event DisposableEvent
 simulateTimeSeries st expdata =
   do let view    = timeSeriesView st
          rs1     = timeSeriesLeftYSeries view $
@@ -272,7 +264,7 @@ filterPlotLinesValues =
   divideBy (\(t, x) -> isNaN x || isInfinite x)
 
 -- | Get the HTML code.     
-timeSeriesHtml :: TimeSeriesViewState r a -> Int -> HtmlWriter ()     
+timeSeriesHtml :: TimeSeriesViewState r -> Int -> HtmlWriter ()     
 timeSeriesHtml st index =
   let n = experimentRunCount $ timeSeriesExperiment st
   in if n == 1
@@ -280,7 +272,7 @@ timeSeriesHtml st index =
      else timeSeriesHtmlMultiple st index
      
 -- | Get the HTML code for a single run.
-timeSeriesHtmlSingle :: TimeSeriesViewState r a -> Int -> HtmlWriter ()
+timeSeriesHtmlSingle :: TimeSeriesViewState r -> Int -> HtmlWriter ()
 timeSeriesHtmlSingle st index =
   do header st index
      let f = fromJust $ M.lookup 0 (timeSeriesMap st)
@@ -288,7 +280,7 @@ timeSeriesHtmlSingle st index =
        writeHtmlImage (makeRelative (timeSeriesDir st) f)
 
 -- | Get the HTML code for multiple runs.
-timeSeriesHtmlMultiple :: TimeSeriesViewState r a -> Int -> HtmlWriter ()
+timeSeriesHtmlMultiple :: TimeSeriesViewState r -> Int -> HtmlWriter ()
 timeSeriesHtmlMultiple st index =
   do header st index
      let n = experimentRunCount $ timeSeriesExperiment st
@@ -297,7 +289,7 @@ timeSeriesHtmlMultiple st index =
        in writeHtmlParagraph $
           writeHtmlImage (makeRelative (timeSeriesDir st) f)
 
-header :: TimeSeriesViewState r a -> Int -> HtmlWriter ()
+header :: TimeSeriesViewState r -> Int -> HtmlWriter ()
 header st index =
   do writeHtmlHeader3WithId ("id" ++ show index) $ 
        writeHtmlText (timeSeriesTitle $ timeSeriesView st)
@@ -307,7 +299,7 @@ header st index =
        writeHtmlText description
 
 -- | Get the TOC item.
-timeSeriesTOCHtml :: TimeSeriesViewState r a -> Int -> HtmlWriter ()
+timeSeriesTOCHtml :: TimeSeriesViewState r -> Int -> HtmlWriter ()
 timeSeriesTOCHtml st index =
   writeHtmlListItem $
   writeHtmlLink ("#id" ++ show index) $

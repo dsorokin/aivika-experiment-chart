@@ -144,9 +144,9 @@ instance WebPageCharting r => ExperimentView FinalXYChartView r WebPageWriter wh
     in ExperimentGenerator { generateReporter = reporter }
   
 -- | The state of the view.
-data FinalXYChartViewState r a =
+data FinalXYChartViewState r =
   FinalXYChartViewState { finalXYChartView       :: FinalXYChartView,
-                          finalXYChartExperiment :: Experiment r a,
+                          finalXYChartExperiment :: Experiment,
                           finalXYChartRenderer   :: r,
                           finalXYChartDir        :: FilePath, 
                           finalXYChartFile       :: IORef (Maybe FilePath),
@@ -160,7 +160,7 @@ data FinalXYChartResults =
                         finalXYChartXY     :: [IOArray Int (Maybe (Double, Double))] }
   
 -- | Create a new state of the view.
-newFinalXYChart :: FinalXYChartView -> Experiment r a -> r -> FilePath -> IO (FinalXYChartViewState r a)
+newFinalXYChart :: FinalXYChartView -> Experiment -> r -> FilePath -> IO (FinalXYChartViewState r)
 newFinalXYChart view exp renderer dir =
   do f <- newIORef Nothing
      l <- newMVar () 
@@ -174,7 +174,7 @@ newFinalXYChart view exp renderer dir =
                                     finalXYChartResults    = r }
        
 -- | Create new chart results.
-newFinalXYChartResults :: String -> [Either String String] -> Experiment r a -> IO FinalXYChartResults
+newFinalXYChartResults :: String -> [Either String String] -> Experiment -> IO FinalXYChartResults
 newFinalXYChartResults xname ynames exp =
   do let n = experimentRunCount exp
      xy <- forM ynames $ \_ -> 
@@ -184,10 +184,7 @@ newFinalXYChartResults xname ynames exp =
                                   finalXYChartXY     = xy }
        
 -- | Require to return unique results associated with the specified state. 
-requireFinalXYChartResults :: FinalXYChartViewState r a
-                              -> String
-                              -> [Either String String]
-                              -> IO FinalXYChartResults
+requireFinalXYChartResults :: FinalXYChartViewState r -> String -> [Either String String] -> IO FinalXYChartResults
 requireFinalXYChartResults st xname ynames =
   maybeWriteMRef (finalXYChartResults st)
   (newFinalXYChartResults xname ynames (finalXYChartExperiment st)) $ \results ->
@@ -196,7 +193,7 @@ requireFinalXYChartResults st xname ynames =
   else results
        
 -- | Simulation.
-simulateFinalXYChart :: FinalXYChartViewState r a -> ExperimentData -> Event DisposableEvent
+simulateFinalXYChart :: FinalXYChartViewState r -> ExperimentData -> Event DisposableEvent
 simulateFinalXYChart st expdata =
   do let view    = finalXYChartView st
          rs0     = finalXYChartXSeries view $
@@ -237,7 +234,7 @@ simulateFinalXYChart st expdata =
             x `seq` y `seq` writeArray xy i $ Just (x, y)
      
 -- | Plot the XY chart after the simulation is complete.
-finaliseFinalXYChart :: WebPageCharting r => FinalXYChartViewState r WebPageWriter -> IO ()
+finaliseFinalXYChart :: WebPageCharting r => FinalXYChartViewState r -> IO ()
 finaliseFinalXYChart st =
   do let view = finalXYChartView st 
          title = finalXYChartTitle view
@@ -303,7 +300,7 @@ filterPlotLinesValues =
                                isNaN y || isInfinite y
 
 -- | Get the HTML code.     
-finalXYChartHtml :: FinalXYChartViewState r a -> Int -> HtmlWriter ()
+finalXYChartHtml :: FinalXYChartViewState r -> Int -> HtmlWriter ()
 finalXYChartHtml st index =
   do header st index
      file <- liftIO $ readIORef (finalXYChartFile st)
@@ -313,7 +310,7 @@ finalXYChartHtml st index =
          writeHtmlParagraph $
          writeHtmlImage (makeRelative (finalXYChartDir st) f)
 
-header :: FinalXYChartViewState r a -> Int -> HtmlWriter ()
+header :: FinalXYChartViewState r -> Int -> HtmlWriter ()
 header st index =
   do writeHtmlHeader3WithId ("id" ++ show index) $ 
        writeHtmlText (finalXYChartTitle $ finalXYChartView st)
@@ -323,7 +320,7 @@ header st index =
        writeHtmlText description
 
 -- | Get the TOC item.
-finalXYChartTOCHtml :: FinalXYChartViewState r a -> Int -> HtmlWriter ()
+finalXYChartTOCHtml :: FinalXYChartViewState r -> Int -> HtmlWriter ()
 finalXYChartTOCHtml st index =
   writeHtmlListItem $
   writeHtmlLink ("#id" ++ show index) $

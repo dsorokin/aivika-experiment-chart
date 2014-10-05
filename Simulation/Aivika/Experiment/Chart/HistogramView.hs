@@ -137,20 +137,15 @@ instance WebPageCharting r => ExperimentView HistogramView r WebPageWriter where
     in ExperimentGenerator { generateReporter = reporter }
   
 -- | The state of the view.
-data HistogramViewState r a =
+data HistogramViewState r =
   HistogramViewState { histogramView       :: HistogramView,
-                       histogramExperiment :: Experiment r a,
+                       histogramExperiment :: Experiment,
                        histogramRenderer   :: r,
                        histogramDir        :: FilePath, 
                        histogramMap        :: M.Map Int FilePath }
   
 -- | Create a new state of the view.
-newHistogram :: WebPageCharting r
-                => HistogramView
-                -> Experiment r WebPageWriter
-                -> r
-                -> FilePath
-                -> IO (HistogramViewState r WebPageWriter)
+newHistogram :: WebPageCharting r => HistogramView -> Experiment -> r -> FilePath -> IO (HistogramViewState r)
 newHistogram view exp renderer dir =
   do let n = experimentRunCount exp
      fs <- forM [0..(n - 1)] $ \i ->
@@ -169,10 +164,7 @@ newHistogram view exp renderer dir =
                                  histogramMap        = m }
        
 -- | Plot the histogram during the simulation.
-simulateHistogram :: WebPageCharting r
-                     => HistogramViewState r WebPageWriter
-                     -> ExperimentData
-                     -> Event DisposableEvent
+simulateHistogram :: WebPageCharting r => HistogramViewState r -> ExperimentData -> Event DisposableEvent
 simulateHistogram st expdata =
   do let view    = histogramView st
          rs      = histogramSeries view $
@@ -250,7 +242,7 @@ histogramToBars :: [(Double, [Int])] -> [(Double, [Double])]
 histogramToBars = map $ \(x, ns) -> (x, map fromIntegral ns)
 
 -- | Get the HTML code.     
-histogramHtml :: HistogramViewState r a -> Int -> HtmlWriter ()     
+histogramHtml :: HistogramViewState r -> Int -> HtmlWriter ()     
 histogramHtml st index =
   let n = experimentRunCount $ histogramExperiment st
   in if n == 1
@@ -258,7 +250,7 @@ histogramHtml st index =
      else histogramHtmlMultiple st index
      
 -- | Get the HTML code for a single run.
-histogramHtmlSingle :: HistogramViewState r a -> Int -> HtmlWriter ()
+histogramHtmlSingle :: HistogramViewState r -> Int -> HtmlWriter ()
 histogramHtmlSingle st index =
   do header st index
      let f = fromJust $ M.lookup 0 (histogramMap st)
@@ -266,7 +258,7 @@ histogramHtmlSingle st index =
        writeHtmlImage (makeRelative (histogramDir st) f)
 
 -- | Get the HTML code for multiple runs.
-histogramHtmlMultiple :: HistogramViewState r a -> Int -> HtmlWriter ()
+histogramHtmlMultiple :: HistogramViewState r -> Int -> HtmlWriter ()
 histogramHtmlMultiple st index =
   do header st index
      let n = experimentRunCount $ histogramExperiment st
@@ -275,7 +267,7 @@ histogramHtmlMultiple st index =
        in writeHtmlParagraph $
           writeHtmlImage (makeRelative (histogramDir st) f)
 
-header :: HistogramViewState r a -> Int -> HtmlWriter ()
+header :: HistogramViewState r -> Int -> HtmlWriter ()
 header st index =
   do writeHtmlHeader3WithId ("id" ++ show index) $ 
        writeHtmlText (histogramTitle $ histogramView st)
@@ -285,7 +277,7 @@ header st index =
        writeHtmlText description
 
 -- | Get the TOC item.
-histogramTOCHtml :: HistogramViewState r a -> Int -> HtmlWriter ()
+histogramTOCHtml :: HistogramViewState r -> Int -> HtmlWriter ()
 histogramTOCHtml st index =
   writeHtmlListItem $
   writeHtmlLink ("#id" ++ show index) $

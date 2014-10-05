@@ -151,20 +151,15 @@ instance WebPageCharting r => ExperimentView XYChartView r WebPageWriter where
     in ExperimentGenerator { generateReporter = reporter }
   
 -- | The state of the view.
-data XYChartViewState r a =
+data XYChartViewState r =
   XYChartViewState { xyChartView       :: XYChartView,
-                     xyChartExperiment :: Experiment r a,
+                     xyChartExperiment :: Experiment,
                      xyChartRenderer   :: r,
                      xyChartDir        :: FilePath, 
                      xyChartMap        :: M.Map Int FilePath }
   
 -- | Create a new state of the view.
-newXYChart :: WebPageCharting r
-              => XYChartView
-              -> Experiment r WebPageWriter
-              -> r
-              -> FilePath
-              -> IO (XYChartViewState r WebPageWriter)
+newXYChart :: WebPageCharting r => XYChartView -> Experiment -> r -> FilePath -> IO (XYChartViewState r)
 newXYChart view exp renderer dir =
   do let n = experimentRunCount exp
      fs <- forM [0..(n - 1)] $ \i ->
@@ -183,10 +178,7 @@ newXYChart view exp renderer dir =
                                xyChartMap        = m }
        
 -- | Plot the XY chart during the simulation.
-simulateXYChart :: WebPageCharting r
-                   => XYChartViewState r WebPageWriter
-                   -> ExperimentData
-                   -> Event DisposableEvent
+simulateXYChart :: WebPageCharting r => XYChartViewState r -> ExperimentData -> Event DisposableEvent
 simulateXYChart st expdata =
   do let view    = xyChartView st
          rs0     = xyChartXSeries view $
@@ -292,7 +284,7 @@ filterPlotLinesValues =
   divideBy (\(x, y) -> isNaN x || isInfinite x || isNaN y || isInfinite y)
 
 -- | Get the HTML code.     
-xyChartHtml :: XYChartViewState r a -> Int -> HtmlWriter ()     
+xyChartHtml :: XYChartViewState r -> Int -> HtmlWriter ()     
 xyChartHtml st index =
   let n = experimentRunCount $ xyChartExperiment st
   in if n == 1
@@ -300,7 +292,7 @@ xyChartHtml st index =
      else xyChartHtmlMultiple st index
      
 -- | Get the HTML code for a single run.
-xyChartHtmlSingle :: XYChartViewState r a -> Int -> HtmlWriter ()
+xyChartHtmlSingle :: XYChartViewState r -> Int -> HtmlWriter ()
 xyChartHtmlSingle st index =
   do header st index
      let f = fromJust $ M.lookup 0 (xyChartMap st)
@@ -308,7 +300,7 @@ xyChartHtmlSingle st index =
        writeHtmlImage (makeRelative (xyChartDir st) f)
 
 -- | Get the HTML code for multiple runs.
-xyChartHtmlMultiple :: XYChartViewState r a -> Int -> HtmlWriter ()
+xyChartHtmlMultiple :: XYChartViewState r -> Int -> HtmlWriter ()
 xyChartHtmlMultiple st index =
   do header st index
      let n = experimentRunCount $ xyChartExperiment st
@@ -317,7 +309,7 @@ xyChartHtmlMultiple st index =
        in writeHtmlParagraph $
           writeHtmlImage (makeRelative (xyChartDir st) f)
 
-header :: XYChartViewState r a -> Int -> HtmlWriter ()
+header :: XYChartViewState r -> Int -> HtmlWriter ()
 header st index =
   do writeHtmlHeader3WithId ("id" ++ show index) $ 
        writeHtmlText (xyChartTitle $ xyChartView st)
@@ -327,7 +319,7 @@ header st index =
        writeHtmlText description
 
 -- | Get the TOC item.
-xyChartTOCHtml :: XYChartViewState r a -> Int -> HtmlWriter ()
+xyChartTOCHtml :: XYChartViewState r -> Int -> HtmlWriter ()
 xyChartTOCHtml st index =
   writeHtmlListItem $
   writeHtmlLink ("#id" ++ show index) $

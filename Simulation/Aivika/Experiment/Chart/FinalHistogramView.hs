@@ -127,9 +127,9 @@ instance WebPageCharting r => ExperimentView FinalHistogramView r WebPageWriter 
     in ExperimentGenerator { generateReporter = reporter }
   
 -- | The state of the view.
-data FinalHistogramViewState r a =
+data FinalHistogramViewState r =
   FinalHistogramViewState { finalHistogramView       :: FinalHistogramView,
-                            finalHistogramExperiment :: Experiment r a,
+                            finalHistogramExperiment :: Experiment,
                             finalHistogramRenderer   :: r,
                             finalHistogramDir        :: FilePath, 
                             finalHistogramFile       :: IORef (Maybe FilePath),
@@ -141,7 +141,7 @@ data FinalHistogramResults =
                           finalHistogramValues :: [MRef [Double]] }
   
 -- | Create a new state of the view.
-newFinalHistogram :: FinalHistogramView -> Experiment r a -> r -> FilePath -> IO (FinalHistogramViewState r a)
+newFinalHistogram :: FinalHistogramView -> Experiment -> r -> FilePath -> IO (FinalHistogramViewState r)
 newFinalHistogram view exp renderer dir =
   do f <- newIORef Nothing
      r <- newMRef Nothing
@@ -153,14 +153,14 @@ newFinalHistogram view exp renderer dir =
                                       finalHistogramResults    = r }
        
 -- | Create new histogram results.
-newFinalHistogramResults :: [String] -> Experiment r a -> IO FinalHistogramResults
+newFinalHistogramResults :: [String] -> Experiment -> IO FinalHistogramResults
 newFinalHistogramResults names exp =
   do values <- forM names $ \_ -> liftIO $ newMRef []
      return FinalHistogramResults { finalHistogramNames  = names,
                                     finalHistogramValues = values }
        
 -- | Require to return unique results associated with the specified state. 
-requireFinalHistogramResults :: FinalHistogramViewState r a -> [String] -> IO FinalHistogramResults
+requireFinalHistogramResults :: FinalHistogramViewState r -> [String] -> IO FinalHistogramResults
 requireFinalHistogramResults st names =
   maybeWriteMRef (finalHistogramResults st)
   (newFinalHistogramResults names (finalHistogramExperiment st)) $ \results ->
@@ -169,7 +169,7 @@ requireFinalHistogramResults st names =
   else results
 
 -- | Simulation of the specified series.
-simulateFinalHistogram :: FinalHistogramViewState r a -> ExperimentData -> Event DisposableEvent
+simulateFinalHistogram :: FinalHistogramViewState r -> ExperimentData -> Event DisposableEvent
 simulateFinalHistogram st expdata =
   do let view    = finalHistogramView st
          rs      = finalHistogramSeries view $
@@ -190,7 +190,7 @@ simulateFinalHistogram st expdata =
             modifyMRef values $ (++) x
      
 -- | Plot the histogram after the simulation is complete.
-finaliseFinalHistogram :: WebPageCharting r => FinalHistogramViewState r WebPageWriter -> IO ()
+finaliseFinalHistogram :: WebPageCharting r => FinalHistogramViewState r -> IO ()
 finaliseFinalHistogram st =
   do let view = finalHistogramView st
          title = finalHistogramTitle view
@@ -253,7 +253,7 @@ histogramToBars :: [(Double, [Int])] -> [(Double, [Double])]
 histogramToBars = map $ \(x, ns) -> (x, map fromIntegral ns)
 
 -- | Get the HTML code.     
-finalHistogramHtml :: FinalHistogramViewState r a -> Int -> HtmlWriter ()
+finalHistogramHtml :: FinalHistogramViewState r -> Int -> HtmlWriter ()
 finalHistogramHtml st index =
   do header st index
      file <- liftIO $ readIORef (finalHistogramFile st)
@@ -263,7 +263,7 @@ finalHistogramHtml st index =
          writeHtmlParagraph $
          writeHtmlImage (makeRelative (finalHistogramDir st) f)
 
-header :: FinalHistogramViewState r a -> Int -> HtmlWriter ()
+header :: FinalHistogramViewState r -> Int -> HtmlWriter ()
 header st index =
   do writeHtmlHeader3WithId ("id" ++ show index) $ 
        writeHtmlText (finalHistogramTitle $ finalHistogramView st)
@@ -273,7 +273,7 @@ header st index =
        writeHtmlText description
 
 -- | Get the TOC item.
-finalHistogramTOCHtml :: FinalHistogramViewState r a -> Int -> HtmlWriter ()
+finalHistogramTOCHtml :: FinalHistogramViewState r -> Int -> HtmlWriter ()
 finalHistogramTOCHtml st index =
   writeHtmlListItem $
   writeHtmlLink ("#id" ++ show index) $

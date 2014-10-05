@@ -135,9 +135,9 @@ instance WebPageCharting r => ExperimentView DeviationChartView r WebPageWriter 
     in ExperimentGenerator { generateReporter = reporter }
   
 -- | The state of the view.
-data DeviationChartViewState r a =
+data DeviationChartViewState r =
   DeviationChartViewState { deviationChartView       :: DeviationChartView,
-                            deviationChartExperiment :: Experiment r a,
+                            deviationChartExperiment :: Experiment,
                             deviationChartRenderer   :: r,
                             deviationChartDir        :: FilePath, 
                             deviationChartFile       :: IORef (Maybe FilePath),
@@ -151,11 +151,7 @@ data DeviationChartResults =
                           deviationChartStats :: [IOArray Int (SamplingStats Double)] }
   
 -- | Create a new state of the view.
-newDeviationChart :: DeviationChartView
-                     -> Experiment r a
-                     -> r
-                     -> FilePath
-                     -> IO (DeviationChartViewState r a)
+newDeviationChart :: DeviationChartView -> Experiment -> r -> FilePath -> IO (DeviationChartViewState r)
 newDeviationChart view exp renderer dir =
   do f <- newIORef Nothing
      l <- newMVar () 
@@ -169,7 +165,7 @@ newDeviationChart view exp renderer dir =
                                       deviationChartResults    = r }
        
 -- | Create new chart results.
-newDeviationChartResults :: [Either String String] -> Experiment r a -> IO DeviationChartResults
+newDeviationChartResults :: [Either String String] -> Experiment -> IO DeviationChartResults
 newDeviationChartResults names exp =
   do let specs = experimentSpecs exp
          bnds  = integIterationBnds specs
@@ -181,7 +177,7 @@ newDeviationChartResults names exp =
                                     deviationChartStats = stats }
 
 -- | Require to return unique chart results associated with the specified state. 
-requireDeviationChartResults :: DeviationChartViewState r a -> [Either String String] -> IO DeviationChartResults
+requireDeviationChartResults :: DeviationChartViewState r -> [Either String String] -> IO DeviationChartResults
 requireDeviationChartResults st names =
   maybeWriteMRef (deviationChartResults st)
   (newDeviationChartResults names (deviationChartExperiment st)) $ \results ->
@@ -190,7 +186,7 @@ requireDeviationChartResults st names =
   else results
        
 -- | Simulate the specified series.
-simulateDeviationChart :: DeviationChartViewState r a -> ExperimentData -> Event DisposableEvent
+simulateDeviationChart :: DeviationChartViewState r -> ExperimentData -> Event DisposableEvent
 simulateDeviationChart st expdata =
   do let view    = deviationChartView st
          rs1     = deviationChartLeftYSeries view $
@@ -221,7 +217,7 @@ simulateDeviationChart st expdata =
                y' `seq` writeArray stats i y'
      
 -- | Plot the deviation chart after the simulation is complete.
-finaliseDeviationChart :: WebPageCharting r => DeviationChartViewState r WebPageWriter -> IO ()
+finaliseDeviationChart :: WebPageCharting r => DeviationChartViewState r -> IO ()
 finaliseDeviationChart st =
   do let view = deviationChartView st
          title = deviationChartTitle view
@@ -309,7 +305,7 @@ filterPlotFillBetweenValues =
   filter $ \(t, (x1, x2)) -> not $ isNaN x1 || isInfinite x1 || isNaN x2 || isInfinite x2
 
 -- | Get the HTML code.     
-deviationChartHtml :: DeviationChartViewState r a -> Int -> HtmlWriter ()
+deviationChartHtml :: DeviationChartViewState r -> Int -> HtmlWriter ()
 deviationChartHtml st index =
   do header st index
      file <- liftIO $ readIORef (deviationChartFile st)
@@ -319,7 +315,7 @@ deviationChartHtml st index =
          writeHtmlParagraph $
          writeHtmlImage (makeRelative (deviationChartDir st) f)
 
-header :: DeviationChartViewState r a -> Int -> HtmlWriter ()
+header :: DeviationChartViewState r -> Int -> HtmlWriter ()
 header st index =
   do writeHtmlHeader3WithId ("id" ++ show index) $ 
        writeHtmlText (deviationChartTitle $ deviationChartView st)
@@ -329,7 +325,7 @@ header st index =
        writeHtmlText description
 
 -- | Get the TOC item.
-deviationChartTOCHtml :: DeviationChartViewState r a -> Int -> HtmlWriter ()
+deviationChartTOCHtml :: DeviationChartViewState r -> Int -> HtmlWriter ()
 deviationChartTOCHtml st index =
   writeHtmlListItem $
   writeHtmlLink ("#id" ++ show index) $
