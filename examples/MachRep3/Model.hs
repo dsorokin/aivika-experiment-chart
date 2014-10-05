@@ -24,7 +24,7 @@ import Simulation.Aivika.Experiment
 meanUpTime = 1.0
 meanRepairTime = 0.5
 
-model :: Simulation ExperimentData
+model :: Simulation Results
 model =
   do -- number of machines currently up
      nUp <- newRef 2
@@ -73,12 +73,19 @@ model =
      runProcessInStartTimeUsingId
        pid2 (machine pid1)
      
-     let result = 
+     let upTimeProp = 
            do x <- readRef totalUpTime
               y <- liftDynamics time
               return $ x / (2 * y)          
-              
-     experimentDataInStartTime
-       [("x", seriesEntity "The proportion of up time" result),
-        ("t", seriesEntity "Total up time" totalUpTime),
-        ("n", seriesEntity "Simulation run" simulationIndex)]
+
+     return $
+       results
+       [resultSource
+        "upTimeProp" "The proportion of up time"
+        upTimeProp,
+        resultSource
+        "totalUpTime" "Total up time"
+        totalUpTime,
+        resultSource
+        "runIndex" "Simulation run"
+        simulationIndex]
