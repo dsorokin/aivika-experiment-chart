@@ -160,8 +160,9 @@ data FinalXYChartResults =
                         finalXYChartXY     :: [IOArray Int (Maybe (Double, Double))] }
   
 -- | Create a new state of the view.
-newFinalXYChart :: FinalXYChartView -> Experiment -> r -> FilePath -> IO (FinalXYChartViewState r)
+newFinalXYChart :: FinalXYChartView -> Experiment -> r -> FilePath -> ExperimentWriter (FinalXYChartViewState r)
 newFinalXYChart view exp renderer dir =
+  liftIO $
   do f <- newIORef Nothing
      l <- newMVar () 
      r <- newMRef Nothing
@@ -234,7 +235,7 @@ simulateFinalXYChart st expdata =
             x `seq` y `seq` writeArray xy i $ Just (x, y)
      
 -- | Plot the XY chart after the simulation is complete.
-finaliseFinalXYChart :: WebPageCharting r => FinalXYChartViewState r -> IO ()
+finaliseFinalXYChart :: WebPageCharting r => FinalXYChartViewState r -> ExperimentWriter ()
 finaliseFinalXYChart st =
   do let view = finalXYChartView st 
          title = finalXYChartTitle view
@@ -248,10 +249,15 @@ finaliseFinalXYChart st =
          plotBottomAxis = finalXYChartBottomAxis view
          plotLayout = finalXYChartLayout view
          renderer = finalXYChartRenderer st
-     results <- readMRef $ finalXYChartResults st
+     file <- resolveFilePath (finalXYChartDir st) $
+             mapFilePath (flip replaceExtension $ renderableChartExtension renderer) $
+             expandFilePath (finalXYChartFileName view) $
+             M.fromList [("$TITLE", title)]
+     results <- liftIO $ readMRef $ finalXYChartResults st
      case results of
        Nothing -> return ()
        Just results ->
+         liftIO $
          do let xname  = finalXYChartXName results
                 ynames = finalXYChartYNames results
                 xys    = finalXYChartXY results
@@ -282,10 +288,6 @@ finaliseFinalXYChart st =
                         layoutlr_title .~ plotTitle' $
                         layoutlr_plots .~ ps $
                         def
-            file <- resolveFilePath (finalXYChartDir st) $
-                    mapFilePath (flip replaceExtension $ renderableChartExtension renderer) $
-                    expandFilePath (finalXYChartFileName view) $
-                    M.fromList [("$TITLE", title)]
             renderChart renderer (width, height) file (toRenderable chart)
             when (experimentVerbose $ finalXYChartExperiment st) $
               putStr "Generated file " >> putStrLn file

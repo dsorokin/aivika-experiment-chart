@@ -150,7 +150,7 @@ data TimeSeriesViewState r =
                         timeSeriesMap        :: M.Map Int FilePath }
   
 -- | Create a new state of the view.
-newTimeSeries :: WebPageCharting r => TimeSeriesView -> Experiment -> r -> FilePath -> IO (TimeSeriesViewState r)
+newTimeSeries :: WebPageCharting r => TimeSeriesView -> Experiment -> r -> FilePath -> ExperimentWriter (TimeSeriesViewState r)
 newTimeSeries view exp renderer dir =
   do let n = experimentRunCount exp
      fs <- forM [0..(n - 1)] $ \i ->
@@ -160,7 +160,7 @@ newTimeSeries view exp renderer dir =
        M.fromList [("$TITLE", timeSeriesTitle view),
                    ("$RUN_INDEX", show $ i + 1),
                    ("$RUN_COUNT", show n)]
-     forM_ fs $ flip writeFile []  -- reserve the file names
+     liftIO $ forM_ fs $ flip writeFile []  -- reserve the file names
      let m = M.fromList $ zip [0..(n - 1)] fs
      return TimeSeriesViewState { timeSeriesView       = view,
                                   timeSeriesExperiment = exp,

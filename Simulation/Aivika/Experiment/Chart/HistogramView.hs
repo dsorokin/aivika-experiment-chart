@@ -145,7 +145,7 @@ data HistogramViewState r =
                        histogramMap        :: M.Map Int FilePath }
   
 -- | Create a new state of the view.
-newHistogram :: WebPageCharting r => HistogramView -> Experiment -> r -> FilePath -> IO (HistogramViewState r)
+newHistogram :: WebPageCharting r => HistogramView -> Experiment -> r -> FilePath -> ExperimentWriter (HistogramViewState r)
 newHistogram view exp renderer dir =
   do let n = experimentRunCount exp
      fs <- forM [0..(n - 1)] $ \i ->
@@ -155,7 +155,7 @@ newHistogram view exp renderer dir =
        M.fromList [("$TITLE", histogramTitle view),
                    ("$RUN_INDEX", show $ i + 1),
                    ("$RUN_COUNT", show n)]
-     forM_ fs $ flip writeFile []  -- reserve the file names
+     liftIO $ forM_ fs $ flip writeFile []  -- reserve the file names
      let m = M.fromList $ zip [0..(n - 1)] fs
      return HistogramViewState { histogramView       = view,
                                  histogramExperiment = exp,

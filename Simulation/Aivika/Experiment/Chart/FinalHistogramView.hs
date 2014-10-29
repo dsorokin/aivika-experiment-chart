@@ -141,8 +141,9 @@ data FinalHistogramResults =
                           finalHistogramValues :: [MRef [Double]] }
   
 -- | Create a new state of the view.
-newFinalHistogram :: FinalHistogramView -> Experiment -> r -> FilePath -> IO (FinalHistogramViewState r)
+newFinalHistogram :: FinalHistogramView -> Experiment -> r -> FilePath -> ExperimentWriter (FinalHistogramViewState r)
 newFinalHistogram view exp renderer dir =
+  liftIO $
   do f <- newIORef Nothing
      r <- newMRef Nothing
      return FinalHistogramViewState { finalHistogramView       = view,
@@ -190,7 +191,7 @@ simulateFinalHistogram st expdata =
             modifyMRef_ values $ return . (++) x
      
 -- | Plot the histogram after the simulation is complete.
-finaliseFinalHistogram :: WebPageCharting r => FinalHistogramViewState r -> IO ()
+finaliseFinalHistogram :: WebPageCharting r => FinalHistogramViewState r -> ExperimentWriter ()
 finaliseFinalHistogram st =
   do let view = finalHistogramView st
          title = finalHistogramTitle view
@@ -204,10 +205,15 @@ finaliseFinalHistogram st =
          bars = finalHistogramPlotBars view
          layout = finalHistogramLayout view
          renderer = finalHistogramRenderer st
-     results <- readMRef $ finalHistogramResults st
+     file <- resolveFilePath (finalHistogramDir st) $
+             mapFilePath (flip replaceExtension $ renderableChartExtension renderer) $
+             expandFilePath (finalHistogramFileName view) $
+             M.fromList [("$TITLE", title)]
+     results <- liftIO $ readMRef $ finalHistogramResults st
      case results of
        Nothing -> return ()
        Just results ->
+         liftIO $
          do let names  = finalHistogramNames results
                 values = finalHistogramValues results
             xs <- forM values readMRef
@@ -231,10 +237,6 @@ finaliseFinalHistogram st =
                         layout_title .~ plotTitle' $
                         layout_plots .~ [p] $
                         def
-            file <- resolveFilePath (finalHistogramDir st) $
-                    mapFilePath (flip replaceExtension $ renderableChartExtension renderer) $
-                    expandFilePath (finalHistogramFileName view) $
-                    M.fromList [("$TITLE", title)]
             renderChart renderer (width, height) file (toRenderable chart)
             when (experimentVerbose $ finalHistogramExperiment st) $
               putStr "Generated file " >> putStrLn file

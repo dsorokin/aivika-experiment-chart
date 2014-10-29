@@ -159,7 +159,7 @@ data XYChartViewState r =
                      xyChartMap        :: M.Map Int FilePath }
   
 -- | Create a new state of the view.
-newXYChart :: WebPageCharting r => XYChartView -> Experiment -> r -> FilePath -> IO (XYChartViewState r)
+newXYChart :: WebPageCharting r => XYChartView -> Experiment -> r -> FilePath -> ExperimentWriter (XYChartViewState r)
 newXYChart view exp renderer dir =
   do let n = experimentRunCount exp
      fs <- forM [0..(n - 1)] $ \i ->
@@ -169,7 +169,7 @@ newXYChart view exp renderer dir =
        M.fromList [("$TITLE", xyChartTitle view),
                    ("$RUN_INDEX", show $ i + 1),
                    ("$RUN_COUNT", show n)]
-     forM_ fs $ flip writeFile []  -- reserve the file names
+     liftIO $ forM_ fs $ flip writeFile []  -- reserve the file names
      let m = M.fromList $ zip [0..(n - 1)] fs
      return XYChartViewState { xyChartView       = view,
                                xyChartExperiment = exp,

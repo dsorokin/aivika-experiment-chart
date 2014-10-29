@@ -151,8 +151,9 @@ data DeviationChartResults =
                           deviationChartStats :: [IOArray Int (SamplingStats Double)] }
   
 -- | Create a new state of the view.
-newDeviationChart :: DeviationChartView -> Experiment -> r -> FilePath -> IO (DeviationChartViewState r)
+newDeviationChart :: DeviationChartView -> Experiment -> r -> FilePath -> ExperimentWriter (DeviationChartViewState r)
 newDeviationChart view exp renderer dir =
+  liftIO $ 
   do f <- newIORef Nothing
      l <- newMVar () 
      r <- newMRef Nothing
@@ -217,7 +218,7 @@ simulateDeviationChart st expdata =
                y' `seq` writeArray stats i y'
      
 -- | Plot the deviation chart after the simulation is complete.
-finaliseDeviationChart :: WebPageCharting r => DeviationChartViewState r -> IO ()
+finaliseDeviationChart :: WebPageCharting r => DeviationChartViewState r -> ExperimentWriter ()
 finaliseDeviationChart st =
   do let view = deviationChartView st
          title = deviationChartTitle view
@@ -232,10 +233,15 @@ finaliseDeviationChart st =
          plotBottomAxis = deviationChartBottomAxis view
          plotLayout = deviationChartLayout view
          renderer = deviationChartRenderer st
-     results <- readMRef $ deviationChartResults st
+     file <- resolveFilePath (deviationChartDir st) $
+             mapFilePath (flip replaceExtension $ renderableChartExtension renderer) $
+             expandFilePath (deviationChartFileName view) $
+             M.fromList [("$TITLE", title)]
+     results <- liftIO $ readMRef $ deviationChartResults st
      case results of
        Nothing -> return ()
        Just results ->
+         liftIO $
          do let times = deviationChartTimes results
                 names = deviationChartNames results
                 stats = deviationChartStats results
@@ -284,10 +290,6 @@ finaliseDeviationChart st =
                         layoutlr_title .~ plotTitle' $
                         layoutlr_plots .~ ps $
                         def
-            file <- resolveFilePath (deviationChartDir st) $
-                    mapFilePath (flip replaceExtension $ renderableChartExtension renderer) $
-                    expandFilePath (deviationChartFileName view) $
-                    M.fromList [("$TITLE", title)]
             renderChart renderer (width, height) file (toRenderable chart)
             when (experimentVerbose $ deviationChartExperiment st) $
               putStr "Generated file " >> putStrLn file
