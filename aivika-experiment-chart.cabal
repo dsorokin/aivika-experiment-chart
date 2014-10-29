@@ -86,8 +86,8 @@ library
                      lens >= 3.9,
                      data-default-class < 0.1,
                      colour >= 2.3.3,
-                     aivika >= 1.4,
-                     aivika-experiment >= 1.4
+                     aivika >= 2.1,
+                     aivika-experiment >= 2.1
 
     extensions:      FlexibleInstances,
                      MultiParamTypeClasses
