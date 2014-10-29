@@ -190,7 +190,7 @@ requireFinalXYChartResults st xname ynames =
   (newFinalXYChartResults xname ynames (finalXYChartExperiment st)) $ \results ->
   if (xname /= finalXYChartXName results) || (ynames /= finalXYChartYNames results)
   then error "Series with different names are returned for different runs: requireFinalXYChartResults"
-  else results
+  else return results
        
 -- | Simulation.
 simulateFinalXYChart :: FinalXYChartViewState r -> ExperimentData -> Event DisposableEvent

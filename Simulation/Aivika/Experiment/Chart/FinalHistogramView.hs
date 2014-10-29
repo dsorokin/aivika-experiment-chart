@@ -166,7 +166,7 @@ requireFinalHistogramResults st names =
   (newFinalHistogramResults names (finalHistogramExperiment st)) $ \results ->
   if (names /= finalHistogramNames results)
   then error "Series with different names are returned for different runs: requireFinalHistogramResults"
-  else results
+  else return results
 
 -- | Simulation of the specified series.
 simulateFinalHistogram :: FinalHistogramViewState r -> ExperimentData -> Event DisposableEvent
@@ -187,7 +187,7 @@ simulateFinalHistogram st expdata =
        do xs <- forM exts resultExtractData
           liftIO $
             forM_ (zip xs values) $ \(x, values) ->
-            modifyMRef values $ (++) x
+            modifyMRef_ values $ return . (++) x
      
 -- | Plot the histogram after the simulation is complete.
 finaliseFinalHistogram :: WebPageCharting r => FinalHistogramViewState r -> IO ()

@@ -183,7 +183,7 @@ requireDeviationChartResults st names =
   (newDeviationChartResults names (deviationChartExperiment st)) $ \results ->
   if (names /= deviationChartNames results)
   then error "Series with different names are returned for different runs: requireDeviationChartResults"
-  else results
+  else return results
        
 -- | Simulate the specified series.
 simulateDeviationChart :: DeviationChartViewState r -> ExperimentData -> Event DisposableEvent
