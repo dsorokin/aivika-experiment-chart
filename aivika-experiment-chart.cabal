@@ -28,6 +28,11 @@ extra-source-files:  examples/BassDiffusion/Model.hs
                      examples/BassDiffusion/MainUsingCairo.hs
                      examples/BassDiffusion/MainUsingDiagrams.hs
                      examples/BassDiffusion/README
+                     examples/BouncingBall/Model.hs
+                     examples/BouncingBall/Experiment.hs
+                     examples/BouncingBall/MainUsingCairo.hs
+                     examples/BouncingBall/MainUsingDiagrams.hs
+                     examples/BouncingBall/README
                      examples/ChemicalReaction/Model.hs
                      examples/ChemicalReaction/Experiment.hs
                      examples/ChemicalReaction/MainUsingCairo.hs
