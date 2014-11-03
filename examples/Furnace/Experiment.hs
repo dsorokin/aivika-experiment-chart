@@ -72,39 +72,39 @@ generators =
      deviationChartTitle = "Deviation Chart - 3",
      deviationChartPlotTitle = "The queue size",
      deviationChartRightYSeries =
-       resultByName furnaceQueueName >>> resultByProperty "queueCount" },
+       resultByName furnaceQueueName >>> resultById QueueCountId },
    outputView $ defaultFinalHistogramView {
      finalHistogramTitle = "Final Histogram - 3",
      finalHistogramPlotTitle = "The queue size in the final time point.",
      finalHistogramSeries =
-       resultByName furnaceQueueName >>> resultByProperty "queueCount" },
+       resultByName furnaceQueueName >>> resultById QueueCountId },
    outputView $ defaultFinalStatsView {
      finalStatsTitle = "Final Statistics - 3",
      finalStatsDescription = "The summary of the queue size in the final time point.",
      finalStatsSeries =
-       resultByName furnaceQueueName >>> resultByProperty "queueCount" },
+       resultByName furnaceQueueName >>> resultById QueueCountId },
    outputView $ defaultDeviationChartView {
      deviationChartTitle = "Deviation Chart - 4",
      deviationChartPlotTitle = "The mean wait time",
      deviationChartRightYSeries =
-       resultByName furnaceQueueName >>> resultByProperty "queueWaitTime" },
+       resultByName furnaceQueueName >>> resultById QueueWaitTimeId },
    outputView $ defaultFinalStatsView {
      finalStatsTitle = "Final Statistics - 4",
      finalStatsDescription = "The summary of the mean wait time in " ++
                              "the final time point.",
      finalStatsSeries =
-       resultByName furnaceQueueName >>> resultByProperty "queueWaitTime" },
+       resultByName furnaceQueueName >>> resultById QueueWaitTimeId },
    outputView $ defaultDeviationChartView {
      deviationChartTitle = "Deviation Chart - 5",
      deviationChartPlotTitle = "The queue rate",
      deviationChartRightYSeries =
-       resultByName furnaceQueueName >>> resultByProperty "queueRate" },
+       resultByName furnaceQueueName >>> resultById QueueRateId },
    outputView $ defaultFinalStatsView {
      finalStatsTitle = "Final Statistics - 5",
      finalStatsDescription = "The summary of the queue rate in " ++
                              "the final time point.",
      finalStatsSeries =
-       resultByName furnaceQueueName >>> resultByProperty "queueRate" },
+       resultByName furnaceQueueName >>> resultById QueueRateId },
    outputView $ defaultDeviationChartView {
      deviationChartTitle = "Deviation Chart - 6",
      deviationChartPlotTitle = "The mean heating time",
