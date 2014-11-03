@@ -28,34 +28,34 @@ experiment =
 resultProcessingTime :: ResultTransform
 resultProcessingTime =
   (resultByName "inputArrivalTimer" >>>
-   resultByProperty "processingTime")
+   resultById ArrivalProcessingTimeId)
   <>
   (resultByName "outputArrivalTimer" >>>
-   resultByProperty "processingTime")
+   resultById ArrivalProcessingTimeId)
 
 resultProcessingFactor :: ResultTransform
 resultProcessingFactor =
   (resultByName "inspectionStations" >>>
-   resultByProperty "processingFactor")
+   resultById ServerProcessingFactorId)
   <>
   (resultByName "adjustmentStations" >>>
-   resultByProperty "processingFactor")
+   resultById ServerProcessingFactorId)
 
 resultQueueSize :: ResultTransform
 resultQueueSize =
   (resultByName "inspectionQueue" >>>
-   resultByProperty "queueCount")
+   resultById QueueCountId)
   <>
   (resultByName "adjustmentQueue" >>>
-   resultByProperty "queueCount")
+   resultById QueueCountId)
 
 resultWaitTime :: ResultTransform
 resultWaitTime =
   (resultByName "inspectionQueue" >>>
-   resultByProperty "queueWaitTime")
+   resultById QueueWaitTimeId)
   <>
   (resultByName "adjustmentQueue" >>>
-   resultByProperty "queueWaitTime")
+   resultById QueueWaitTimeId)
 
 generators :: WebPageCharting r => [WebPageGenerator r]
 generators =
