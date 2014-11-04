@@ -1,5 +1,5 @@
 
-{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 
 -- |
 -- Module     : Simulation.Aivika.Experiment.Chart.XYChartView
@@ -136,18 +136,30 @@ defaultXYChartView =
                 xyChartBottomAxis  = id,
                 xyChartLayout      = id }
 
-instance WebPageCharting r => ExperimentView XYChartView r WebPageWriter where
+instance ChartRendering r => ExperimentView XYChartView (WebPageRenderer r) where
   
   outputView v = 
-    let reporter exp renderer dir =
+    let reporter exp (WebPageRenderer renderer) dir =
           do st <- newXYChart v exp renderer dir
-             let writer =
+             let context =
+                   WebPageContext $
                    WebPageWriter { reporterWriteTOCHtml = xyChartTOCHtml st,
                                    reporterWriteHtml    = xyChartHtml st }
              return ExperimentReporter { reporterInitialise = return (),
                                          reporterFinalise   = return (),
                                          reporterSimulate   = simulateXYChart st,
-                                         reporterRequest    = writer }
+                                         reporterContext    = context }
+    in ExperimentGenerator { generateReporter = reporter }
+
+instance ChartRendering r => ExperimentView XYChartView (FileRenderer r) where
+  
+  outputView v = 
+    let reporter exp (FileRenderer renderer) dir =
+          do st <- newXYChart v exp renderer dir
+             return ExperimentReporter { reporterInitialise = return (),
+                                         reporterFinalise   = return (),
+                                         reporterSimulate   = simulateXYChart st,
+                                         reporterContext    = FileContext }
     in ExperimentGenerator { generateReporter = reporter }
   
 -- | The state of the view.
@@ -159,7 +171,7 @@ data XYChartViewState r =
                      xyChartMap        :: M.Map Int FilePath }
   
 -- | Create a new state of the view.
-newXYChart :: WebPageCharting r => XYChartView -> Experiment -> r -> FilePath -> ExperimentWriter (XYChartViewState r)
+newXYChart :: ChartRendering r => XYChartView -> Experiment -> r -> FilePath -> ExperimentWriter (XYChartViewState r)
 newXYChart view exp renderer dir =
   do let n = experimentRunCount exp
      fs <- forM [0..(n - 1)] $ \i ->
@@ -178,7 +190,7 @@ newXYChart view exp renderer dir =
                                xyChartMap        = m }
        
 -- | Plot the XY chart during the simulation.
-simulateXYChart :: WebPageCharting r => XYChartViewState r -> ExperimentData -> Event DisposableEvent
+simulateXYChart :: ChartRendering r => XYChartViewState r -> ExperimentData -> Event DisposableEvent
 simulateXYChart st expdata =
   do let view    = xyChartView st
          rs0     = xyChartXSeries view $

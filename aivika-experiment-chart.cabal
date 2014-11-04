@@ -94,8 +94,7 @@ library
                      aivika >= 2.2,
                      aivika-experiment >= 2.2
 
-    extensions:      FlexibleInstances,
-                     MultiParamTypeClasses
+    extensions:      MultiParamTypeClasses
 
     ghc-options:     -O2
 

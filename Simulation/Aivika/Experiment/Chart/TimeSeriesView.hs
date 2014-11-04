@@ -1,5 +1,5 @@
 
-{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 
 -- |
 -- Module     : Simulation.Aivika.Experiment.Chart.TimeSeriesView
@@ -127,18 +127,30 @@ defaultTimeSeriesView =
                    timeSeriesBottomAxis  = id,
                    timeSeriesLayout      = id }
 
-instance WebPageCharting r => ExperimentView TimeSeriesView r WebPageWriter where
+instance ChartRendering r => ExperimentView TimeSeriesView (WebPageRenderer r) where
   
   outputView v = 
-    let reporter exp renderer dir =
+    let reporter exp (WebPageRenderer renderer) dir =
           do st <- newTimeSeries v exp renderer dir
-             let writer =
+             let context =
+                   WebPageContext $
                    WebPageWriter { reporterWriteTOCHtml = timeSeriesTOCHtml st,
                                    reporterWriteHtml    = timeSeriesHtml st }
              return ExperimentReporter { reporterInitialise = return (),
                                          reporterFinalise   = return (),
                                          reporterSimulate   = simulateTimeSeries st,
-                                         reporterRequest    = writer }
+                                         reporterContext    = context }
+    in ExperimentGenerator { generateReporter = reporter }
+
+instance ChartRendering r => ExperimentView TimeSeriesView (FileRenderer r) where
+  
+  outputView v = 
+    let reporter exp (FileRenderer renderer) dir =
+          do st <- newTimeSeries v exp renderer dir
+             return ExperimentReporter { reporterInitialise = return (),
+                                         reporterFinalise   = return (),
+                                         reporterSimulate   = simulateTimeSeries st,
+                                         reporterContext    = FileContext }
     in ExperimentGenerator { generateReporter = reporter }
   
 -- | The state of the view.
@@ -150,7 +162,7 @@ data TimeSeriesViewState r =
                         timeSeriesMap        :: M.Map Int FilePath }
   
 -- | Create a new state of the view.
-newTimeSeries :: WebPageCharting r => TimeSeriesView -> Experiment -> r -> FilePath -> ExperimentWriter (TimeSeriesViewState r)
+newTimeSeries :: ChartRendering r => TimeSeriesView -> Experiment -> r -> FilePath -> ExperimentWriter (TimeSeriesViewState r)
 newTimeSeries view exp renderer dir =
   do let n = experimentRunCount exp
      fs <- forM [0..(n - 1)] $ \i ->
@@ -169,7 +181,7 @@ newTimeSeries view exp renderer dir =
                                   timeSeriesMap        = m }
        
 -- | Plot the time series chart within simulation.
-simulateTimeSeries :: WebPageCharting r => TimeSeriesViewState r -> ExperimentData -> Event DisposableEvent
+simulateTimeSeries :: ChartRendering r => TimeSeriesViewState r -> ExperimentData -> Event DisposableEvent
 simulateTimeSeries st expdata =
   do let view    = timeSeriesView st
          rs1     = timeSeriesLeftYSeries view $

@@ -1,5 +1,5 @@
 
-{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 
 -- |
 -- Module     : Simulation.Aivika.Experiment.Chart.FinalXYChartView
@@ -129,18 +129,30 @@ defaultFinalXYChartView =
                      finalXYChartBottomAxis  = id,
                      finalXYChartLayout      = id }
 
-instance WebPageCharting r => ExperimentView FinalXYChartView r WebPageWriter where
+instance ChartRendering r => ExperimentView FinalXYChartView (WebPageRenderer r) where
   
   outputView v = 
-    let reporter exp renderer dir =
+    let reporter exp (WebPageRenderer renderer) dir =
           do st <- newFinalXYChart v exp renderer dir
-             let writer =
+             let context =
+                   WebPageContext $
                    WebPageWriter { reporterWriteTOCHtml = finalXYChartTOCHtml st,
                                    reporterWriteHtml    = finalXYChartHtml st }
              return ExperimentReporter { reporterInitialise = return (),
                                          reporterFinalise   = finaliseFinalXYChart st,
                                          reporterSimulate   = simulateFinalXYChart st,
-                                         reporterRequest    = writer }
+                                         reporterContext    = context }
+    in ExperimentGenerator { generateReporter = reporter }
+
+instance ChartRendering r => ExperimentView FinalXYChartView (FileRenderer r) where
+  
+  outputView v = 
+    let reporter exp (FileRenderer renderer) dir =
+          do st <- newFinalXYChart v exp renderer dir
+             return ExperimentReporter { reporterInitialise = return (),
+                                         reporterFinalise   = finaliseFinalXYChart st,
+                                         reporterSimulate   = simulateFinalXYChart st,
+                                         reporterContext    = FileContext }
     in ExperimentGenerator { generateReporter = reporter }
   
 -- | The state of the view.
@@ -235,7 +247,7 @@ simulateFinalXYChart st expdata =
             x `seq` y `seq` writeArray xy i $ Just (x, y)
      
 -- | Plot the XY chart after the simulation is complete.
-finaliseFinalXYChart :: WebPageCharting r => FinalXYChartViewState r -> ExperimentWriter ()
+finaliseFinalXYChart :: ChartRendering r => FinalXYChartViewState r -> ExperimentWriter ()
 finaliseFinalXYChart st =
   do let view = finalXYChartView st 
          title = finalXYChartTitle view

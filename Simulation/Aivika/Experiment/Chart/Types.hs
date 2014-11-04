@@ -11,14 +11,14 @@
 --
 
 module Simulation.Aivika.Experiment.Chart.Types
-       (WebPageCharting(..)) where
+       (ChartRendering(..)) where
 
 import Graphics.Rendering.Chart
 
 import Simulation.Aivika.Experiment
 
 -- | A type class of chart renderers.
-class WebPageRendering r => WebPageCharting r where
+class ChartRendering r where
 
   -- | The file extension used when rendering.
   renderableChartExtension :: r -> String

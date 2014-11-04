@@ -1,5 +1,5 @@
 
-{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 
 -- |
 -- Module     : Simulation.Aivika.Experiment.Chart.DeviationChartView
@@ -120,18 +120,30 @@ defaultDeviationChartView =
                        deviationChartBottomAxis  = id,
                        deviationChartLayout      = id }
 
-instance WebPageCharting r => ExperimentView DeviationChartView r WebPageWriter where
+instance ChartRendering r => ExperimentView DeviationChartView (WebPageRenderer r) where
   
   outputView v = 
-    let reporter exp renderer dir =
+    let reporter exp (WebPageRenderer renderer) dir =
           do st <- newDeviationChart v exp renderer dir
-             let writer =
+             let context =
+                   WebPageContext $
                    WebPageWriter { reporterWriteTOCHtml = deviationChartTOCHtml st,
                                    reporterWriteHtml    = deviationChartHtml st }
              return ExperimentReporter { reporterInitialise = return (),
                                          reporterFinalise   = finaliseDeviationChart st,
                                          reporterSimulate   = simulateDeviationChart st,
-                                         reporterRequest    = writer }
+                                         reporterContext    = context }
+    in ExperimentGenerator { generateReporter = reporter }
+
+instance ChartRendering r => ExperimentView DeviationChartView (FileRenderer r) where
+  
+  outputView v = 
+    let reporter exp (FileRenderer renderer) dir =
+          do st <- newDeviationChart v exp renderer dir
+             return ExperimentReporter { reporterInitialise = return (),
+                                         reporterFinalise   = finaliseDeviationChart st,
+                                         reporterSimulate   = simulateDeviationChart st,
+                                         reporterContext    = FileContext }
     in ExperimentGenerator { generateReporter = reporter }
   
 -- | The state of the view.
@@ -218,7 +230,7 @@ simulateDeviationChart st expdata =
                y' `seq` writeArray stats i y'
      
 -- | Plot the deviation chart after the simulation is complete.
-finaliseDeviationChart :: WebPageCharting r => DeviationChartViewState r -> ExperimentWriter ()
+finaliseDeviationChart :: ChartRendering r => DeviationChartViewState r -> ExperimentWriter ()
 finaliseDeviationChart st =
   do let view = deviationChartView st
          title = deviationChartTitle view

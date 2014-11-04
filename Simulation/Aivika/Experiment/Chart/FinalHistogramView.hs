@@ -1,5 +1,5 @@
 
-{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 
 -- |
 -- Module     : Simulation.Aivika.Experiment.Chart.FinalHistogramView
@@ -112,18 +112,30 @@ defaultFinalHistogramView =
                        finalHistogramPlotBars    = colourisePlotBars,
                        finalHistogramLayout      = id }
 
-instance WebPageCharting r => ExperimentView FinalHistogramView r WebPageWriter where
+instance ChartRendering r => ExperimentView FinalHistogramView (WebPageRenderer r) where
   
   outputView v = 
-    let reporter exp renderer dir =
+    let reporter exp (WebPageRenderer renderer) dir =
           do st <- newFinalHistogram v exp renderer dir
-             let writer =
+             let context =
+                   WebPageContext $
                    WebPageWriter { reporterWriteTOCHtml = finalHistogramTOCHtml st,
                                    reporterWriteHtml    = finalHistogramHtml st }
              return ExperimentReporter { reporterInitialise = return (),
                                          reporterFinalise   = finaliseFinalHistogram st,
                                          reporterSimulate   = simulateFinalHistogram st,
-                                         reporterRequest    = writer }
+                                         reporterContext    = context }
+    in ExperimentGenerator { generateReporter = reporter }
+
+instance ChartRendering r => ExperimentView FinalHistogramView (FileRenderer r) where
+  
+  outputView v = 
+    let reporter exp (FileRenderer renderer) dir =
+          do st <- newFinalHistogram v exp renderer dir
+             return ExperimentReporter { reporterInitialise = return (),
+                                         reporterFinalise   = finaliseFinalHistogram st,
+                                         reporterSimulate   = simulateFinalHistogram st,
+                                         reporterContext    = FileContext }
     in ExperimentGenerator { generateReporter = reporter }
   
 -- | The state of the view.
@@ -191,7 +203,7 @@ simulateFinalHistogram st expdata =
             modifyMRef_ values $ return . (++) x
      
 -- | Plot the histogram after the simulation is complete.
-finaliseFinalHistogram :: WebPageCharting r => FinalHistogramViewState r -> ExperimentWriter ()
+finaliseFinalHistogram :: ChartRendering r => FinalHistogramViewState r -> ExperimentWriter ()
 finaliseFinalHistogram st =
   do let view = finalHistogramView st
          title = finalHistogramTitle view

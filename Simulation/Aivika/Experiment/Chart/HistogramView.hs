@@ -1,5 +1,5 @@
 
-{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 
 -- |
 -- Module     : Simulation.Aivika.Experiment.Chart.HistogramView
@@ -122,18 +122,30 @@ defaultHistogramView =
                   histogramPlotBars    = colourisePlotBars,
                   histogramLayout      = id }
 
-instance WebPageCharting r => ExperimentView HistogramView r WebPageWriter where
+instance ChartRendering r => ExperimentView HistogramView (WebPageRenderer r) where
   
   outputView v = 
-    let reporter exp renderer dir =
+    let reporter exp (WebPageRenderer renderer) dir =
           do st <- newHistogram v exp renderer dir
-             let writer =
+             let context =
+                   WebPageContext $
                    WebPageWriter { reporterWriteTOCHtml = histogramTOCHtml st,
                                    reporterWriteHtml    = histogramHtml st }
              return ExperimentReporter { reporterInitialise = return (),
                                          reporterFinalise   = return (),
                                          reporterSimulate   = simulateHistogram st,
-                                         reporterRequest    = writer }
+                                         reporterContext    = context }
+    in ExperimentGenerator { generateReporter = reporter }
+
+instance ChartRendering r => ExperimentView HistogramView (FileRenderer r) where
+  
+  outputView v = 
+    let reporter exp (FileRenderer renderer) dir =
+          do st <- newHistogram v exp renderer dir
+             return ExperimentReporter { reporterInitialise = return (),
+                                         reporterFinalise   = return (),
+                                         reporterSimulate   = simulateHistogram st,
+                                         reporterContext    = FileContext }
     in ExperimentGenerator { generateReporter = reporter }
   
 -- | The state of the view.
@@ -145,7 +157,7 @@ data HistogramViewState r =
                        histogramMap        :: M.Map Int FilePath }
   
 -- | Create a new state of the view.
-newHistogram :: WebPageCharting r => HistogramView -> Experiment -> r -> FilePath -> ExperimentWriter (HistogramViewState r)
+newHistogram :: ChartRendering r => HistogramView -> Experiment -> r -> FilePath -> ExperimentWriter (HistogramViewState r)
 newHistogram view exp renderer dir =
   do let n = experimentRunCount exp
      fs <- forM [0..(n - 1)] $ \i ->
@@ -164,7 +176,7 @@ newHistogram view exp renderer dir =
                                  histogramMap        = m }
        
 -- | Plot the histogram during the simulation.
-simulateHistogram :: WebPageCharting r => HistogramViewState r -> ExperimentData -> Event DisposableEvent
+simulateHistogram :: ChartRendering r => HistogramViewState r -> ExperimentData -> Event DisposableEvent
 simulateHistogram st expdata =
   do let view    = histogramView st
          rs      = histogramSeries view $
