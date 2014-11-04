@@ -17,11 +17,11 @@ main = do
   putStrLn "*** The simulation with default parameters..."
   runExperiment
     singleExperiment singleGenerators
-    (DiagramsRenderer SVG M.empty) (model defaultParams)
+    (WebPageRenderer $ DiagramsRenderer SVG M.empty) (model defaultParams)
   putStrLn ""
 
   -- run the Monte-Carlo simulation
   putStrLn "*** The Monte-Carlo simulation..."
   randomParams >>= runExperimentParallel
     monteCarloExperiment monteCarloGenerators
-    (DiagramsRenderer SVG M.empty) . model
+    (WebPageRenderer $ DiagramsRenderer SVG M.empty) . model

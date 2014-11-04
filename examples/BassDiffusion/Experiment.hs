@@ -20,7 +20,7 @@ experiment =
     experimentRunCount = 20,
     experimentDescription = "This is the famous Bass Diffusion model solved with help of the agent-based modelling." }
 
-generators :: WebPageCharting r => [WebPageGenerator r]
+generators :: ChartRendering r => [WebPageGenerator r]
 generators =
   [outputView defaultExperimentSpecsView,
    outputView $ defaultDeviationChartView {

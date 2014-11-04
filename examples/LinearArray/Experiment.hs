@@ -22,7 +22,7 @@ experiment =
     experimentDescription = "Model Linear Array as described in " ++
                             "the examples included in Berkeley-Madonna." }
 
-generators :: WebPageCharting r => [WebPageGenerator r]
+generators :: ChartRendering r => [WebPageGenerator r]
 generators = 
   [outputView defaultExperimentSpecsView,
    outputView $ defaultTableView {

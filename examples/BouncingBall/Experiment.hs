@@ -22,7 +22,7 @@ experiment =
     experimentDescription = "Simulation of a Bouncing Ball as described in " ++
                             "the corresponded MATLAB & Simulink example" }
 
-generators :: WebPageCharting r => [WebPageGenerator r]
+generators :: ChartRendering r => [WebPageGenerator r]
 generators =
   [outputView defaultExperimentSpecsView,
    outputView $ defaultTableView {

@@ -25,7 +25,7 @@ monteCarloExperiment =
     experimentDescription = "Financial Model (the Monte-Carlo simulation) as described in " ++
                             "Vensim 5 Modeling Guide, Chapter Financial Modeling and Risk." }
 
-monteCarloGenerators :: WebPageCharting r => [WebPageGenerator r]
+monteCarloGenerators :: ChartRendering r => [WebPageGenerator r]
 monteCarloGenerators =
   [outputView defaultExperimentSpecsView,
    outputView $ defaultDeviationChartView {
@@ -72,7 +72,7 @@ singleExperiment =
     experimentDescription = "Financial Model as described in " ++
                             "Vensim 5 Modeling Guide, Chapter Financial Modeling and Risk." }
 
-singleGenerators :: WebPageCharting r => [WebPageGenerator r]
+singleGenerators :: ChartRendering r => [WebPageGenerator r]
 singleGenerators =
   [outputView defaultExperimentSpecsView,
    outputView $ defaultTimeSeriesView {

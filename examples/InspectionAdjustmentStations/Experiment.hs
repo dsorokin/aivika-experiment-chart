@@ -57,7 +57,7 @@ resultWaitTime =
   (resultByName "adjustmentQueue" >>>
    resultById QueueWaitTimeId)
 
-generators :: WebPageCharting r => [WebPageGenerator r]
+generators :: ChartRendering r => [WebPageGenerator r]
 generators =
   [outputView defaultExperimentSpecsView,
    outputView $ defaultFinalStatsView {

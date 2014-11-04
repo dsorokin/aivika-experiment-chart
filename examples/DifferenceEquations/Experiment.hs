@@ -23,7 +23,7 @@ experiment =
                             "the corresponded tutorial of Berkeley-Madonna " ++
                             "with small modification for calculating std." }
 
-generators :: WebPageCharting r => [WebPageGenerator r]
+generators :: ChartRendering r => [WebPageGenerator r]
 generators =
   [outputView defaultExperimentSpecsView,
    outputView $ defaultTableView {

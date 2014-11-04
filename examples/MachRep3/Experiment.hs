@@ -24,7 +24,7 @@ x = resultByName "upTimeProp"
 t = resultByName "totalUpTime"
 n = resultByName "runIndex"
 
-generators :: WebPageCharting r => [WebPageGenerator r]
+generators :: ChartRendering r => [WebPageGenerator r]
 generators =
   [outputView defaultExperimentSpecsView,
    outputView $ defaultDeviationChartView {

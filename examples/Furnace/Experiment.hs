@@ -27,7 +27,7 @@ experiment =
     experimentRunCount = 100,
     experimentTitle = "The Furnace model (the Monte-Carlo simulation)" }
 
-generators :: WebPageCharting r => [WebPageGenerator r]
+generators :: ChartRendering r => [WebPageGenerator r]
 generators =
   [outputView defaultExperimentSpecsView,
    outputView $ defaultDeviationChartView {

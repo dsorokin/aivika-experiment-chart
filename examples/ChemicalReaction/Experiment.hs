@@ -22,7 +22,7 @@ experiment =
     experimentDescription = "Chemical Reaction as described in " ++
                             "the 5-minute tutorial of Berkeley-Madonna" }
 
-generators :: WebPageCharting r => [WebPageGenerator r]
+generators :: ChartRendering r => [WebPageGenerator r]
 generators =
   [outputView defaultExperimentSpecsView,
    outputView $ defaultLastValueView {
