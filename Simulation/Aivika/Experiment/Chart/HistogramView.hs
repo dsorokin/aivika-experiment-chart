@@ -182,8 +182,8 @@ simulateHistogram st expdata =
          rs      = histogramSeries view $
                    histogramTransform view $
                    experimentResults expdata
-         exts    = extractDoubleListResults rs
-         names   = map resultExtractName exts
+         exts    = resultsToDoubleListValues rs
+         names   = map resultValueName exts
          signals = experimentPredefinedSignals expdata
          n = experimentRunCount $ histogramExperiment st
          build   = histogramBuild view
@@ -210,7 +210,7 @@ simulateHistogram st expdata =
                 runPlotTitle
      hs <- forM exts $ \ext ->
        newSignalHistory $
-       mapSignalM (const $ resultExtractData ext) $
+       mapSignalM (const $ resultValueData ext) $
        filterSignalM (const predicate) $
        resultSignalInIntegTimes signals
      return $

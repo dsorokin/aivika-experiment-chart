@@ -219,15 +219,15 @@ simulateFinalXYChart st expdata =
                    finalXYChartTransform view $
                    experimentResults expdata
          ext0    =
-           case extractDoubleResults rs0 of
+           case resultsToDoubleValues rs0 of
              [x] -> x
              _   -> error "Expected to see a single X series: simulateFinalXYChart"
-         exts1   = extractDoubleResults rs1
-         exts2   = extractDoubleResults rs2
+         exts1   = resultsToDoubleValues rs1
+         exts2   = resultsToDoubleValues rs2
          exts    = exts1 ++ exts2
-         name0   = resultExtractName ext0
-         names1  = map resultExtractName exts1
-         names2  = map resultExtractName exts2
+         name0   = resultValueName ext0
+         names1  = map resultValueName exts1
+         names2  = map resultValueName exts2
          names   = map Left names1 ++ map Right names2
          signals = experimentPredefinedSignals expdata
          signal  = filterSignalM (const predicate) $
@@ -238,8 +238,8 @@ simulateFinalXYChart st expdata =
      results <- liftIO $ requireFinalXYChartResults st name0 names
      let xys = finalXYChartXY results
      handleSignal signal $ \_ ->
-       do x  <- resultExtractData ext0
-          ys <- forM exts resultExtractData
+       do x  <- resultValueData ext0
+          ys <- forM exts resultValueData
           i  <- liftParameter simulationIndex
           liftIO $
             forM_ (zip ys xys) $ \(y, xy) ->

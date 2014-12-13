@@ -188,8 +188,8 @@ simulateFinalHistogram st expdata =
          rs      = finalHistogramSeries view $
                    finalHistogramTransform view $
                    experimentResults expdata
-         exts    = extractDoubleListResults rs
-         names   = map resultExtractName exts
+         exts    = resultsToDoubleListValues rs
+         names   = map resultValueName exts
          signals = experimentPredefinedSignals expdata
          signal  = filterSignalM (const predicate) $
                    resultSignalInStopTime signals
@@ -197,7 +197,7 @@ simulateFinalHistogram st expdata =
      results <- liftIO $ requireFinalHistogramResults st names
      let values = finalHistogramValues results
      handleSignal signal $ \_ ->
-       do xs <- forM exts resultExtractData
+       do xs <- forM exts resultValueData
           liftIO $
             forM_ (zip xs values) $ \(x, values) ->
             modifyMRef_ values $ return . (++) x

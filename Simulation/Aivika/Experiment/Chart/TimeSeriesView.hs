@@ -190,8 +190,8 @@ simulateTimeSeries st expdata =
          rs2     = timeSeriesRightYSeries view $
                    timeSeriesTransform view $
                    experimentResults expdata
-         exts1   = extractDoubleResults rs1
-         exts2   = extractDoubleResults rs2
+         exts1   = resultsToDoubleValues rs1
+         exts2   = resultsToDoubleValues rs2
          signals = experimentPredefinedSignals expdata
          n = experimentRunCount $ timeSeriesExperiment st
          width   = timeSeriesWidth view
@@ -221,12 +221,12 @@ simulateTimeSeries st expdata =
            let transform () =
                  do x <- predicate
                     if x
-                      then resultExtractData ext
+                      then resultValueData ext
                       else return (1/0)  -- the infinite values will be ignored then
            in newSignalHistory $
               mapSignalM transform $
               pureResultSignal signals $
-              resultExtractSignal ext
+              resultValueSignal ext
      hs1 <- inputHistory exts1
      hs2 <- inputHistory exts2
      return $
@@ -240,7 +240,7 @@ simulateTimeSeries st expdata =
                           toPlot $
                           plotLines $
                           plot_lines_values .~ filterPlotLinesValues (zip (elems ts) (elems xs)) $
-                          plot_lines_title .~ resultExtractName ext $
+                          plot_lines_title .~ resultValueName ext $
                           def
                    return (ps, drop (length hs) plotLineTails)
           (ps1, plotLineTails) <- plots hs1 exts1 (tails plotLines)

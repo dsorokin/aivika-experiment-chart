@@ -203,11 +203,11 @@ simulateXYChart st expdata =
                    xyChartTransform view $
                    experimentResults expdata
          ext0    =
-           case extractDoubleResults rs0 of
+           case resultsToDoubleValues rs0 of
              [x] -> x
              _   -> error "Expected to see a single X series: simulateXYChart"
-         exts1   = extractDoubleResults rs1
-         exts2   = extractDoubleResults rs2
+         exts1   = resultsToDoubleValues rs1
+         exts2   = resultsToDoubleValues rs2
          signals = experimentPredefinedSignals expdata
          n = experimentRunCount $ xyChartExperiment st
          width   = xyChartWidth view
@@ -234,15 +234,15 @@ simulateXYChart st expdata =
                 runPlotTitle
          inputHistory exts = 
            forM exts $ \ext ->
-           let x = resultExtractData ext0
-               y = resultExtractData ext
+           let x = resultValueData ext0
+               y = resultValueData ext
                transform () =
                  do p <- predicate
                     if p
                       then liftM2 (,) x y
                       else return (1/0, 1/0)  -- such values will be ignored then
-               signalx = resultExtractSignal ext0
-               signaly = resultExtractSignal ext
+               signalx = resultValueSignal ext0
+               signaly = resultValueSignal ext
            in newSignalHistory $
               mapSignalM transform $
               pureResultSignal signals $
@@ -260,7 +260,7 @@ simulateXYChart st expdata =
                           toPlot $
                           plotLines $
                           plot_lines_values .~ filterPlotLinesValues (elems zs) $
-                          plot_lines_title .~ resultExtractName ext $
+                          plot_lines_title .~ resultValueName ext $
                           def
                    return (ps, drop (length hs) plotLineTails)     
           (ps1, plotLineTails) <- plots hs1 exts1 (tails plotLines)
@@ -269,7 +269,7 @@ simulateXYChart st expdata =
               ps2' = map Right ps2
               ps'  = ps1' ++ ps2'
               axis = plotBottomAxis $
-                      laxis_title .~ resultExtractName ext0 $
+                      laxis_title .~ resultValueName ext0 $
                       def
               updateLeftAxis =
                 if null ps1

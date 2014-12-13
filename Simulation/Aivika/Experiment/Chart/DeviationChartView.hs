@@ -208,11 +208,11 @@ simulateDeviationChart st expdata =
          rs2     = deviationChartRightYSeries view $
                    deviationChartTransform view $
                    experimentResults expdata
-         exts1   = extractDoubleStatsEitherResults rs1
-         exts2   = extractDoubleStatsEitherResults rs2
+         exts1   = resultsToDoubleStatsEitherValues rs1
+         exts2   = resultsToDoubleStatsEitherValues rs2
          exts    = exts1 ++ exts2
-         names1  = map resultExtractName exts1
-         names2  = map resultExtractName exts2
+         names1  = map resultValueName exts1
+         names2  = map resultValueName exts2
          names   = map Left names1 ++ map Right names2
          signals = experimentPredefinedSignals expdata
          signal  = resultSignalInIntegTimes signals
@@ -220,7 +220,7 @@ simulateDeviationChart st expdata =
      results <- liftIO $ requireDeviationChartResults st names
      let stats   = deviationChartStats results
      handleSignal signal $ \_ ->
-       do xs <- forM exts resultExtractData
+       do xs <- forM exts resultValueData
           i  <- liftDynamics integIteration
           liftIO $
             forM_ (zip xs stats) $ \(x, stats) ->
