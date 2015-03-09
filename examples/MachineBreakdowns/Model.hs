@@ -20,13 +20,6 @@ import Simulation.Aivika
 import qualified Simulation.Aivika.Queue.Infinite as IQ
 import qualified Simulation.Aivika.Resource.Preemption as PR
 
--- | The simulation specs.
-specs = Specs { spcStartTime = 0.0,
-                spcStopTime = 500.0,
-                spcDT = 0.1,
-                spcMethod = RungeKutta4,
-                spcGeneratorType = SimpleGenerator }
-
 -- | How often do jobs arrive to a machine tool (exponential)?
 jobArrivingMu = 1
 
