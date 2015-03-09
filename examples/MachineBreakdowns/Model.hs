@@ -1,6 +1,4 @@
 
--- CAUTION: THE MODEL IS NOT COMPLETE YET!
---
 -- Example: Machine Tool with Breakdowns 
 --
 -- It is described in different sources [1, 2]. So, this is chapter 13 of [2] and section 6.12 of [1].
@@ -20,6 +18,14 @@ import Data.List
 
 import Simulation.Aivika
 import qualified Simulation.Aivika.Queue.Infinite as IQ
+import qualified Simulation.Aivika.Resource.Preemption as PR
+
+-- | The simulation specs.
+specs = Specs { spcStartTime = 0.0,
+                spcStopTime = 500.0,
+                spcDT = 0.1,
+                spcMethod = RungeKutta4,
+                spcGeneratorType = SimpleGenerator }
 
 -- | How often do jobs arrive to a machine tool (exponential)?
 jobArrivingMu = 1
@@ -45,114 +51,78 @@ breakdownSigma = 2
 -- | A mean of each of the three repair phases (Erlang).
 repairMu = 3/4
 
--- | It defines a job.
-data Job = Job { jobProcessingTime :: Double,
-                 -- ^ the job processing time defined when arriving.
-                 jobRemainingTime :: Double
-                 -- ^ the remaining processing time (may differ after return).
-               }
+-- | A priority of the job (the less is higher)
+jobPriority = 1
 
--- | Return the remaining job after interruption.
-remainingJobInput :: ServerInterruption (Arrival Job) -> Arrival Job
-remainingJobInput x = a'
-  where
-    t1 = serverStartProcessingTime x
-    t2 = serverInterruptionTime x
-    dt = t2 - t1
-    a  = serverInterruptedInput x
-    a' = a { arrivalValue = job' }
-    job  = arrivalValue a
-    job' = job { jobRemainingTime =
-                    max 0 $ jobRemainingTime job - dt }
+-- | A priority of the breakdown (the less is higher)
+breakdownPriority = 0
 
+-- | The simulation model.
 model :: Simulation Results
 model = do
   -- create an input queue
-  inputQueue <- runEventInStartTime IQ.newPriorityQueue
+  inputQueue <- runEventInStartTime IQ.newFCFSQueue
   -- a counter of jobs completed
   jobsCompleted <- newArrivalTimer
-  -- a counter of interrupted jobs but then returned for the further processing
+  -- a counter of interrupted jobs
   jobsInterrupted <- newRef (0 :: Int)
   -- create an input stream
   let inputStream =
-        repeatProcess $ IQ.dequeue inputQueue
-  -- create the setting up phase of processing
+        randomExponentialStream jobArrivingMu
+  -- create a preemptible resource
+  tool <- PR.newResource 1
+  -- the machine setting up
   machineSettingUp <-
-    newInterruptibleServer True $ \a ->
+    newPreemptibleServer True $ \a ->
+    PR.usingResourceWithPriority tool jobPriority $
     do -- set up the machine
        setUpTime <-
          liftParameter $
          randomUniform minSetUpTime maxSetUpTime
        holdProcess setUpTime
        return a
-  -- create the processing phase itself
+  -- the machine processing
   machineProcessing <-
-    newInterruptibleServer True $ \a ->
-    do -- process the job
-       let job = arrivalValue a
-       holdProcess $ jobRemainingTime job
-       -- return the completed job
-       return a { arrivalValue = job { jobRemainingTime = 0 } }
-  -- enqueue the interrupted jobs again
+    newPreemptibleServer True $ \a ->
+    PR.usingResourceWithPriority tool jobPriority $
+    do -- do the job
+       jobProcessingTime <-
+         liftParameter $
+         randomNormal jobProcessingMu jobProcessingSigma
+       when (jobProcessingTime > 0) $
+         holdProcess jobProcessingTime
+       return a
+  -- the machine breakdown
+  let machineBreakdown =
+        do -- up time of the machine tool
+           upTime <-
+             liftParameter $
+             randomNormal breakdownMu breakdownSigma
+           when (upTime > 0) $
+             holdProcess upTime
+           PR.usingResourceWithPriority tool breakdownPriority $
+             do -- repair the machine tool
+                repairTime <- liftParameter $
+                              randomErlang repairMu 3
+                holdProcess repairTime
+           machineBreakdown
+  -- start the process of breakdowns
+  runProcessInStartTime machineBreakdown
+  -- update a counter of job interruptions
   runEventInStartTime $
-    do handleSignal_ (serverTaskInterrupted machineSettingUp) $ \x ->
-         do let a = serverInterruptedInput x
-                t = arrivalTime a
-            IQ.enqueueWithStoringPriority inputQueue t a
-       handleSignal_ (serverTaskInterrupted machineProcessing) $ \x ->
-         do let a = remainingJobInput x
-                t = arrivalTime a
-            modifyRef jobsInterrupted (+ 1)
-            IQ.enqueueWithStoringPriority inputQueue t a
-  let -- launch the machine tool again and again
-      machineLaunch =
-        joinProcessor $
-        do spawnProcess $
-             do -- breakdown the machine tool in time (a bound child process)
-                breakdownTime <-
-                  liftParameter $
-                  randomNormal breakdownMu breakdownSigma
-                when (breakdownTime > 0) $
-                  holdProcess breakdownTime
-                cancelProcess
-           return $
-             serverProcessor machineSettingUp >>>
-             serverProcessor machineProcessing
-      -- repair the machine tool
-      machineRepair =
-        do repairTime <- liftParameter $
-                         randomErlang repairMu 3
-           holdProcess repairTime
-      -- launch after repairing the machine tool
-      machineRepairAndLaunch =
-        joinProcessor $
-        do machineRepair
-           return machineLaunch
-      -- machine loop
-      machineLoop = machineLaunch : repeat machineRepairAndLaunch
-      -- the network
-      network = 
-        failoverProcessor machineLoop >>>
+    handleSignal_ (serverTaskPreempting machineProcessing) $ \a ->
+    modifyRef jobsInterrupted (+ 1)
+  -- define the queue network
+  let network = 
+        queueProcessor
+        (\a -> liftEvent $ IQ.enqueue inputQueue a)
+        (IQ.dequeue inputQueue) >>>
+        serverProcessor machineSettingUp >>>
+        serverProcessor machineProcessing >>>
         arrivalTimerProcessor jobsCompleted
   -- start the machine tool
   runProcessInStartTime $
     sinkStream $ runProcessor network inputStream
-  -- model a stream of jobs
-  let jobs =
-        randomExponentialStream jobArrivingMu
-  -- start the processing of jobs by enqueueing them
-  runProcessInStartTime $
-    flip consumeStream jobs $ \a ->
-    liftEvent $ do
-      -- define the processing time for the job
-      jobProcessingTime <-
-        liftParameter $
-        randomNormal jobProcessingMu jobProcessingSigma
-      -- enqueue the job
-      let t0 = arrivalTime a
-          dt = max 0 jobProcessingTime
-      IQ.enqueueWithStoringPriority inputQueue t0 $
-        a { arrivalValue = Job dt dt }
   -- return the simulation results in start time
   return $
     results
@@ -161,11 +131,11 @@ model = do
      inputQueue,
      --
      resultSource
-     "machineSettingUp" "the machine tool (the setting up phase)"
+     "machineSettingUp" "the machine setting up"
      machineSettingUp,
      --
      resultSource
-     "machineProcessing" "the machine tool (the processing phase)"
+     "machineProcessing" "the machine processing"
      machineProcessing,
      --
      resultSource
