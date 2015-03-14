@@ -44,10 +44,10 @@ breakdownSigma = 2
 -- | A mean of each of the three repair phases (Erlang).
 repairMu = 3/4
 
--- | A priority of the job (the less is higher)
+-- | A priority of the job (less is higher)
 jobPriority = 1
 
--- | A priority of the breakdown (the less is higher)
+-- | A priority of the breakdown (less is higher)
 breakdownPriority = 0
 
 -- | The simulation model.
@@ -66,38 +66,15 @@ model = do
   tool <- PR.newResource 1
   -- the machine setting up
   machineSettingUp <-
-    newPreemptibleServer True $ \a ->
-    PR.usingResourceWithPriority tool jobPriority $
-    do -- set up the machine
-       setUpTime <-
-         liftParameter $
-         randomUniform minSetUpTime maxSetUpTime
-       holdProcess setUpTime
-       return a
+    newPreemptibleRandomUniformServer True minSetUpTime maxSetUpTime
   -- the machine processing
   machineProcessing <-
-    newPreemptibleServer True $ \a ->
-    PR.usingResourceWithPriority tool jobPriority $
-    do -- do the job
-       jobProcessingTime <-
-         liftParameter $
-         randomNormal jobProcessingMu jobProcessingSigma
-       when (jobProcessingTime > 0) $
-         holdProcess jobProcessingTime
-       return a
+    newPreemptibleRandomNormalServer True jobProcessingMu jobProcessingSigma
   -- the machine breakdown
   let machineBreakdown =
-        do -- up time of the machine tool
-           upTime <-
-             liftParameter $
-             randomNormal breakdownMu breakdownSigma
-           when (upTime > 0) $
-             holdProcess upTime
+        do randomNormalProcess_ breakdownMu breakdownSigma
            PR.usingResourceWithPriority tool breakdownPriority $
-             do -- repair the machine tool
-                repairTime <- liftParameter $
-                              randomErlang repairMu 3
-                holdProcess repairTime
+             randomErlangProcess_ repairMu 3
            machineBreakdown
   -- start the process of breakdowns
   runProcessInStartTime machineBreakdown
@@ -110,8 +87,10 @@ model = do
         queueProcessor
         (\a -> liftEvent $ IQ.enqueue inputQueue a)
         (IQ.dequeue inputQueue) >>>
+        (withinProcessor $ PR.requestResourceWithPriority tool jobPriority) >>>
         serverProcessor machineSettingUp >>>
         serverProcessor machineProcessing >>>
+        (withinProcessor $ PR.releaseResource tool) >>>
         arrivalTimerProcessor jobsCompleted
   -- start the machine tool
   runProcessInStartTime $
