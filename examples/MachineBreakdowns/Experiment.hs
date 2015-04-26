@@ -35,9 +35,7 @@ jobsCompleted =
 processingTime :: ResultTransform
 processingTime = 
   resultByName "jobsCompleted" >>>
-  resultById ArrivalProcessingTimeId >>>
-  expandResults >>>
-  resultById SamplingStatsMeanId
+  resultById ArrivalProcessingTimeId
 
 jobsInterrupted :: ResultTransform
 jobsInterrupted = resultByName "jobsInterrupted"
@@ -50,9 +48,7 @@ waitTime =
 queueSize :: ResultTransform
 queueSize = 
   resultByName "inputQueue" >>> 
-  resultById QueueCountStatsId >>> 
-  expandResults >>> 
-  resultById TimingStatsMeanId
+  resultById QueueCountStatsId
 
 processingFactor :: ResultTransform
 processingFactor =
@@ -76,10 +72,6 @@ generators =
      deviationChartTitle = "The Queue Size (chart)",
      deviationChartWidth = 1000,
      deviationChartRightYSeries = queueSize },
-   outputView $ defaultFinalHistogramView {
-     finalHistogramTitle = "The Queue Size (histogram)",
-     finalHistogramWidth = 1000,
-     finalHistogramSeries = queueSize },
    outputView $ defaultFinalStatsView {
      finalStatsTitle = "The Queue Size (statistics)",
      finalStatsSeries = queueSize },
@@ -87,10 +79,6 @@ generators =
      deviationChartTitle = "The Processing Time (chart)",
      deviationChartWidth = 1000,
      deviationChartRightYSeries = processingTime },
-   outputView $ defaultFinalHistogramView {
-     finalHistogramTitle = "The Processing Time (histogram)",
-     finalHistogramWidth = 1000,
-     finalHistogramSeries = processingTime },
    outputView $ defaultFinalStatsView {
      finalStatsTitle = "The Processing Time (statistics)",
      finalStatsSeries = processingTime },
