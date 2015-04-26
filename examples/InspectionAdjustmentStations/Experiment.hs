@@ -44,10 +44,10 @@ resultProcessingFactor =
 resultQueueSize :: ResultTransform
 resultQueueSize =
   (resultByName "inspectionQueue" >>>
-   resultById QueueCountId)
+   resultById QueueCountStatsId)
   <>
   (resultByName "adjustmentQueue" >>>
-   resultById QueueCountId)
+   resultById QueueCountStatsId)
 
 resultWaitTime :: ResultTransform
 resultWaitTime =
@@ -78,10 +78,6 @@ generators =
      deviationChartTitle = "The queue size (chart)",
      deviationChartWidth = 1000,
      deviationChartRightYSeries = resultQueueSize },
-   outputView $ defaultFinalHistogramView {
-     finalHistogramTitle = "The queue size (histogram)",
-     finalHistogramWidth = 1000,
-     finalHistogramSeries = resultQueueSize },
    outputView $ defaultFinalStatsView {
      finalStatsTitle = "The queue size (statistics)",
      finalStatsSeries = resultQueueSize },
