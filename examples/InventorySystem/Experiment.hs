@@ -25,45 +25,40 @@ experiment =
     -- experimentRunCount = 10,
     experimentTitle = "Inventory System with Lost Sales and Backorders" }
 
-totalCustomerCount :: ResultTransform
-totalCustomerCount = resultByName "totalCustomerCount"
+radio :: ResultTransform
+radio = resultByName "radio"
 
-immedSalesCount :: ResultTransform
-immedSalesCount = resultByName "immedSalesCount"
+invPos :: ResultTransform
+invPos = 
+  resultByName "invPos" >>>
+  resultById TimingCounterValueId
 
-backorderWaitTime :: ResultTransform
-backorderWaitTime = 
-  resultByName "backorderQueue" >>> 
-  resultById QueueWaitTimeId
+invPosStats :: ResultTransform
+invPosStats =
+  resultByName "invPos" >>>
+  resultById TimingCounterStatsId
 
-backorderQueueSize :: ResultTransform
-backorderQueueSize = 
-  resultByName "backorderQueue" >>> 
-  resultById QueueCountStatsId >>> 
-  expandResults >>> 
-  resultById TimingStatsMeanId
+tbLostSales :: ResultTransform
+tbLostSales = resultByName "tbLostSales"
+
+tbLostSalesCount :: ResultTransform
+tbLostSalesCount =
+  tbLostSales >>>
+  resultById SamplingStatsCountId
+
+safetyStock :: ResultTransform
+safetyStock = resultByName "safetyStock"
 
 generators :: ChartRendering r => [WebPageGenerator r]
 generators =
   [outputView defaultExperimentSpecsView,
    outputView $ defaultFinalStatsView {
-     finalStatsTitle  = "Total Customer and Immediate Sales Counts",
-     finalStatsSeries = totalCustomerCount <> immedSalesCount },
+     finalStatsTitle  = "Inventory Position and Time Between Lost Sales",
+     finalStatsSeries = invPosStats <> tbLostSales },
    outputView $ defaultDeviationChartView {
-     deviationChartTitle = "The Backorder Wait Time (chart)",
-     deviationChartWidth = 1000,
-     deviationChartRightYSeries = backorderWaitTime },
+     deviationChartTitle = "Radios, Inventory Position and Safety Stock",
+     -- deviationChartWidth = 1000,
+     deviationChartRightYSeries = radio <> invPosStats <> safetyStock },
    outputView $ defaultFinalStatsView {
-     finalStatsTitle = "The Backorder Wait Time (statistics)",
-     finalStatsSeries = backorderWaitTime },
-   outputView $ defaultDeviationChartView {
-     deviationChartTitle = "The Backorder Queue Size (chart)",
-     deviationChartWidth = 1000,
-     deviationChartRightYSeries = backorderQueueSize },
-   outputView $ defaultFinalHistogramView {
-     finalHistogramTitle = "The Backorder Queue Size (histogram)",
-     finalHistogramWidth = 1000,
-     finalHistogramSeries = backorderQueueSize },
-   outputView $ defaultFinalStatsView {
-     finalStatsTitle = "The Backorder Queue Size (statistics)",
-     finalStatsSeries = backorderQueueSize } ]
+     finalStatsTitle = "Safety Stock",
+     finalStatsSeries = safetyStock } ]
