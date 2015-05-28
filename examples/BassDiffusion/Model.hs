@@ -1,6 +1,6 @@
 
 -- This is the Bass Diffusion model solved with help of 
--- the Agent-based Modeling as described in the AnyLogic 
+-- the agent-based Modeling as described in the AnyLogic 
 -- documentation.
 --
 -- The model describes a product diffusion process. Potential 

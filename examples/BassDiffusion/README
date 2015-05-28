@@ -1,1 +1,13 @@
-Simulation model Bass Diffusion as described in the documentation of AnyLogic in the part related to the Agent-based modelling.
+Simulation model Bass Diffusion as described in the documentation
+of AnyLogic in the part related to the agent-based modelling.
+
+The model describes a product diffusion process. Potential 
+adopters of a product are influenced into buying the product 
+by advertising and by word of mouth from adopters, those 
+who have already purchased the new product. Adoption of 
+a new product driven by word of mouth is likewise an epidemic. 
+Potential adopters come into contact with adopters through 
+social interactions. A fraction of these contacts results 
+in the purchase of the new product. The advertising causes 
+a constant fraction of the potential adopter population 
+to adopt each time period.
