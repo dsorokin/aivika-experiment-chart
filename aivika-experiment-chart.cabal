@@ -58,6 +58,11 @@ extra-source-files:  examples/BassDiffusion/Model.hs
                      examples/InspectionAdjustmentStations/MainUsingCairo.hs
                      examples/InspectionAdjustmentStations/MainUsingDiagrams.hs
                      examples/InspectionAdjustmentStations/README
+                     examples/InventorySystem/Model.hs
+                     examples/InventorySystem/Experiment.hs
+                     examples/InventorySystem/MainUsingCairo.hs
+                     examples/InventorySystem/MainUsingDiagrams.hs
+                     examples/InventorySystem/README
                      examples/LinearArray/Model.hs
                      examples/LinearArray/Experiment.hs
                      examples/LinearArray/MainUsingCairo.hs
@@ -68,6 +73,16 @@ extra-source-files:  examples/BassDiffusion/Model.hs
                      examples/MachRep3/MainUsingCairo.hs
                      examples/MachRep3/MainUsingDiagrams.hs
                      examples/MachRep3/README
+                     examples/MachineBreakdowns/Model.hs
+                     examples/MachineBreakdowns/Experiment.hs
+                     examples/MachineBreakdowns/MainUsingCairo.hs
+                     examples/MachineBreakdowns/MainUsingDiagrams.hs
+                     examples/MachineBreakdowns/README
+                     examples/QuarryOperations/Model.hs
+                     examples/QuarryOperations/Experiment.hs
+                     examples/QuarryOperations/MainUsingCairo.hs
+                     examples/QuarryOperations/MainUsingDiagrams.hs
+                     examples/QuarryOperations/README
 
 library
 
