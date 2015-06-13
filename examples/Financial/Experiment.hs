@@ -28,6 +28,7 @@ monteCarloExperiment =
 monteCarloGenerators :: ChartRendering r => [WebPageGenerator r]
 monteCarloGenerators =
   [outputView defaultExperimentSpecsView,
+   outputView defaultInfoView,
    outputView $ defaultDeviationChartView {
      deviationChartTitle = "Chart 1",
      deviationChartPlotTitle = "The deviation chart for Net Income and Cash Flow",
@@ -75,6 +76,7 @@ singleExperiment =
 singleGenerators :: ChartRendering r => [WebPageGenerator r]
 singleGenerators =
   [outputView defaultExperimentSpecsView,
+   outputView defaultInfoView,
    outputView $ defaultTimeSeriesView {
      timeSeriesTitle = "Time Series 1",
      timeSeriesPlotTitle = "Time series of Net Income and Cash Flow",

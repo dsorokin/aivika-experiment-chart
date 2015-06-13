@@ -27,6 +27,7 @@ n = resultByName "runIndex"
 generators :: ChartRendering r => [WebPageGenerator r]
 generators =
   [outputView defaultExperimentSpecsView,
+   outputView defaultInfoView,
    outputView $ defaultDeviationChartView {
      deviationChartLeftYSeries = t,
      deviationChartRightYSeries = x },

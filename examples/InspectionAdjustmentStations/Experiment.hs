@@ -60,6 +60,7 @@ resultWaitTime =
 generators :: ChartRendering r => [WebPageGenerator r]
 generators =
   [outputView defaultExperimentSpecsView,
+   outputView defaultInfoView,
    outputView $ defaultFinalStatsView {
      finalStatsTitle  = "Arrivals",
      finalStatsSeries = resultProcessingTime },

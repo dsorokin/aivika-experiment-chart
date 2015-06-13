@@ -30,6 +30,7 @@ experiment =
 generators :: ChartRendering r => [WebPageGenerator r]
 generators =
   [outputView defaultExperimentSpecsView,
+   outputView defaultInfoView,
    outputView $ defaultDeviationChartView {
      deviationChartTitle = "Deviation Chart - 1",
      deviationChartPlotTitle = "The input, loaded and output ingot counts",
@@ -70,19 +71,14 @@ generators =
        resultByName pitCountName },
    outputView $ defaultDeviationChartView {
      deviationChartTitle = "Deviation Chart - 3",
-     deviationChartPlotTitle = "The queue size",
+     deviationChartPlotTitle = "The average queue size",
      deviationChartRightYSeries =
-       resultByName furnaceQueueName >>> resultById QueueCountId },
-   outputView $ defaultFinalHistogramView {
-     finalHistogramTitle = "Final Histogram - 3",
-     finalHistogramPlotTitle = "The queue size in the final time point.",
-     finalHistogramSeries =
-       resultByName furnaceQueueName >>> resultById QueueCountId },
+       resultByName furnaceQueueName >>> resultById QueueCountStatsId },
    outputView $ defaultFinalStatsView {
      finalStatsTitle = "Final Statistics - 3",
-     finalStatsDescription = "The summary of the queue size in the final time point.",
+     finalStatsDescription = "The summary of the average queue size in the final time point.",
      finalStatsSeries =
-       resultByName furnaceQueueName >>> resultById QueueCountId },
+       resultByName furnaceQueueName >>> resultById QueueCountStatsId },
    outputView $ defaultDeviationChartView {
      deviationChartTitle = "Deviation Chart - 4",
      deviationChartPlotTitle = "The mean wait time",

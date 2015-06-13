@@ -26,6 +26,7 @@ experiment =
 generators :: ChartRendering r => [WebPageGenerator r]
 generators =
   [outputView defaultExperimentSpecsView,
+   outputView defaultInfoView,
    outputView $ defaultTableView {
      tableSeries =
         mconcat $ map resultByName $

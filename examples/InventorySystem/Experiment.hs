@@ -52,6 +52,7 @@ safetyStock = resultByName "safetyStock"
 generators :: ChartRendering r => [WebPageGenerator r]
 generators =
   [outputView defaultExperimentSpecsView,
+   outputView defaultInfoView,
    outputView $ defaultFinalStatsView {
      finalStatsTitle  = "Inventory Position and Time Between Lost Sales",
      finalStatsSeries = invPosStats <> tbLostSales },

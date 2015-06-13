@@ -27,5 +27,5 @@ model =
          resultSource "x" "x" x,
          resultSource "sumX" "sum x" sumX,
          resultSource "sumX2" "sum x^2" sumX2,
-         resultSource "avg" "Ex" avg,
-         resultSource "std" "sqrt(Dx)" std]
+         resultSource "avg" "E(x)" avg,
+         resultSource "std" "sqrt(D(x))" std]

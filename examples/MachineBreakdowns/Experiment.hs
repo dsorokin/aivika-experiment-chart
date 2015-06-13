@@ -58,6 +58,7 @@ processingFactor =
 generators :: ChartRendering r => [WebPageGenerator r]
 generators =
   [outputView defaultExperimentSpecsView,
+   outputView defaultInfoView,
    outputView $ defaultFinalStatsView {
      finalStatsTitle  = "Machine Tool With Breakdowns",
      finalStatsSeries = jobsCompleted <> jobsInterrupted },

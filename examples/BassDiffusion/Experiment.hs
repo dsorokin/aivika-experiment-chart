@@ -23,6 +23,7 @@ experiment =
 generators :: ChartRendering r => [WebPageGenerator r]
 generators =
   [outputView defaultExperimentSpecsView,
+   outputView defaultInfoView,
    outputView $ defaultDeviationChartView {
      deviationChartLeftYSeries = 
         resultByName "potentialAdopters" <>

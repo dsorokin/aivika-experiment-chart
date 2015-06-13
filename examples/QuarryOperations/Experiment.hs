@@ -27,7 +27,7 @@ experiment =
 shovelQueueSize :: ResultTransform
 shovelQueueSize =
   (resultByName "shovelQueue" >>>
-   resultById QueueCountId)
+   resultById QueueCountStatsId)
 
 shovelQueueWaitTime :: ResultTransform
 shovelQueueWaitTime =
@@ -42,7 +42,7 @@ shovelQueueRate =
 crusherQueueSize :: ResultTransform
 crusherQueueSize =
   (resultByName "crusherQueue" >>>
-   resultById QueueCountId)
+   resultById QueueCountStatsId)
 
 crusherQueueWaitTime :: ResultTransform
 crusherQueueWaitTime =
@@ -87,11 +87,12 @@ subgenerators2 title series =
 
 generators :: ChartRendering r => [WebPageGenerator r]
 generators =
-  [outputView defaultExperimentSpecsView] <>
-  subgenerators1 "The shovel queue size" shovelQueueSize <>
+  [outputView defaultExperimentSpecsView,
+   outputView defaultInfoView] <>
+  subgenerators2 "The shovel queue size" shovelQueueSize <>
   subgenerators2 "The shovel queue wait time" shovelQueueWaitTime <>
   subgenerators1 "The shovel queue rate" shovelQueueRate <>
-  subgenerators1 "The crusher queue size" crusherQueueSize <>
+  subgenerators2 "The crusher queue size" crusherQueueSize <>
   subgenerators2 "The crusher queue wait time" crusherQueueWaitTime <>
   subgenerators1 "The crusher queue rate" crusherQueueRate <>
   subgenerators1 "The shovel utilisation factor" shovelUtilisationFactor <>
