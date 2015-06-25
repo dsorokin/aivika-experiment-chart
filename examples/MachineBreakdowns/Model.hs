@@ -86,7 +86,7 @@ model = do
   let inputStream =
         randomExponentialStream jobArrivingMu
   -- create a preemptible resource
-  tool <- PR.newResource 1
+  tool <- runEventInStartTime $ PR.newResource 1
   -- the machine setting up
   machineSettingUp <-
     newPreemptibleRandomUniformServer True minSetUpTime maxSetUpTime
@@ -139,4 +139,8 @@ model = do
      --
      resultSource
      "jobsCompleted" "a counter of the completed jobs"
-     jobsCompleted]
+     jobsCompleted,
+     --
+     resultSource
+     "tool" "the machine tool"
+     tool]
