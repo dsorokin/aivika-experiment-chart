@@ -26,7 +26,9 @@ experiment =
     experimentTitle = "Inventory System with Lost Sales and Backorders" }
 
 radio :: ResultTransform
-radio = resultByName "radio"
+radio =
+  resultByName "radio" >>>
+  resultById ResourceCountId
 
 invPos :: ResultTransform
 invPos = 

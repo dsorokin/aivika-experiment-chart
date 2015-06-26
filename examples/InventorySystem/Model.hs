@@ -38,6 +38,7 @@ import Control.Monad
 import Control.Monad.Trans
 
 import Simulation.Aivika
+import qualified Simulation.Aivika.Resource as R
 
 -- | The time between demands for a radio.
 avgRadioDemand = 0.2
@@ -62,7 +63,7 @@ reviewPeriod = 4
 
 -- | Clear the statistics at the end of the first year
 clearingTime = 52
-  
+
 model :: Simulation Results
 model = do
   -- the start time
@@ -70,7 +71,7 @@ model = do
   -- the inventory position
   invPos <- newRef $ returnTimingCounter t0 radio0
   -- the radios in stock
-  radio <- newFCFSResource radio0
+  radio <- runEventInStartTime $ R.newFCFSResource radio0
   -- the time between lost sales
   tbLostSales <- newRef emptySamplingStats
   -- the last arrive time for the lost sale
@@ -82,7 +83,7 @@ model = do
            modifyRef invPos $
              decTimingCounter t 1
            runProcess $
-             requestResource radio
+             R.requestResource radio
   -- a customer has been lost
   let customerLost :: Event ()
       customerLost = do
@@ -99,7 +100,7 @@ model = do
       customerArrival = do
         randomExponentialProcess_ avgRadioDemand
         liftEvent $ do
-          r <- resourceCount radio
+          r <- R.resourceCount radio
           if r > 0
             then customerOrder
             else do b <- liftParameter $
@@ -125,10 +126,10 @@ model = do
                     setTimingCounter t stockControlLevel
              holdProcess leadTime
              liftEvent $
-               do r <- resourceCount radio
+               do r <- R.resourceCount radio
                   modifyRef safetyStock $
                     addSamplingStats r
-                  incResourceCount radio orderQty
+                  R.incResourceCount radio orderQty
   -- start the inventory review process
   runEventInStartTime $
     enqueueEventWithTimes [t0, t0 + reviewPeriod ..] $
@@ -146,7 +147,7 @@ model = do
     results
     [resultSource
      "radio" "the number of radios in stock"
-     (resourceCount radio),
+     radio,
      --
      resultSource
      "invPos" "the inventory position"
