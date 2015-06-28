@@ -9,6 +9,8 @@ import Simulation.Aivika
 import Simulation.Aivika.Experiment
 import Simulation.Aivika.Experiment.Chart
 
+import qualified Simulation.Aivika.Results.Transform as T
+
 -- | The simulation specs.
 specs = Specs { spcStartTime = 0.0,
                 spcStopTime = 500.0,
@@ -25,35 +27,30 @@ experiment =
     -- experimentRunCount = 10,
     experimentTitle = "Machine Tool with Breakdowns" }
 
-jobsCompleted :: ResultTransform
-jobsCompleted = 
-  resultByName "jobsCompleted" >>>
-  resultById ArrivalProcessingTimeId >>>
-  expandResults >>>
-  resultById SamplingStatsCountId
+jobsCompleted     = T.ArrivalTimer $ resultByName "jobsCompleted"
+jobsInterrupted   = resultByName "jobsInterrupted"
+inputQueue        = T.Queue $ resultByName "inputQueue"
+machineProcessing = T.Server $ resultByName "machineProcessing"
 
+jobsCompletedCount =
+  T.tr $ T.samplingStatsCount $
+  T.arrivalProcessingTime jobsCompleted
+  
 processingTime :: ResultTransform
-processingTime = 
-  resultByName "jobsCompleted" >>>
-  resultById ArrivalProcessingTimeId
-
-jobsInterrupted :: ResultTransform
-jobsInterrupted = resultByName "jobsInterrupted"
+processingTime =
+  T.tr $ T.arrivalProcessingTime jobsCompleted
 
 waitTime :: ResultTransform
-waitTime = 
-  resultByName "inputQueue" >>> 
-  resultById QueueWaitTimeId
+waitTime =
+  T.tr $ T.queueWaitTime inputQueue
 
 queueSize :: ResultTransform
-queueSize = 
-  resultByName "inputQueue" >>> 
-  resultById QueueCountStatsId
+queueSize =
+  T.tr $ T.queueCountStats inputQueue
 
 processingFactor :: ResultTransform
 processingFactor =
-  resultByName "machineProcessing" >>>
-  resultById ServerProcessingFactorId
+  T.tr $ T.serverProcessingFactor machineProcessing
 
 generators :: ChartRendering r => [WebPageGenerator r]
 generators =
@@ -61,7 +58,7 @@ generators =
    outputView defaultInfoView,
    outputView $ defaultFinalStatsView {
      finalStatsTitle  = "Machine Tool With Breakdowns",
-     finalStatsSeries = jobsCompleted <> jobsInterrupted },
+     finalStatsSeries = jobsCompletedCount <> jobsInterrupted },
    outputView $ defaultDeviationChartView {
      deviationChartTitle = "The Wait Time (chart)",
      deviationChartWidth = 1000,
