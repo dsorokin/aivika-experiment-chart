@@ -23,29 +23,29 @@ experiment =
                             "the corresponded tutorial of Berkeley-Madonna " ++
                             "with small modification for calculating std." }
 
+t     = resultByName "t"
+x     = resultByName "x"
+sumX  = resultByName "sumX"
+sumX2 = resultByName "sumX2"
+avg   = resultByName "avg"
+std   = resultByName "std"
+
 generators :: ChartRendering r => [WebPageGenerator r]
 generators =
   [outputView defaultExperimentSpecsView,
    outputView defaultInfoView,
    outputView $ defaultTableView {
      tableSeries =
-        mconcat $ map resultByName $
-        ["t", "x", "sumX", "sumX2", "avg", "std"] }, 
+        t <> x <> sumX <> sumX2 <> avg <> std },
    outputView $ defaultTimeSeriesView {
      timeSeriesTitle = "Time Series",
-     timeSeriesLeftYSeries =
-       resultByName "x" <>
-       resultByName "avg" },
+     timeSeriesLeftYSeries = x <> avg },
    outputView $ defaultTimingStatsView {
-     timingStatsSeries =
-        resultByName "x" },
+     timingStatsSeries = x },
    outputView $ defaultTimeSeriesView {
      timeSeriesTitle = "Sums",
-     timeSeriesLeftYSeries =
-       resultByName "sumX",
-     timeSeriesRightYSeries =
-       resultByName "sumX2" },
+     timeSeriesLeftYSeries = sumX,
+     timeSeriesRightYSeries = sumX2 },
    outputView $ defaultTimeSeriesView {
      timeSeriesTitle = "Standard Deviation",
-     timeSeriesLeftYSeries =
-       resultByName "std" } ]
+     timeSeriesLeftYSeries = std } ]
