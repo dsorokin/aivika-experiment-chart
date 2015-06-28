@@ -9,6 +9,8 @@ import Simulation.Aivika
 import Simulation.Aivika.Experiment
 import Simulation.Aivika.Experiment.Chart
 
+import qualified Simulation.Aivika.Results.Transform as T
+
 -- | The simulation specs.
 specs = Specs { spcStartTime = 0.0,
                 spcStopTime = 480.0,
@@ -25,37 +27,34 @@ experiment =
     -- experimentRunCount = 10,
     experimentTitle = "Inspection and Adjustment Stations on a Production Line (the Monte-Carlo simulation)" }
 
+inputArrivalTimer  = T.ArrivalTimer $ resultByName "inputArrivalTimer"
+outputArrivalTimer = T.ArrivalTimer $ resultByName "outputArrivalTimer"
+
+inspectionStations = T.Server $ resultByName "inspectionStations"
+adjustmentStations = T.Server $ resultByName "adjustmentStations"
+
+inspectionQueue = T.Queue $ resultByName "inspectionQueue"
+adjustmentQueue = T.Queue $ resultByName "adjustmentQueue"
+
 resultProcessingTime :: ResultTransform
 resultProcessingTime =
-  (resultByName "inputArrivalTimer" >>>
-   resultById ArrivalProcessingTimeId)
-  <>
-  (resultByName "outputArrivalTimer" >>>
-   resultById ArrivalProcessingTimeId)
+  (T.tr $ T.arrivalProcessingTime inputArrivalTimer) <>
+  (T.tr $ T.arrivalProcessingTime outputArrivalTimer)
 
 resultProcessingFactor :: ResultTransform
 resultProcessingFactor =
-  (resultByName "inspectionStations" >>>
-   resultById ServerProcessingFactorId)
-  <>
-  (resultByName "adjustmentStations" >>>
-   resultById ServerProcessingFactorId)
+  (T.tr $ T.serverProcessingFactor inspectionStations) <>
+  (T.tr $ T.serverProcessingFactor adjustmentStations)
 
 resultQueueSize :: ResultTransform
 resultQueueSize =
-  (resultByName "inspectionQueue" >>>
-   resultById QueueCountStatsId)
-  <>
-  (resultByName "adjustmentQueue" >>>
-   resultById QueueCountStatsId)
+  (T.tr $ T.queueCountStats inspectionQueue) <>
+  (T.tr $ T.queueCountStats adjustmentQueue)
 
 resultWaitTime :: ResultTransform
 resultWaitTime =
-  (resultByName "inspectionQueue" >>>
-   resultById QueueWaitTimeId)
-  <>
-  (resultByName "adjustmentQueue" >>>
-   resultById QueueWaitTimeId)
+  (T.tr $ T.queueWaitTime inspectionQueue) <>
+  (T.tr $ T.queueWaitTime adjustmentQueue)
 
 generators :: ChartRendering r => [WebPageGenerator r]
 generators =
