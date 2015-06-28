@@ -22,22 +22,21 @@ experiment =
     experimentDescription = "Simulation of a Bouncing Ball as described in " ++
                             "the corresponded MATLAB & Simulink example" }
 
+t = resultByName "t"
+x = resultByName "x"
+v = resultByName "v"
+
 generators :: ChartRendering r => [WebPageGenerator r]
 generators =
   [outputView defaultExperimentSpecsView,
    outputView defaultInfoView,
    outputView $ defaultTableView {
-     tableSeries =
-        resultByName "t" <>
-        resultByName "x" <>
-        resultByName "v" },
+     tableSeries = t <> x <> v },
    outputView $ defaultTimeSeriesView {
      timeSeriesDescription = "The chart shows the position of the ball",
      timeSeriesTitle = "Position",
-     timeSeriesLeftYSeries =
-        resultByName "x" },
+     timeSeriesLeftYSeries = x },
    outputView $ defaultTimeSeriesView {
      timeSeriesDescription = "The chart shows the velocity of the ball",
      timeSeriesTitle = "Velocity",
-     timeSeriesLeftYSeries =
-        resultByName "v" } ]
+     timeSeriesLeftYSeries = v } ]
