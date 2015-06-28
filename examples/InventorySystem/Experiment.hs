@@ -9,6 +9,8 @@ import Simulation.Aivika
 import Simulation.Aivika.Experiment
 import Simulation.Aivika.Experiment.Chart
 
+import qualified Simulation.Aivika.Results.Transform as T
+
 -- | The simulation specs.
 specs = Specs { spcStartTime = 0.0,
                 spcStopTime = 312.0,
@@ -27,26 +29,30 @@ experiment =
 
 radio :: ResultTransform
 radio =
-  resultByName "radio" >>>
-  resultById ResourceCountId
+  T.tr $
+  T.resourceCount $
+  T.Resource $ resultByName "radio"
 
 invPos :: ResultTransform
-invPos = 
-  resultByName "invPos" >>>
-  resultById TimingCounterValueId
+invPos =
+  T.tr $
+  T.timingCounterValue $
+  T.TimingCounter $ resultByName "invPos"
 
 invPosStats :: ResultTransform
 invPosStats =
-  resultByName "invPos" >>>
-  resultById TimingCounterStatsId
+  T.tr $
+  T.timingCounterStats $
+  T.TimingCounter $ resultByName "invPos"
 
 tbLostSales :: ResultTransform
 tbLostSales = resultByName "tbLostSales"
 
 tbLostSalesCount :: ResultTransform
 tbLostSalesCount =
-  tbLostSales >>>
-  resultById SamplingStatsCountId
+  T.tr $
+  T.samplingStatsCount $
+  T.SamplingStats tbLostSales
 
 safetyStock :: ResultTransform
 safetyStock = resultByName "safetyStock"
