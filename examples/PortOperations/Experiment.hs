@@ -9,6 +9,8 @@ import Simulation.Aivika
 import Simulation.Aivika.Experiment
 import Simulation.Aivika.Experiment.Chart
 
+import qualified Simulation.Aivika.Results.Transform as T
+
 -- | The simulation specs.
 specs = Specs { spcStartTime = 0.0,
                 spcStopTime = 8760.0,
@@ -27,17 +29,17 @@ experiment =
 
 portTime = resultByName "portTime"
 
-berth = resultByName "berth"
-berthQueueCount = berth >>> resultById ResourceQueueCountStatsId
-berthWaitTime = berth >>> resultById ResourceWaitTimeId
-berthCount = berth >>> resultById ResourceCountStatsId
-berthUtilisationCount = berth >>> resultById ResourceUtilisationCountStatsId
+berth                 = T.Resource $ resultByName "berth"
+berthCount            = T.tr $ T.resourceCountStats berth
+berthUtilisationCount = T.tr $ T.resourceUtilisationCountStats berth
+berthQueueCount       = T.tr $ T.resourceQueueCountStats berth
+berthWaitTime         = T.tr $ T.resourceWaitTime berth
 
-tug = resultByName "tug"
-tugCount = tug >>> resultById ResourceCountStatsId
-tugQueueCount = tug >>> resultById ResourceQueueCountStatsId
-tugWaitTime = tug >>> resultById ResourceWaitTimeId
-tugUtilisationCount = tug >>> resultById ResourceUtilisationCountStatsId
+tug                 = T.Resource $ resultByName "tug"
+tugCount            = T.tr $ T.resourceCountStats tug
+tugUtilisationCount = T.tr $ T.resourceUtilisationCountStats tug
+tugQueueCount       = T.tr $ T.resourceQueueCountStats tug
+tugWaitTime         = T.tr $ T.resourceWaitTime tug
 
 generators :: ChartRendering r => [WebPageGenerator r]
 generators =
