@@ -22,50 +22,35 @@ experiment =
     experimentDescription = "Chemical Reaction as described in " ++
                             "the 5-minute tutorial of Berkeley-Madonna" }
 
+t = resultByName "t"
+a = resultByName "a"
+b = resultByName "b"
+c = resultByName "c"
+
 generators :: ChartRendering r => [WebPageGenerator r]
 generators =
   [outputView defaultExperimentSpecsView,
    outputView $ defaultLastValueView {
-     lastValueSeries =
-        resultByName "t" <>
-        resultByName "a" <>
-        resultByName "b" <>
-        resultByName "c" },
+     lastValueSeries = t <> a <> b <> c },
    outputView $ defaultTableView {
-     tableSeries =
-        resultByName "t" <>
-        resultByName "a" <>
-        resultByName "b" <>
-        resultByName "c" },
+     tableSeries = t <> a <> b <> c },
    outputView $ defaultTimeSeriesView {
      timeSeriesTitle = "Time Series",
-     timeSeriesLeftYSeries =
-        resultByName "a" <>
-        resultByName "b" <>
-        resultByName "c" },
+     timeSeriesLeftYSeries = a <> b <> c },
    outputView $ defaultXYChartView {
      xyChartTitle = "XYChart - 1",
      xyChartPlotTitle = "b=b(a), c=c(a)",
-     xyChartXSeries =
-       resultByName "a",
-     xyChartLeftYSeries =
-       resultByName "b",
-     xyChartRightYSeries =
-       resultByName "c" },
+     xyChartXSeries = a,
+     xyChartLeftYSeries = b,
+     xyChartRightYSeries = c },
    outputView $ defaultXYChartView {
      xyChartTitle = "XYChart - 2",
      xyChartPlotTitle = "a=a(b), c=c(b)",
-     xyChartXSeries =
-       resultByName "b",
-     xyChartRightYSeries =
-       resultByName "a" <>
-       resultByName "c" },
+     xyChartXSeries = b,
+     xyChartRightYSeries = a <> c },
    outputView $ defaultXYChartView {
      xyChartTitle = "XYChart - 3",
      xyChartPlotTitle = "a=a(c), b=b(c)",
-     xyChartXSeries =
-       resultByName "c",
-     xyChartLeftYSeries =
-       resultByName "b",
-     xyChartRightYSeries =
-       resultByName "a" } ]
+     xyChartXSeries = c,
+     xyChartLeftYSeries = b,
+     xyChartRightYSeries = a } ]
