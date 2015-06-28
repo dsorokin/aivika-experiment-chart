@@ -22,51 +22,41 @@ experiment =
     experimentDescription = "Model Linear Array as described in " ++
                             "the examples included in Berkeley-Madonna." }
 
+t = resultByName "t"
+m = resultByName "m"
+c = resultByName "c"
+        
 generators :: ChartRendering r => [WebPageGenerator r]
 generators = 
   [outputView defaultExperimentSpecsView,
    outputView $ defaultTableView {
-     tableSeries =
-        resultByName "t" <>
-        resultByName "m" <>
-        resultByName "c" },
+     tableSeries = t <> m <> c },
    outputView $ defaultTimeSeriesView {
-     timeSeriesLeftYSeries =
-        resultByName "m",
+     timeSeriesLeftYSeries = m,
      timeSeriesWidth = 800,
      timeSeriesHeight = 800 },
    outputView $ defaultTimeSeriesView {
-     timeSeriesRightYSeries =
-        resultByName "c",
+     timeSeriesRightYSeries = c,
      timeSeriesWidth = 800,
      timeSeriesHeight = 800 },
    outputView $ defaultTimeSeriesView {
-     timeSeriesLeftYSeries =
-        resultByName "m",
-     timeSeriesRightYSeries =
-       resultByName "c",
+     timeSeriesLeftYSeries = m,
+     timeSeriesRightYSeries = c,
      timeSeriesWidth = 800,
      timeSeriesHeight = 800 },
    outputView $ defaultXYChartView {
-     xyChartXSeries =
-        resultByName "t",
-     xyChartLeftYSeries =
-       resultByName "m",
+     xyChartXSeries = t,
+     xyChartLeftYSeries = m,
      xyChartWidth = 800,
      xyChartHeight = 800 },
    outputView $ defaultXYChartView {
-     xyChartXSeries =
-        resultByName "t",
-     xyChartRightYSeries =
-       resultByName "c",
+     xyChartXSeries = t,
+     xyChartRightYSeries = c,
      xyChartWidth = 800,
      xyChartHeight = 800 },
    outputView $ defaultXYChartView {
-     xyChartXSeries =
-        resultByName "t",
-     xyChartLeftYSeries =
-       resultByName "m",
-     xyChartRightYSeries =
-       resultByName "c",
+     xyChartXSeries = t,
+     xyChartLeftYSeries = m,
+     xyChartRightYSeries = c,
      xyChartWidth = 800,
      xyChartHeight = 800 } ]
