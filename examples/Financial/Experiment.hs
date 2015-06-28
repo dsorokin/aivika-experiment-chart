@@ -25,6 +25,12 @@ monteCarloExperiment =
     experimentDescription = "Financial Model (the Monte-Carlo simulation) as described in " ++
                             "Vensim 5 Modeling Guide, Chapter Financial Modeling and Risk." }
 
+netIncome = resultByName netIncomeName
+npvIncome = resultByName npvIncomeName
+  
+netCashFlow = resultByName netCashFlowName
+npvCashFlow = resultByName npvCashFlowName
+
 monteCarloGenerators :: ChartRendering r => [WebPageGenerator r]
 monteCarloGenerators =
   [outputView defaultExperimentSpecsView,
@@ -32,37 +38,25 @@ monteCarloGenerators =
    outputView $ defaultDeviationChartView {
      deviationChartTitle = "Chart 1",
      deviationChartPlotTitle = "The deviation chart for Net Income and Cash Flow",
-     deviationChartLeftYSeries =
-       resultByName netIncomeName <>
-       resultByName netCashFlowName },
+     deviationChartLeftYSeries = netIncome <> netCashFlow },
    outputView $ defaultDeviationChartView {
      deviationChartTitle = "Chart 2",
      deviationChartPlotTitle = "The deviation chart for Net Present Value of Income and Cash Flow",
-     deviationChartLeftYSeries =
-       resultByName npvIncomeName <>
-       resultByName npvCashFlowName },
+     deviationChartLeftYSeries = npvIncome <> npvCashFlow },
    outputView $ defaultFinalHistogramView {
      finalHistogramTitle = "Histogram 1",
      finalHistogramPlotTitle = "Histogram for Net Income and Cash Flow",
-     finalHistogramSeries =
-       resultByName netIncomeName <>
-       resultByName netCashFlowName },
+     finalHistogramSeries = netIncome <> netCashFlow },
    outputView $ defaultFinalHistogramView {
      finalHistogramTitle = "Histogram 2",
      finalHistogramPlotTitle = "Histogram for Net Present Value of Income and Cash Flow",
-     finalHistogramSeries =
-       resultByName npvIncomeName <>
-       resultByName npvCashFlowName },
+     finalHistogramSeries = npvIncome <> npvCashFlow },
    outputView $ defaultFinalStatsView {
      finalStatsTitle = "Summary 1",
-     finalStatsSeries =
-       resultByName netIncomeName <>
-       resultByName netCashFlowName },
+     finalStatsSeries = netIncome <> netCashFlow },
    outputView $ defaultFinalStatsView {
      finalStatsTitle = "Summary 2",
-     finalStatsSeries =
-       resultByName npvIncomeName <>
-       resultByName npvCashFlowName } ]
+     finalStatsSeries = npvIncome <> npvCashFlow } ]
   
 -- | The experiment with single simulation run.
 singleExperiment :: Experiment
@@ -80,18 +74,11 @@ singleGenerators =
    outputView $ defaultTimeSeriesView {
      timeSeriesTitle = "Time Series 1",
      timeSeriesPlotTitle = "Time series of Net Income and Cash Flow",
-     timeSeriesLeftYSeries =
-       resultByName netIncomeName <>
-       resultByName netCashFlowName },
+     timeSeriesLeftYSeries = netIncome <> netCashFlow },
    outputView $ defaultTimeSeriesView {
      timeSeriesTitle = "Time Series 2",
      timeSeriesPlotTitle = "Time series of Net Present Value for Income and Cash Flow",
-     timeSeriesLeftYSeries =
-       resultByName npvIncomeName <>
-       resultByName npvCashFlowName },
+     timeSeriesLeftYSeries = npvIncome <> npvCashFlow },
    outputView $ defaultTableView {
      tableTitle = "Table",
-     tableSeries =
-       mconcat $ map resultByName $ 
-       [netIncomeName, netCashFlowName,
-                    npvIncomeName, npvCashFlowName] } ]
+     tableSeries = netIncome <> netCashFlow <> npvIncome <> npvCashFlow } ]
