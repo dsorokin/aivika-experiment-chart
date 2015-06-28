@@ -8,6 +8,8 @@ import Simulation.Aivika
 import Simulation.Aivika.Experiment
 import Simulation.Aivika.Experiment.Chart
 
+import qualified Simulation.Aivika.Results.Transform as T
+
 -- | The simulation specs.
 specs = Specs { spcStartTime = 0.0,
                 spcStopTime = 480.0,
@@ -24,45 +26,22 @@ experiment =
     -- experimentRunCount = 10,
     experimentTitle = "Quarry Operations" }
 
-shovelQueueSize :: ResultTransform
-shovelQueueSize =
-  (resultByName "shovelQueue" >>>
-   resultById QueueCountStatsId)
+shovelQueue  = T.Queue $ resultByName "shovelQueue"
+crusherQueue = T.Queue $ resultByName "crusherQueue"
 
-shovelQueueWaitTime :: ResultTransform
-shovelQueueWaitTime =
-  (resultByName "shovelQueue" >>>
-   resultById QueueWaitTimeId)
+shovelActvty  = T.Activity $ resultByName "shovelActvty"
+crusherActvty = T.Activity $ resultByName "crusherActvty"
 
-shovelQueueRate :: ResultTransform
-shovelQueueRate =
-  (resultByName "shovelQueue" >>>
-   resultById QueueRateId)
+shovelQueueSize     = T.tr $ T.queueCountStats shovelQueue
+shovelQueueWaitTime = T.tr $ T.queueWaitTime shovelQueue
+shovelQueueRate     = T.tr $ T.queueRate shovelQueue
 
-crusherQueueSize :: ResultTransform
-crusherQueueSize =
-  (resultByName "crusherQueue" >>>
-   resultById QueueCountStatsId)
+crusherQueueSize     = T.tr $ T.queueCountStats crusherQueue
+crusherQueueWaitTime = T.tr $ T.queueWaitTime crusherQueue
+crusherQueueRate     = T.tr $ T.queueRate crusherQueue
 
-crusherQueueWaitTime :: ResultTransform
-crusherQueueWaitTime =
-  (resultByName "crusherQueue" >>>
-   resultById QueueWaitTimeId)
-
-crusherQueueRate :: ResultTransform
-crusherQueueRate =
-  (resultByName "crusherQueue" >>>
-   resultById QueueRateId)
-
-shovelUtilisationFactor :: ResultTransform
-shovelUtilisationFactor =
-  (resultByName "shovelActvty" >>>
-   resultById ActivityUtilisationFactorId)
-
-crusherUtilisationFactor :: ResultTransform
-crusherUtilisationFactor =
-  (resultByName "crusherActvty" >>>
-   resultById ActivityUtilisationFactorId)
+shovelUtilisationFactor  = T.tr $ T.activityUtilisationFactor shovelActvty
+crusherUtilisationFactor = T.tr $ T.activityUtilisationFactor crusherActvty
 
 subgenerators1 :: ChartRendering r => String -> ResultTransform -> [WebPageGenerator r]
 subgenerators1 title series =
