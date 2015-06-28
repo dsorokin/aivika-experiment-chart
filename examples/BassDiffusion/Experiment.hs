@@ -20,15 +20,16 @@ experiment =
     experimentRunCount = 20,
     experimentDescription = "This is the famous Bass Diffusion model solved with help of the agent-based modelling." }
 
+potentialAdopters = resultByName "potentialAdopters"
+adopters = resultByName "adopters"
+
 generators :: ChartRendering r => [WebPageGenerator r]
 generators =
   [outputView defaultExperimentSpecsView,
    outputView defaultInfoView,
    outputView $ defaultDeviationChartView {
      deviationChartLeftYSeries = 
-        resultByName "potentialAdopters" <>
-        resultByName "adopters" },
+        potentialAdopters <> adopters },
     outputView $ defaultTimeSeriesView {
       timeSeriesLeftYSeries =
-         resultByName "potentialAdopters" <>
-         resultByName "adopters" } ]
+         potentialAdopters <> adopters } ]
