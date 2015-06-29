@@ -88,6 +88,11 @@ extra-source-files:  examples/BassDiffusion/Model.hs
                      examples/PortOperations/MainUsingCairo.hs
                      examples/PortOperations/MainUsingDiagrams.hs
                      examples/PortOperations/README
+                     examples/SingleLaneTraffic/Model.hs
+                     examples/SingleLaneTraffic/Experiment.hs
+                     examples/SingleLaneTraffic/MainUsingCairo.hs
+                     examples/SingleLaneTraffic/MainUsingDiagrams.hs
+                     examples/SingleLaneTraffic/README
 
 library
 
