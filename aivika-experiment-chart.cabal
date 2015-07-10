@@ -1,5 +1,5 @@
 name:            aivika-experiment-chart
-version:         4.0.4
+version:         4.2
 synopsis:        Simulation experiments with charting for the Aivika library
 description:
     This package complements the Aivika and Aivika Experiment packages with
@@ -116,7 +116,7 @@ library
                      lens >= 3.9,
                      data-default-class < 0.1,
                      colour >= 2.3.3,
-                     aivika >= 4.0.3,
+                     aivika >= 4.2,
                      aivika-experiment >= 4.0.3
 
     extensions:      MultiParamTypeClasses
