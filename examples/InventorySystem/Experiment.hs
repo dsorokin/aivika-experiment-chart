@@ -27,29 +27,16 @@ experiment =
     -- experimentRunCount = 10,
     experimentTitle = "Inventory System with Lost Sales and Backorders" }
 
-radio :: ResultTransform
-radio =
-  T.tr $
-  T.resourceCount $
-  T.Resource $ resultByName "radio"
+radio = T.Resource $ resultByName "radio"
+radioCount      = T.tr $ T.resourceCount radio
+radioCountStats = T.tr $ T.resourceCountStats radio
 
-invPos :: ResultTransform
-invPos =
-  T.tr $
-  T.timingCounterValue $
-  T.TimingCounter $ resultByName "invPos"
+invPos = T.TimingCounter $ resultByName "invPos"
+invPosValue = T.tr $ T.timingCounterValue invPos
+invPosStats = T.tr $ T.timingCounterStats invPos
 
-invPosStats :: ResultTransform
-invPosStats =
-  T.tr $
-  T.timingCounterStats $
-  T.TimingCounter $ resultByName "invPos"
-
-tbLostSales :: ResultTransform
 tbLostSales = resultByName "tbLostSales"
-
-tbLostSalesCount :: ResultTransform
-tbLostSalesCount =
+tbLostSalesCount = 
   T.tr $
   T.samplingStatsCount $
   T.SamplingStats tbLostSales
@@ -65,9 +52,25 @@ generators =
      finalStatsTitle  = "Inventory Position and Time Between Lost Sales",
      finalStatsSeries = invPosStats <> tbLostSales },
    outputView $ defaultDeviationChartView {
-     deviationChartTitle = "Radios, Inventory Position and Safety Stock",
+     deviationChartTitle = "Radios and Inventory Position",
      -- deviationChartWidth = 1000,
-     deviationChartRightYSeries = radio <> invPosStats <> safetyStock },
+     deviationChartRightYSeries = 
+       radioCount <> invPosValue },
+   outputView $ defaultDeviationChartView {
+     deviationChartTitle = "Radios",
+     -- deviationChartWidth = 1000,
+     deviationChartRightYSeries = 
+       radioCount <> radioCountStats },
+   outputView $ defaultDeviationChartView {
+     deviationChartTitle = "Inventory Position",
+     -- deviationChartWidth = 1000,
+     deviationChartRightYSeries = 
+       invPosValue <> invPosStats },
+   outputView $ defaultDeviationChartView {
+     deviationChartTitle = "Safety Stock",
+     -- deviationChartWidth = 1000,
+     deviationChartRightYSeries = 
+       safetyStock },
    outputView $ defaultFinalStatsView {
      finalStatsTitle = "Safety Stock",
      finalStatsSeries = safetyStock } ]

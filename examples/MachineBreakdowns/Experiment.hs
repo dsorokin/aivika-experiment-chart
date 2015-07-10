@@ -44,8 +44,12 @@ waitTime :: ResultTransform
 waitTime =
   T.tr $ T.queueWaitTime inputQueue
 
-queueSize :: ResultTransform
-queueSize =
+queueCount :: ResultTransform
+queueCount =
+  T.tr $ T.queueCount inputQueue
+
+queueCountStats :: ResultTransform
+queueCountStats =
   T.tr $ T.queueCountStats inputQueue
 
 processingFactor :: ResultTransform
@@ -69,10 +73,10 @@ generators =
    outputView $ defaultDeviationChartView {
      deviationChartTitle = "The Queue Size (chart)",
      deviationChartWidth = 1000,
-     deviationChartRightYSeries = queueSize },
+     deviationChartRightYSeries = queueCount <> queueCountStats },
    outputView $ defaultFinalStatsView {
      finalStatsTitle = "The Queue Size (statistics)",
-     finalStatsSeries = queueSize },
+     finalStatsSeries = queueCountStats },
    outputView $ defaultDeviationChartView {
      deviationChartTitle = "The Processing Time (chart)",
      deviationChartWidth = 1000,

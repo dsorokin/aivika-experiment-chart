@@ -30,11 +30,12 @@ experiment =
 waitTime       = resultByName "waitTime"
 greenLightTime = resultByName "greenLightTime"
 
-start           = T.Resource $ resultByName "start"
-startQueueCount = T.tr $ T.resourceQueueCount start
-startWaitTime   = T.tr $ T.resourceWaitTime start
-startCount      = T.tr $ T.resourceCount start
-startUtilisationCount = T.tr $ T.resourceUtilisationCount start
+start                      = T.Resource $ resultByName "start"
+startQueueCount            = T.tr $ T.resourceQueueCount start
+startQueueCountStats       = T.tr $ T.resourceQueueCountStats start
+startWaitTime              = T.tr $ T.resourceWaitTime start
+startCountStats            = T.tr $ T.resourceCountStats start
+startUtilisationCountStats = T.tr $ T.resourceUtilisationCountStats start
 
 generators :: ChartRendering r => [WebPageGenerator r]
 generators =
@@ -48,16 +49,22 @@ generators =
      finalStatsSeries = waitTime },
    outputView $ defaultDeviationChartView {
      deviationChartTitle = "The Average Waiting Time Chart",
+     deviationChartWidth = 1000,
      deviationChartRightYSeries = waitTime },
    outputView $ defaultFinalStatsView {
      finalStatsTitle = "The Resource Queue Count",
-     finalStatsSeries = startQueueCount },
+     finalStatsSeries = startQueueCountStats },
+   outputView $ defaultDeviationChartView {
+     deviationChartTitle = "The Resource Queue Count Chart",
+     deviationChartWidth = 1000,
+     deviationChartRightYSeries =
+       startQueueCount <> startQueueCountStats },
    outputView $ defaultFinalStatsView {
      finalStatsTitle = "The Resource Wait Time",
      finalStatsSeries = startWaitTime },
    outputView $ defaultFinalStatsView {
      finalStatsTitle = "The Resource Utilisation Summary",
-     finalStatsSeries = startUtilisationCount },
+     finalStatsSeries = startUtilisationCountStats },
    outputView $ defaultFinalStatsView {
      finalStatsTitle = "The Resource Availability Summary",
-     finalStatsSeries = startCount } ]
+     finalStatsSeries = startCountStats } ]

@@ -37,6 +37,7 @@ heatingTime      = resultByName heatingTimeName
 outputIngotTemp  = resultByName outputIngotTempName
 
 furnaceQueue     = T.Queue $ resultByName furnaceQueueName
+furnaceQueueCount      = T.tr $ T.queueCount furnaceQueue
 furnaceQueueCountStats = T.tr $ T.queueCountStats furnaceQueue
 furnaceQueueWaitTime   = T.tr $ T.queueWaitTime furnaceQueue
 furnaceQueueRate       = T.tr $ T.queueRate furnaceQueue
@@ -76,8 +77,8 @@ generators =
      finalStatsSeries = pitCount },
    outputView $ defaultDeviationChartView {
      deviationChartTitle = "Deviation Chart - 3",
-     deviationChartPlotTitle = "The average queue size",
-     deviationChartRightYSeries = furnaceQueueCountStats },
+     deviationChartPlotTitle = "The queue size",
+     deviationChartRightYSeries = furnaceQueueCount <> furnaceQueueCountStats },
    outputView $ defaultFinalStatsView {
      finalStatsTitle = "Final Statistics - 3",
      finalStatsDescription = "The summary of the average queue size in the final time point.",

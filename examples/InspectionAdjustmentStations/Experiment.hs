@@ -46,15 +46,13 @@ resultProcessingFactor =
   (T.tr $ T.serverProcessingFactor inspectionStations) <>
   (T.tr $ T.serverProcessingFactor adjustmentStations)
 
-resultQueueSize :: ResultTransform
-resultQueueSize =
-  (T.tr $ T.queueCountStats inspectionQueue) <>
-  (T.tr $ T.queueCountStats adjustmentQueue)
+inspectionQueueCount      = T.tr $ T.queueCount inspectionQueue
+inspectionQueueCountStats = T.tr $ T.queueCountStats inspectionQueue
+inspectionWaitTime        = T.tr $ T.queueWaitTime inspectionQueue
 
-resultWaitTime :: ResultTransform
-resultWaitTime =
-  (T.tr $ T.queueWaitTime inspectionQueue) <>
-  (T.tr $ T.queueWaitTime adjustmentQueue)
+adjustmentQueueCount      = T.tr $ T.queueCount adjustmentQueue
+adjustmentQueueCountStats = T.tr $ T.queueCountStats adjustmentQueue
+adjustmentWaitTime        = T.tr $ T.queueWaitTime adjustmentQueue
 
 generators :: ChartRendering r => [WebPageGenerator r]
 generators =
@@ -75,16 +73,32 @@ generators =
      finalStatsTitle = "The processing factor (statistics)",
      finalStatsSeries = resultProcessingFactor },
    outputView $ defaultDeviationChartView {
-     deviationChartTitle = "The queue size (chart)",
+     deviationChartTitle = "The inspection queue size (chart)",
      deviationChartWidth = 1000,
-     deviationChartRightYSeries = resultQueueSize },
+     deviationChartRightYSeries = 
+       inspectionQueueCount <> inspectionQueueCountStats },
    outputView $ defaultFinalStatsView {
-     finalStatsTitle = "The queue size (statistics)",
-     finalStatsSeries = resultQueueSize },
+     finalStatsTitle = "The inspection queue size (statistics)",
+     finalStatsSeries = inspectionQueueCountStats },
    outputView $ defaultDeviationChartView {
-     deviationChartTitle = "The queue wait time (chart)",
+     deviationChartTitle = "The inspection queue wait time (chart)",
      deviationChartWidth = 1000,
-     deviationChartRightYSeries = resultWaitTime },
+     deviationChartRightYSeries = inspectionWaitTime },
    outputView $ defaultFinalStatsView {
-     finalStatsTitle = "The queue wait time (statistics)",
-     finalStatsSeries = resultWaitTime } ]
+     finalStatsTitle = "The inspection queue wait time (statistics)",
+     finalStatsSeries = inspectionWaitTime },
+   outputView $ defaultDeviationChartView {
+     deviationChartTitle = "The adjustment queue size (chart)",
+     deviationChartWidth = 1000,
+     deviationChartRightYSeries = 
+       adjustmentQueueCount <> adjustmentQueueCountStats },
+   outputView $ defaultFinalStatsView {
+     finalStatsTitle = "The adjustment queue size (statistics)",
+     finalStatsSeries = adjustmentQueueCountStats },
+   outputView $ defaultDeviationChartView {
+     deviationChartTitle = "The adjustment queue wait time (chart)",
+     deviationChartWidth = 1000,
+     deviationChartRightYSeries = adjustmentWaitTime },
+   outputView $ defaultFinalStatsView {
+     finalStatsTitle = "The adjustment queue wait time (statistics)",
+     finalStatsSeries = adjustmentWaitTime } ]

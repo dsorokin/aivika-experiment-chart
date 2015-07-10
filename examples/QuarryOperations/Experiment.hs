@@ -32,13 +32,15 @@ crusherQueue = T.Queue $ resultByName "crusherQueue"
 shovelActvty  = T.Activity $ resultByName "shovelActvty"
 crusherActvty = T.Activity $ resultByName "crusherActvty"
 
-shovelQueueSize     = T.tr $ T.queueCountStats shovelQueue
-shovelQueueWaitTime = T.tr $ T.queueWaitTime shovelQueue
-shovelQueueRate     = T.tr $ T.queueRate shovelQueue
+shovelQueueCount      = T.tr $ T.queueCount shovelQueue
+shovelQueueCountStats = T.tr $ T.queueCountStats shovelQueue
+shovelQueueWaitTime   = T.tr $ T.queueWaitTime shovelQueue
+shovelQueueRate       = T.tr $ T.queueRate shovelQueue
 
-crusherQueueSize     = T.tr $ T.queueCountStats crusherQueue
-crusherQueueWaitTime = T.tr $ T.queueWaitTime crusherQueue
-crusherQueueRate     = T.tr $ T.queueRate crusherQueue
+crusherQueueCount      = T.tr $ T.queueCount crusherQueue
+crusherQueueCountStats = T.tr $ T.queueCountStats crusherQueue
+crusherQueueWaitTime   = T.tr $ T.queueWaitTime crusherQueue
+crusherQueueRate       = T.tr $ T.queueRate crusherQueue
 
 shovelUtilisationFactor  = T.tr $ T.activityUtilisationFactor shovelActvty
 crusherUtilisationFactor = T.tr $ T.activityUtilisationFactor crusherActvty
@@ -47,9 +49,11 @@ subgenerators1 :: ChartRendering r => String -> ResultTransform -> [WebPageGener
 subgenerators1 title series =
   [outputView $ defaultDeviationChartView {
      deviationChartTitle = title ++ " (chart)",
+     deviationChartWidth = 1000,
      deviationChartRightYSeries = series },
    outputView $ defaultFinalHistogramView {
      finalHistogramTitle = title ++ " (histogram)",
+     finalHistogramWidth = 1000,
      finalHistogramSeries = series },
    outputView $ defaultFinalStatsView {
      finalStatsTitle = title ++ " (statistics)",
@@ -59,19 +63,30 @@ subgenerators2 :: ChartRendering r => String -> ResultTransform -> [WebPageGener
 subgenerators2 title series =
   [outputView $ defaultDeviationChartView {
      deviationChartTitle = title ++ " (chart)",
+     deviationChartWidth = 1000,
      deviationChartRightYSeries = series },
    outputView $ defaultFinalStatsView {
      finalStatsTitle = title ++ " (statistics)",
      finalStatsSeries = series } ]
 
+subgenerators3 :: ChartRendering r => String -> ResultTransform -> ResultTransform -> [WebPageGenerator r]
+subgenerators3 title series1 series2 =
+  [outputView $ defaultDeviationChartView {
+     deviationChartTitle = title ++ " (chart)",
+     deviationChartWidth = 1000,
+     deviationChartRightYSeries = series1 <> series2 },
+   outputView $ defaultFinalStatsView {
+     finalStatsTitle = title ++ " (statistics)",
+     finalStatsSeries = series2 } ]
+
 generators :: ChartRendering r => [WebPageGenerator r]
 generators =
   [outputView defaultExperimentSpecsView,
    outputView defaultInfoView] <>
-  subgenerators2 "The shovel queue size" shovelQueueSize <>
+  subgenerators3 "The shovel queue size" shovelQueueCount shovelQueueCountStats <>
   subgenerators2 "The shovel queue wait time" shovelQueueWaitTime <>
   subgenerators1 "The shovel queue rate" shovelQueueRate <>
-  subgenerators2 "The crusher queue size" crusherQueueSize <>
+  subgenerators3 "The crusher queue size" crusherQueueCount crusherQueueCountStats <>
   subgenerators2 "The crusher queue wait time" crusherQueueWaitTime <>
   subgenerators1 "The crusher queue rate" crusherQueueRate <>
   subgenerators1 "The shovel utilisation factor" shovelUtilisationFactor <>
