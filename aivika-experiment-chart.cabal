@@ -93,6 +93,11 @@ extra-source-files:  examples/BassDiffusion/Model.hs
                      examples/SingleLaneTraffic/MainUsingCairo.hs
                      examples/SingleLaneTraffic/MainUsingDiagrams.hs
                      examples/SingleLaneTraffic/README
+                     examples/PERT/Model.hs
+                     examples/PERT/Experiment.hs
+                     examples/PERT/MainUsingCairo.hs
+                     examples/PERT/MainUsingDiagrams.hs
+                     examples/PERT/README
 
 library
 
@@ -116,7 +121,7 @@ library
                      lens >= 3.9,
                      data-default-class < 0.1,
                      colour >= 2.3.3,
-                     aivika >= 4.2,
+                     aivika >= 4.2.1,
                      aivika-experiment >= 4.0.3
 
     extensions:      MultiParamTypeClasses
