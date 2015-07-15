@@ -73,5 +73,9 @@ generators =
      truckQueueCount <> truckQueueCountStats,
    outputView $ chartView "Queue Loader" $ 
      loaderQueueCount <> loaderQueueCountStats,
+   outputView $ statsView "Queue Waiting Time" $
+     loadWaitTime <>
+     truckWaitTime <>
+     loaderWaitTime,
    outputView $ statsView "Loader Utilisation"
      loaderUtilisationFactor]
