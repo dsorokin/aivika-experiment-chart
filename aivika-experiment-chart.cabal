@@ -98,6 +98,11 @@ extra-source-files:  examples/BassDiffusion/Model.hs
                      examples/PERT/MainUsingCairo.hs
                      examples/PERT/MainUsingDiagrams.hs
                      examples/PERT/README
+                     examples/TruckHaulingSituation/Model.hs
+                     examples/TruckHaulingSituation/Experiment.hs
+                     examples/TruckHaulingSituation/MainUsingCairo.hs
+                     examples/TruckHaulingSituation/MainUsingDiagrams.hs
+                     examples/TruckHaulingSituation/README
 
 library
 
