@@ -103,11 +103,6 @@ extra-source-files:  examples/BassDiffusion/Model.hs
                      examples/TruckHaulingSituation/MainUsingCairo.hs
                      examples/TruckHaulingSituation/MainUsingDiagrams.hs
                      examples/TruckHaulingSituation/README
-                     examples/TruckHaulingSituationVer2/Model.hs
-                     examples/TruckHaulingSituationVer2/Experiment.hs
-                     examples/TruckHaulingSituationVer2/MainUsingCairo.hs
-                     examples/TruckHaulingSituationVer2/MainUsingDiagrams.hs
-                     examples/TruckHaulingSituationVer2/README
 
 library
 
