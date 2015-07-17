@@ -44,6 +44,10 @@ loaderQueueCount      = T.tr $ T.queueCount loaderQueue
 loaderQueueCountStats = T.tr $ T.queueCountStats loaderQueue
 loaderWaitTime        = T.tr $ T.queueWaitTime loaderQueue
 
+loaderOps               = T.Operation $ resultByName "loaderOps"
+loaderUtilisationTime   = T.tr $ T.operationUtilisationTime loaderOps
+loaderUtilisationFactor = T.tr $ T.operationUtilisationFactor loaderOps
+
 statsView title series =
   defaultFinalStatsView {
     finalStatsTitle = title,
@@ -73,4 +77,9 @@ generators =
    outputView $ statsView "Queue Waiting Time" $
      loadWaitTime <>
      truckWaitTime <>
-     loaderWaitTime]
+     loaderWaitTime,
+   outputView $ chartView "Loader Utilisation Chart"
+     loaderUtilisationFactor,
+   outputView $ statsView "Loader Utilisation Summary" $
+     loaderUtilisationFactor <>
+     loaderUtilisationTime]

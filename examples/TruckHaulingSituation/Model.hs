@@ -58,11 +58,19 @@ awaitQueuesNonEmpty q1 q2 q3 =
           processAwait signal
           awaitQueuesNonEmpty q1 q2 q3
 
+-- | The simulation model.
 model :: Simulation Results
 model = do
   truckQueue <- runEventInStartTime IQ.newFCFSQueue
   loadQueue <- runEventInStartTime IQ.newFCFSQueue
   loaderQueue <- runEventInStartTime IQ.newFCFSQueue
+  loaderOp1 <- runEventInStartTime $
+               newRandomExponentialOperation 14
+  loaderOp2 <- runEventInStartTime $
+               newRandomExponentialOperation 12
+  let loaderOps = array (Loader1, Loader2)
+                  [(Loader1, loaderOp1),
+                   (Loader2, loaderOp2)]
   let start :: Process ()
       start =
         do randomErlangProcess_ 4 2
@@ -78,9 +86,7 @@ model = do
            pile   <- IQ.dequeue loadQueue
            loader <- IQ.dequeue loaderQueue
            -- the load operation
-           case loader of
-             Loader1 -> randomExponentialProcess_ 14
-             Loader2 -> randomExponentialProcess_ 12
+           operationProcess (loaderOps ! loader) () 
            -- truck hauling
            liftEvent $
              do runProcess $
@@ -114,4 +120,8 @@ model = do
      --
      resultSource
      "loaderQueue" "Queue Loader"
-     loaderQueue]
+     loaderQueue,
+     --
+     resultSource
+     "loaderOps" "Loader Operations"
+     loaderOps]
