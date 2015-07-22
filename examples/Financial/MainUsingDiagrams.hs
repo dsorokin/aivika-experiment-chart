@@ -6,7 +6,6 @@ import Simulation.Aivika.Experiment.Chart.Backend.Diagrams
 
 import Graphics.Rendering.Chart.Backend.Diagrams
 
-import qualified Data.Map as M
 
 import Model
 import Experiment
@@ -17,11 +16,11 @@ main = do
   putStrLn "*** The simulation with default parameters..."
   runExperiment
     singleExperiment singleGenerators
-    (WebPageRenderer $ DiagramsRenderer SVG M.empty) (model defaultParams)
+    (WebPageRenderer $ DiagramsRenderer SVG loadCommonFonts) (model defaultParams)
   putStrLn ""
 
   -- run the Monte-Carlo simulation
   putStrLn "*** The Monte-Carlo simulation..."
   randomParams >>= runExperimentParallel
     monteCarloExperiment monteCarloGenerators
-    (WebPageRenderer $ DiagramsRenderer SVG M.empty) . model
+    (WebPageRenderer $ DiagramsRenderer SVG loadCommonFonts) . model
