@@ -38,6 +38,11 @@ projCompletion = resultByName "projCompletion"
 
 completionTime series = 
   T.tr $ 
+  T.arrivalProcessingTime $
+  T.ArrivalTimer series
+
+completionTimeMean series = 
+  T.tr $ 
   T.samplingStatsMean $
   T.arrivalProcessingTime $
   T.ArrivalTimer series
@@ -57,9 +62,9 @@ generators =
      finalStatsSeries = 
        completionTime timers <> 
        completionTime projCompletion },
-   outputView $ histogramView "Node 2" $ completionTime timer2,
-   outputView $ histogramView "Node 3" $ completionTime timer3,
-   outputView $ histogramView "Node 4" $ completionTime timer3,
-   outputView $ histogramView "Node 5" $ completionTime timer5,
+   outputView $ histogramView "Node 2" $ completionTimeMean timer2,
+   outputView $ histogramView "Node 3" $ completionTimeMean timer3,
+   outputView $ histogramView "Node 4" $ completionTimeMean timer3,
+   outputView $ histogramView "Node 5" $ completionTimeMean timer5,
    outputView $ histogramView "The Project Completion" $ 
-     completionTime projCompletion]
+     completionTimeMean projCompletion]
