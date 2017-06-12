@@ -37,10 +37,10 @@ heatingTime      = resultByName heatingTimeName
 outputIngotTemp  = resultByName outputIngotTempName
 
 furnaceQueue     = T.Queue $ resultByName furnaceQueueName
-furnaceQueueCount      = T.tr $ T.queueCount furnaceQueue
+furnaceQueueCount      = T.queueCount furnaceQueue
 furnaceQueueCountStats = T.tr $ T.queueCountStats furnaceQueue
 furnaceQueueWaitTime   = T.tr $ T.queueWaitTime furnaceQueue
-furnaceQueueRate       = T.tr $ T.queueRate furnaceQueue
+furnaceQueueRate       = T.queueRate furnaceQueue
 
 generators :: ChartRendering r => [WebPageGenerator r]
 generators =

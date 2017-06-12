@@ -28,16 +28,15 @@ experiment =
     experimentTitle = "Inventory System with Lost Sales and Backorders" }
 
 radio = T.Resource $ resultByName "radio"
-radioCount      = T.tr $ T.resourceCount radio
+radioCount      = T.resourceCount radio
 radioCountStats = T.tr $ T.resourceCountStats radio
 
 invPos = T.TimingCounter $ resultByName "invPos"
-invPosValue = T.tr $ T.timingCounterValue invPos
+invPosValue = T.timingCounterValue invPos
 invPosStats = T.tr $ T.timingCounterStats invPos
 
 tbLostSales = resultByName "tbLostSales"
 tbLostSalesCount = 
-  T.tr $
   T.samplingStatsCount $
   T.SamplingStats tbLostSales
 

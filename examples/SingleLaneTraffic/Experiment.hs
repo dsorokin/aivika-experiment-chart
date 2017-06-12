@@ -31,7 +31,7 @@ waitTime       = resultByName "waitTime"
 greenLightTime = resultByName "greenLightTime"
 
 start                      = T.Resource $ resultByName "start"
-startQueueCount            = T.tr $ T.resourceQueueCount start
+startQueueCount            = T.resourceQueueCount start
 startQueueCountStats       = T.tr $ T.resourceQueueCountStats start
 startWaitTime              = T.tr $ T.resourceWaitTime start
 startCountStats            = T.tr $ T.resourceCountStats start

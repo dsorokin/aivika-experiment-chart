@@ -32,18 +32,18 @@ crusherQueue = T.Queue $ resultByName "crusherQueue"
 shovelActvty  = T.Activity $ resultByName "shovelActvty"
 crusherActvty = T.Activity $ resultByName "crusherActvty"
 
-shovelQueueCount      = T.tr $ T.queueCount shovelQueue
+shovelQueueCount      = T.queueCount shovelQueue
 shovelQueueCountStats = T.tr $ T.queueCountStats shovelQueue
 shovelQueueWaitTime   = T.tr $ T.queueWaitTime shovelQueue
-shovelQueueRate       = T.tr $ T.queueRate shovelQueue
+shovelQueueRate       = T.queueRate shovelQueue
 
-crusherQueueCount      = T.tr $ T.queueCount crusherQueue
+crusherQueueCount      = T.queueCount crusherQueue
 crusherQueueCountStats = T.tr $ T.queueCountStats crusherQueue
 crusherQueueWaitTime   = T.tr $ T.queueWaitTime crusherQueue
-crusherQueueRate       = T.tr $ T.queueRate crusherQueue
+crusherQueueRate       = T.queueRate crusherQueue
 
-shovelUtilisationFactor  = T.tr $ T.activityUtilisationFactor shovelActvty
-crusherUtilisationFactor = T.tr $ T.activityUtilisationFactor crusherActvty
+shovelUtilisationFactor  = T.activityUtilisationFactor shovelActvty
+crusherUtilisationFactor = T.activityUtilisationFactor crusherActvty
 
 subgenerators1 :: ChartRendering r => String -> ResultTransform -> [WebPageGenerator r]
 subgenerators1 title series =

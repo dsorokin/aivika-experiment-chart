@@ -3,11 +3,11 @@
 
 -- |
 -- Module     : Simulation.Aivika.Experiment.Chart.TimeSeriesView
--- Copyright  : Copyright (c) 2012-2015, David Sorokin <david.sorokin@gmail.com>
+-- Copyright  : Copyright (c) 2012-2017, David Sorokin <david.sorokin@gmail.com>
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
 -- Stability  : experimental
--- Tested with: GHC 7.10.1
+-- Tested with: GHC 8.0.1
 --
 -- The module defines 'TimeSeriesView' that plots the time series charts.
 --
@@ -36,6 +36,7 @@ import Graphics.Rendering.Chart
 
 import Simulation.Aivika
 import Simulation.Aivika.Experiment
+import Simulation.Aivika.Experiment.Base
 import Simulation.Aivika.Experiment.Chart.Types
 import Simulation.Aivika.Experiment.Chart.Utils (colourisePlotLines)
 
@@ -130,7 +131,7 @@ defaultTimeSeriesView =
 instance ChartRendering r => ExperimentView TimeSeriesView (WebPageRenderer r) where
   
   outputView v = 
-    let reporter exp (WebPageRenderer renderer) dir =
+    let reporter exp (WebPageRenderer renderer _) dir =
           do st <- newTimeSeries v exp renderer dir
              let context =
                    WebPageContext $
@@ -145,7 +146,7 @@ instance ChartRendering r => ExperimentView TimeSeriesView (WebPageRenderer r) w
 instance ChartRendering r => ExperimentView TimeSeriesView (FileRenderer r) where
   
   outputView v = 
-    let reporter exp (FileRenderer renderer) dir =
+    let reporter exp (FileRenderer renderer _) dir =
           do st <- newTimeSeries v exp renderer dir
              return ExperimentReporter { reporterInitialise = return (),
                                          reporterFinalise   = return (),
@@ -181,7 +182,7 @@ newTimeSeries view exp renderer dir =
                                   timeSeriesMap        = m }
        
 -- | Plot the time series chart within simulation.
-simulateTimeSeries :: ChartRendering r => TimeSeriesViewState r -> ExperimentData -> Event DisposableEvent
+simulateTimeSeries :: ChartRendering r => TimeSeriesViewState r -> ExperimentData -> Composite ()
 simulateTimeSeries st expdata =
   do let view    = timeSeriesView st
          rs1     = timeSeriesLeftYSeries view $
@@ -229,7 +230,7 @@ simulateTimeSeries st expdata =
               resultValueSignal ext
      hs1 <- inputHistory exts1
      hs2 <- inputHistory exts2
-     return $
+     disposableComposite $
        DisposableEvent $
        do let plots hs exts plotLineTails =
                 do ps <-

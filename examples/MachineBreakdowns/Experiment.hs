@@ -33,7 +33,7 @@ inputQueue        = T.Queue $ resultByName "inputQueue"
 machineProcessing = T.Server $ resultByName "machineProcessing"
 
 jobsCompletedCount =
-  T.tr $ T.samplingStatsCount $
+  T.samplingStatsCount $
   T.arrivalProcessingTime jobsCompleted
   
 processingTime :: ResultTransform
@@ -46,7 +46,7 @@ waitTime =
 
 queueCount :: ResultTransform
 queueCount =
-  T.tr $ T.queueCount inputQueue
+  T.queueCount inputQueue
 
 queueCountStats :: ResultTransform
 queueCountStats =
@@ -54,7 +54,7 @@ queueCountStats =
 
 processingFactor :: ResultTransform
 processingFactor =
-  T.tr $ T.serverProcessingFactor machineProcessing
+  T.serverProcessingFactor machineProcessing
 
 generators :: ChartRendering r => [WebPageGenerator r]
 generators =

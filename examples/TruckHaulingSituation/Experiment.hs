@@ -30,23 +30,23 @@ experiment =
     experimentTitle = "A Truck Hauling Situation" }
 
 loadQueue           = T.Queue $ resultByName "loadQueue"
-loadQueueCount      = T.tr $ T.queueCount loadQueue
+loadQueueCount      = T.queueCount loadQueue
 loadQueueCountStats = T.tr $ T.queueCountStats loadQueue
 loadWaitTime        = T.tr $ T.queueWaitTime loadQueue
 
 truckQueue           = T.Queue $ resultByName "truckQueue"
-truckQueueCount      = T.tr $ T.queueCount truckQueue
+truckQueueCount      = T.queueCount truckQueue
 truckQueueCountStats = T.tr $ T.queueCountStats truckQueue
 truckWaitTime        = T.tr $ T.queueWaitTime truckQueue
 
 loaderQueue           = T.Queue $ resultByName "loaderQueue"
-loaderQueueCount      = T.tr $ T.queueCount loaderQueue
+loaderQueueCount      = T.queueCount loaderQueue
 loaderQueueCountStats = T.tr $ T.queueCountStats loaderQueue
 loaderWaitTime        = T.tr $ T.queueWaitTime loaderQueue
 
 loaderOps               = T.Operation $ resultByName "loaderOps"
 loaderUtilisationTime   = T.tr $ T.operationUtilisationTime loaderOps
-loaderUtilisationFactor = T.tr $ T.operationUtilisationFactor loaderOps
+loaderUtilisationFactor = T.operationUtilisationFactor loaderOps
 
 statsView title series =
   defaultFinalStatsView {

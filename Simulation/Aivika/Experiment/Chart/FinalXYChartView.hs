@@ -3,11 +3,11 @@
 
 -- |
 -- Module     : Simulation.Aivika.Experiment.Chart.FinalXYChartView
--- Copyright  : Copyright (c) 2012-2015, David Sorokin <david.sorokin@gmail.com>
+-- Copyright  : Copyright (c) 2012-2017, David Sorokin <david.sorokin@gmail.com>
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
 -- Stability  : experimental
--- Tested with: GHC 7.10.1
+-- Tested with: GHC 8.0.1
 --
 -- The module defines 'FinalXYChartView' that plots a single XY chart
 -- in final time points for different simulation runs sequentially
@@ -39,7 +39,8 @@ import Graphics.Rendering.Chart
 
 import Simulation.Aivika
 import Simulation.Aivika.Experiment
-import Simulation.Aivika.Experiment.MRef
+import Simulation.Aivika.Experiment.Base
+import Simulation.Aivika.Experiment.Concurrent.MVar
 import Simulation.Aivika.Experiment.Chart.Types
 import Simulation.Aivika.Experiment.Chart.Utils (colourisePlotLines)
 
@@ -132,7 +133,7 @@ defaultFinalXYChartView =
 instance ChartRendering r => ExperimentView FinalXYChartView (WebPageRenderer r) where
   
   outputView v = 
-    let reporter exp (WebPageRenderer renderer) dir =
+    let reporter exp (WebPageRenderer renderer _) dir =
           do st <- newFinalXYChart v exp renderer dir
              let context =
                    WebPageContext $
@@ -147,7 +148,7 @@ instance ChartRendering r => ExperimentView FinalXYChartView (WebPageRenderer r)
 instance ChartRendering r => ExperimentView FinalXYChartView (FileRenderer r) where
   
   outputView v = 
-    let reporter exp (FileRenderer renderer) dir =
+    let reporter exp (FileRenderer renderer _) dir =
           do st <- newFinalXYChart v exp renderer dir
              return ExperimentReporter { reporterInitialise = return (),
                                          reporterFinalise   = finaliseFinalXYChart st,
@@ -163,7 +164,7 @@ data FinalXYChartViewState r =
                           finalXYChartDir        :: FilePath, 
                           finalXYChartFile       :: IORef (Maybe FilePath),
                           finalXYChartLock       :: MVar (),
-                          finalXYChartResults    :: MRef (Maybe FinalXYChartResults) }
+                          finalXYChartResults    :: MVar (Maybe FinalXYChartResults) }
 
 -- | The XY chart results.
 data FinalXYChartResults =
@@ -177,7 +178,7 @@ newFinalXYChart view exp renderer dir =
   liftIO $
   do f <- newIORef Nothing
      l <- newMVar () 
-     r <- newMRef Nothing
+     r <- newMVar Nothing
      return FinalXYChartViewState { finalXYChartView       = view,
                                     finalXYChartExperiment = exp,
                                     finalXYChartRenderer   = renderer,
@@ -199,14 +200,14 @@ newFinalXYChartResults xname ynames exp =
 -- | Require to return unique results associated with the specified state. 
 requireFinalXYChartResults :: FinalXYChartViewState r -> String -> [Either String String] -> IO FinalXYChartResults
 requireFinalXYChartResults st xname ynames =
-  maybeWriteMRef (finalXYChartResults st)
+  maybePutMVar (finalXYChartResults st)
   (newFinalXYChartResults xname ynames (finalXYChartExperiment st)) $ \results ->
   if (xname /= finalXYChartXName results) || (ynames /= finalXYChartYNames results)
   then error "Series with different names are returned for different runs: requireFinalXYChartResults"
   else return results
        
 -- | Simulation.
-simulateFinalXYChart :: FinalXYChartViewState r -> ExperimentData -> Event DisposableEvent
+simulateFinalXYChart :: FinalXYChartViewState r -> ExperimentData -> Composite ()
 simulateFinalXYChart st expdata =
   do let view    = finalXYChartView st
          rs0     = finalXYChartXSeries view $
@@ -237,7 +238,7 @@ simulateFinalXYChart st expdata =
          lock = finalXYChartLock st
      results <- liftIO $ requireFinalXYChartResults st name0 names
      let xys = finalXYChartXY results
-     handleSignal signal $ \_ ->
+     handleSignalComposite signal $ \_ ->
        do x  <- resultValueData ext0
           ys <- forM exts resultValueData
           i  <- liftParameter simulationIndex
@@ -265,7 +266,7 @@ finaliseFinalXYChart st =
              mapFilePath (flip replaceExtension $ renderableChartExtension renderer) $
              expandFilePath (finalXYChartFileName view) $
              M.fromList [("$TITLE", title)]
-     results <- liftIO $ readMRef $ finalXYChartResults st
+     results <- liftIO $ readMVar $ finalXYChartResults st
      case results of
        Nothing -> return ()
        Just results ->

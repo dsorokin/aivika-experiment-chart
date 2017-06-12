@@ -3,11 +3,11 @@
 
 -- |
 -- Module     : Simulation.Aivika.Experiment.Chart.FinalHistogramView
--- Copyright  : Copyright (c) 2012-2015, David Sorokin <david.sorokin@gmail.com>
+-- Copyright  : Copyright (c) 2012-2017, David Sorokin <david.sorokin@gmail.com>
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
 -- Stability  : experimental
--- Tested with: GHC 7.10.1
+-- Tested with: GHC 8.0.1
 --
 -- The module defines 'FinalHistogramView' that plots a histogram
 -- by the specified series in final time points collected from different 
@@ -39,7 +39,8 @@ import Graphics.Rendering.Chart
 
 import Simulation.Aivika
 import Simulation.Aivika.Experiment
-import Simulation.Aivika.Experiment.MRef
+import Simulation.Aivika.Experiment.Base
+import Simulation.Aivika.Experiment.Concurrent.MVar
 import Simulation.Aivika.Experiment.Chart.Types
 import Simulation.Aivika.Experiment.Chart.Utils (colourisePlotBars)
 
@@ -115,7 +116,7 @@ defaultFinalHistogramView =
 instance ChartRendering r => ExperimentView FinalHistogramView (WebPageRenderer r) where
   
   outputView v = 
-    let reporter exp (WebPageRenderer renderer) dir =
+    let reporter exp (WebPageRenderer renderer _) dir =
           do st <- newFinalHistogram v exp renderer dir
              let context =
                    WebPageContext $
@@ -130,7 +131,7 @@ instance ChartRendering r => ExperimentView FinalHistogramView (WebPageRenderer 
 instance ChartRendering r => ExperimentView FinalHistogramView (FileRenderer r) where
   
   outputView v = 
-    let reporter exp (FileRenderer renderer) dir =
+    let reporter exp (FileRenderer renderer _) dir =
           do st <- newFinalHistogram v exp renderer dir
              return ExperimentReporter { reporterInitialise = return (),
                                          reporterFinalise   = finaliseFinalHistogram st,
@@ -145,19 +146,19 @@ data FinalHistogramViewState r =
                             finalHistogramRenderer   :: r,
                             finalHistogramDir        :: FilePath, 
                             finalHistogramFile       :: IORef (Maybe FilePath),
-                            finalHistogramResults    :: MRef (Maybe FinalHistogramResults) }
+                            finalHistogramResults    :: MVar (Maybe FinalHistogramResults) }
 
 -- | The histogram item.
 data FinalHistogramResults =
   FinalHistogramResults { finalHistogramNames  :: [String],
-                          finalHistogramValues :: [MRef [Double]] }
+                          finalHistogramValues :: [MVar [Double]] }
   
 -- | Create a new state of the view.
 newFinalHistogram :: FinalHistogramView -> Experiment -> r -> FilePath -> ExperimentWriter (FinalHistogramViewState r)
 newFinalHistogram view exp renderer dir =
   liftIO $
   do f <- newIORef Nothing
-     r <- newMRef Nothing
+     r <- newMVar Nothing
      return FinalHistogramViewState { finalHistogramView       = view,
                                       finalHistogramExperiment = exp,
                                       finalHistogramRenderer   = renderer,
@@ -168,21 +169,21 @@ newFinalHistogram view exp renderer dir =
 -- | Create new histogram results.
 newFinalHistogramResults :: [String] -> Experiment -> IO FinalHistogramResults
 newFinalHistogramResults names exp =
-  do values <- forM names $ \_ -> liftIO $ newMRef []
+  do values <- forM names $ \_ -> liftIO $ newMVar []
      return FinalHistogramResults { finalHistogramNames  = names,
                                     finalHistogramValues = values }
        
 -- | Require to return unique results associated with the specified state. 
 requireFinalHistogramResults :: FinalHistogramViewState r -> [String] -> IO FinalHistogramResults
 requireFinalHistogramResults st names =
-  maybeWriteMRef (finalHistogramResults st)
+  maybePutMVar (finalHistogramResults st)
   (newFinalHistogramResults names (finalHistogramExperiment st)) $ \results ->
   if (names /= finalHistogramNames results)
   then error "Series with different names are returned for different runs: requireFinalHistogramResults"
   else return results
 
 -- | Simulation of the specified series.
-simulateFinalHistogram :: FinalHistogramViewState r -> ExperimentData -> Event DisposableEvent
+simulateFinalHistogram :: FinalHistogramViewState r -> ExperimentData -> Composite ()
 simulateFinalHistogram st expdata =
   do let view    = finalHistogramView st
          rs      = finalHistogramSeries view $
@@ -196,11 +197,11 @@ simulateFinalHistogram st expdata =
          predicate = finalHistogramPredicate view
      results <- liftIO $ requireFinalHistogramResults st names
      let values = finalHistogramValues results
-     handleSignal signal $ \_ ->
+     handleSignalComposite signal $ \_ ->
        do xs <- forM exts resultValueData
           liftIO $
             forM_ (zip xs values) $ \(x, values) ->
-            modifyMRef_ values $ return . (++) x
+            modifyMVar_ values $ return . (++) x
      
 -- | Plot the histogram after the simulation is complete.
 finaliseFinalHistogram :: ChartRendering r => FinalHistogramViewState r -> ExperimentWriter ()
@@ -221,14 +222,14 @@ finaliseFinalHistogram st =
              mapFilePath (flip replaceExtension $ renderableChartExtension renderer) $
              expandFilePath (finalHistogramFileName view) $
              M.fromList [("$TITLE", title)]
-     results <- liftIO $ readMRef $ finalHistogramResults st
+     results <- liftIO $ readMVar $ finalHistogramResults st
      case results of
        Nothing -> return ()
        Just results ->
          liftIO $
          do let names  = finalHistogramNames results
                 values = finalHistogramValues results
-            xs <- forM values readMRef
+            xs <- forM values readMVar
             let zs = histogramToBars . filterHistogram . histogram $ 
                      map filterData xs
                 p  = plotBars $

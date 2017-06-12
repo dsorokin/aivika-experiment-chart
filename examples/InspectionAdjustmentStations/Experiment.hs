@@ -43,14 +43,14 @@ resultProcessingTime =
 
 resultProcessingFactor :: ResultTransform
 resultProcessingFactor =
-  (T.tr $ T.serverProcessingFactor inspectionStations) <>
-  (T.tr $ T.serverProcessingFactor adjustmentStations)
+  (T.serverProcessingFactor inspectionStations) <>
+  (T.serverProcessingFactor adjustmentStations)
 
-inspectionQueueCount      = T.tr $ T.queueCount inspectionQueue
+inspectionQueueCount      = T.queueCount inspectionQueue
 inspectionQueueCountStats = T.tr $ T.queueCountStats inspectionQueue
 inspectionWaitTime        = T.tr $ T.queueWaitTime inspectionQueue
 
-adjustmentQueueCount      = T.tr $ T.queueCount adjustmentQueue
+adjustmentQueueCount      = T.queueCount adjustmentQueue
 adjustmentQueueCountStats = T.tr $ T.queueCountStats adjustmentQueue
 adjustmentWaitTime        = T.tr $ T.queueWaitTime adjustmentQueue
 

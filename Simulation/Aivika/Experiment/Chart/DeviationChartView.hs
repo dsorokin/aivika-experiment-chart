@@ -3,11 +3,11 @@
 
 -- |
 -- Module     : Simulation.Aivika.Experiment.Chart.DeviationChartView
--- Copyright  : Copyright (c) 2012-2015, David Sorokin <david.sorokin@gmail.com>
+-- Copyright  : Copyright (c) 2012-2017, David Sorokin <david.sorokin@gmail.com>
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
 -- Stability  : experimental
--- Tested with: GHC 7.10.1
+-- Tested with: GHC 8.0.1
 --
 -- The module defines 'DeviationChartView' that plots the deviation chart using rule of 3-sigma.
 --
@@ -37,7 +37,8 @@ import Graphics.Rendering.Chart
 
 import Simulation.Aivika
 import Simulation.Aivika.Experiment
-import Simulation.Aivika.Experiment.MRef
+import Simulation.Aivika.Experiment.Base
+import Simulation.Aivika.Experiment.Concurrent.MVar
 import Simulation.Aivika.Experiment.Chart.Types
 import Simulation.Aivika.Experiment.Chart.Utils (colourisePlotLines, colourisePlotFillBetween)
 
@@ -123,7 +124,7 @@ defaultDeviationChartView =
 instance ChartRendering r => ExperimentView DeviationChartView (WebPageRenderer r) where
   
   outputView v = 
-    let reporter exp (WebPageRenderer renderer) dir =
+    let reporter exp (WebPageRenderer renderer _) dir =
           do st <- newDeviationChart v exp renderer dir
              let context =
                    WebPageContext $
@@ -138,7 +139,7 @@ instance ChartRendering r => ExperimentView DeviationChartView (WebPageRenderer 
 instance ChartRendering r => ExperimentView DeviationChartView (FileRenderer r) where
   
   outputView v = 
-    let reporter exp (FileRenderer renderer) dir =
+    let reporter exp (FileRenderer renderer _) dir =
           do st <- newDeviationChart v exp renderer dir
              return ExperimentReporter { reporterInitialise = return (),
                                          reporterFinalise   = finaliseDeviationChart st,
@@ -153,28 +154,25 @@ data DeviationChartViewState r =
                             deviationChartRenderer   :: r,
                             deviationChartDir        :: FilePath, 
                             deviationChartFile       :: IORef (Maybe FilePath),
-                            deviationChartLock       :: MVar (),
-                            deviationChartResults    :: MRef (Maybe DeviationChartResults) }
+                            deviationChartResults    :: MVar (Maybe DeviationChartResults) }
 
 -- | The deviation chart item.
 data DeviationChartResults =
   DeviationChartResults { deviationChartTimes :: IOArray Int Double,
                           deviationChartNames :: [Either String String],
-                          deviationChartStats :: [IOArray Int (SamplingStats Double)] }
+                          deviationChartStats :: [MVar (IOArray Int (SamplingStats Double))] }
   
 -- | Create a new state of the view.
 newDeviationChart :: DeviationChartView -> Experiment -> r -> FilePath -> ExperimentWriter (DeviationChartViewState r)
 newDeviationChart view exp renderer dir =
   liftIO $ 
   do f <- newIORef Nothing
-     l <- newMVar () 
-     r <- newMRef Nothing
+     r <- newMVar Nothing
      return DeviationChartViewState { deviationChartView       = view,
                                       deviationChartExperiment = exp,
                                       deviationChartRenderer   = renderer,
                                       deviationChartDir        = dir, 
                                       deviationChartFile       = f,
-                                      deviationChartLock       = l, 
                                       deviationChartResults    = r }
        
 -- | Create new chart results.
@@ -184,7 +182,7 @@ newDeviationChartResults names exp =
          bnds  = integIterationBnds specs
      times <- liftIO $ newListArray bnds (integTimes specs)
      stats <- forM names $ \_ -> 
-       liftIO $ newArray bnds emptySamplingStats
+       liftIO $ newArray bnds emptySamplingStats >>= newMVar
      return DeviationChartResults { deviationChartTimes = times,
                                     deviationChartNames = names,
                                     deviationChartStats = stats }
@@ -192,14 +190,14 @@ newDeviationChartResults names exp =
 -- | Require to return unique chart results associated with the specified state. 
 requireDeviationChartResults :: DeviationChartViewState r -> [Either String String] -> IO DeviationChartResults
 requireDeviationChartResults st names =
-  maybeWriteMRef (deviationChartResults st)
+  maybePutMVar (deviationChartResults st)
   (newDeviationChartResults names (deviationChartExperiment st)) $ \results ->
   if (names /= deviationChartNames results)
   then error "Series with different names are returned for different runs: requireDeviationChartResults"
   else return results
        
 -- | Simulate the specified series.
-simulateDeviationChart :: DeviationChartViewState r -> ExperimentData -> Event DisposableEvent
+simulateDeviationChart :: DeviationChartViewState r -> ExperimentData -> Composite ()
 simulateDeviationChart st expdata =
   do let view    = deviationChartView st
          rs1     = deviationChartLeftYSeries view $
@@ -216,18 +214,24 @@ simulateDeviationChart st expdata =
          names   = map Left names1 ++ map Right names2
          signals = experimentPredefinedSignals expdata
          signal  = resultSignalInIntegTimes signals
-         lock    = deviationChartLock st
-     results <- liftIO $ requireDeviationChartResults st names
-     let stats   = deviationChartStats results
-     handleSignal signal $ \_ ->
-       do xs <- forM exts resultValueData
-          i  <- liftDynamics integIteration
-          liftIO $
-            forM_ (zip xs stats) $ \(x, stats) ->
-            withMVar lock $ \() ->
-            do y <- readArray stats i
-               let y' = combineSamplingStatsEither x y
-               y' `seq` writeArray stats i y'
+     hs <- forM exts $ \ext ->
+           newSignalHistory $
+           flip mapSignalM signal $ \t ->
+           resultValueData ext
+     disposableComposite $
+       DisposableEvent $
+       do results <- liftIO $ requireDeviationChartResults st names
+          let stats = deviationChartStats results
+          forM_ (zip hs stats) $ \(h, stats') ->
+            do (ts, xs) <- readSignalHistory h
+               let (lo, hi) = bounds ts
+               liftIO $
+                 withMVar stats' $ \stats'' ->
+                 forM_ [lo..hi] $ \i ->
+                 do let x = xs ! i
+                    y <- readArray stats'' i
+                    let y' = combineSamplingStatsEither x y
+                    y' `seq` writeArray stats'' i y'
      
 -- | Plot the deviation chart after the simulation is complete.
 finaliseDeviationChart :: ChartRendering r => DeviationChartViewState r -> ExperimentWriter ()
@@ -249,7 +253,7 @@ finaliseDeviationChart st =
              mapFilePath (flip replaceExtension $ renderableChartExtension renderer) $
              expandFilePath (deviationChartFileName view) $
              M.fromList [("$TITLE", title)]
-     results <- liftIO $ readMRef $ deviationChartResults st
+     results <- liftIO $ readMVar $ deviationChartResults st
      case results of
        Nothing -> return ()
        Just results ->
@@ -257,8 +261,9 @@ finaliseDeviationChart st =
          do let times = deviationChartTimes results
                 names = deviationChartNames results
                 stats = deviationChartStats results
-            ps1 <- forM (zip3 names stats plotLines) $ \(name, stats, plotLines) ->
-              do xs <- getAssocs stats
+            ps1 <- forM (zip3 names stats plotLines) $ \(name, stats', plotLines) ->
+              do stats'' <- readMVar stats'
+                 xs <- getAssocs stats''
                  zs <- forM xs $ \(i, stats) ->
                    do t <- readArray times i
                       return (t, samplingStatsMean stats)
@@ -270,8 +275,9 @@ finaliseDeviationChart st =
                  case name of
                    Left _  -> return $ Left p
                    Right _ -> return $ Right p
-            ps2 <- forM (zip3 names stats plotFillBetween) $ \(name, stats, plotFillBetween) ->
-              do xs <- getAssocs stats
+            ps2 <- forM (zip3 names stats plotFillBetween) $ \(name, stats', plotFillBetween) ->
+              do stats'' <- readMVar stats'
+                 xs <- getAssocs stats''
                  zs <- forM xs $ \(i, stats) ->
                    do t <- readArray times i
                       let mu    = samplingStatsMean stats

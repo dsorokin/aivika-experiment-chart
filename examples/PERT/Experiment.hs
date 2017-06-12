@@ -42,7 +42,6 @@ completionTime series =
   T.ArrivalTimer series
 
 completionTimeMean series = 
-  T.tr $ 
   T.samplingStatsMean $
   T.arrivalProcessingTime $
   T.ArrivalTimer series

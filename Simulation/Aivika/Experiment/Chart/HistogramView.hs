@@ -3,11 +3,11 @@
 
 -- |
 -- Module     : Simulation.Aivika.Experiment.Chart.HistogramView
--- Copyright  : Copyright (c) 2012-2015, David Sorokin <david.sorokin@gmail.com>
+-- Copyright  : Copyright (c) 2012-2017, David Sorokin <david.sorokin@gmail.com>
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
 -- Stability  : experimental
--- Tested with: GHC 7.10.1
+-- Tested with: GHC 8.0.1
 --
 -- The module defines 'HistogramView' that plots the histogram
 -- collecting statistics in all integration time points and does
@@ -37,6 +37,7 @@ import Graphics.Rendering.Chart
 
 import Simulation.Aivika
 import Simulation.Aivika.Experiment
+import Simulation.Aivika.Experiment.Base
 import Simulation.Aivika.Experiment.Chart.Types
 import Simulation.Aivika.Experiment.Chart.Utils (colourisePlotBars)
 import Simulation.Aivika.Experiment.Histogram
@@ -125,7 +126,7 @@ defaultHistogramView =
 instance ChartRendering r => ExperimentView HistogramView (WebPageRenderer r) where
   
   outputView v = 
-    let reporter exp (WebPageRenderer renderer) dir =
+    let reporter exp (WebPageRenderer renderer _) dir =
           do st <- newHistogram v exp renderer dir
              let context =
                    WebPageContext $
@@ -140,7 +141,7 @@ instance ChartRendering r => ExperimentView HistogramView (WebPageRenderer r) wh
 instance ChartRendering r => ExperimentView HistogramView (FileRenderer r) where
   
   outputView v = 
-    let reporter exp (FileRenderer renderer) dir =
+    let reporter exp (FileRenderer renderer _) dir =
           do st <- newHistogram v exp renderer dir
              return ExperimentReporter { reporterInitialise = return (),
                                          reporterFinalise   = return (),
@@ -176,7 +177,7 @@ newHistogram view exp renderer dir =
                                  histogramMap        = m }
        
 -- | Plot the histogram during the simulation.
-simulateHistogram :: ChartRendering r => HistogramViewState r -> ExperimentData -> Event DisposableEvent
+simulateHistogram :: ChartRendering r => HistogramViewState r -> ExperimentData -> Composite ()
 simulateHistogram st expdata =
   do let view    = histogramView st
          rs      = histogramSeries view $
@@ -213,7 +214,7 @@ simulateHistogram st expdata =
        mapSignalM (const $ resultValueData ext) $
        filterSignalM (const predicate) $
        resultSignalInIntegTimes signals
-     return $
+     disposableComposite $
        DisposableEvent $
        do xs <- forM hs readSignalHistory
           let zs = histogramToBars . filterHistogram . build $ 

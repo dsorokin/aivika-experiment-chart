@@ -32,14 +32,14 @@ portTime = resultByName "portTime"
 berth                 = T.Resource $ resultByName "berth"
 berthCountStats       = T.tr $ T.resourceCountStats berth
 berthUtilisationCount = T.tr $ T.resourceUtilisationCountStats berth
-berthQueueCount       = T.tr $ T.resourceQueueCount berth
+berthQueueCount       = T.resourceQueueCount berth
 berthQueueCountStats  = T.tr $ T.resourceQueueCountStats berth
 berthWaitTime         = T.tr $ T.resourceWaitTime berth
 
 tug                 = T.Resource $ resultByName "tug"
 tugCountStats       = T.tr $ T.resourceCountStats tug
 tugUtilisationCount = T.tr $ T.resourceUtilisationCountStats tug
-tugQueueCount       = T.tr $ T.resourceQueueCount tug
+tugQueueCount       = T.resourceQueueCount tug
 tugQueueCountStats  = T.tr $ T.resourceQueueCountStats tug
 tugWaitTime         = T.tr $ T.resourceWaitTime tug
 

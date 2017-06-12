@@ -3,11 +3,11 @@
 
 -- |
 -- Module     : Simulation.Aivika.Experiment.Chart.XYChartView
--- Copyright  : Copyright (c) 2012-2015, David Sorokin <david.sorokin@gmail.com>
+-- Copyright  : Copyright (c) 2012-2017, David Sorokin <david.sorokin@gmail.com>
 -- License    : BSD3
 -- Maintainer : David Sorokin <david.sorokin@gmail.com>
 -- Stability  : experimental
--- Tested with: GHC 7.10.1
+-- Tested with: GHC 8.0.1
 --
 -- The module defines 'XYChartView' that plots the XY charts.
 --
@@ -36,6 +36,7 @@ import Graphics.Rendering.Chart
 
 import Simulation.Aivika
 import Simulation.Aivika.Experiment
+import Simulation.Aivika.Experiment.Base
 import Simulation.Aivika.Experiment.Chart.Types
 import Simulation.Aivika.Experiment.Chart.Utils (colourisePlotLines)
 
@@ -139,7 +140,7 @@ defaultXYChartView =
 instance ChartRendering r => ExperimentView XYChartView (WebPageRenderer r) where
   
   outputView v = 
-    let reporter exp (WebPageRenderer renderer) dir =
+    let reporter exp (WebPageRenderer renderer _) dir =
           do st <- newXYChart v exp renderer dir
              let context =
                    WebPageContext $
@@ -154,7 +155,7 @@ instance ChartRendering r => ExperimentView XYChartView (WebPageRenderer r) wher
 instance ChartRendering r => ExperimentView XYChartView (FileRenderer r) where
   
   outputView v = 
-    let reporter exp (FileRenderer renderer) dir =
+    let reporter exp (FileRenderer renderer _) dir =
           do st <- newXYChart v exp renderer dir
              return ExperimentReporter { reporterInitialise = return (),
                                          reporterFinalise   = return (),
@@ -190,7 +191,7 @@ newXYChart view exp renderer dir =
                                xyChartMap        = m }
        
 -- | Plot the XY chart during the simulation.
-simulateXYChart :: ChartRendering r => XYChartViewState r -> ExperimentData -> Event DisposableEvent
+simulateXYChart :: ChartRendering r => XYChartViewState r -> ExperimentData -> Composite ()
 simulateXYChart st expdata =
   do let view    = xyChartView st
          rs0     = xyChartXSeries view $
@@ -249,7 +250,7 @@ simulateXYChart st expdata =
               signalx <> signaly
      hs1 <- inputHistory exts1
      hs2 <- inputHistory exts2
-     return $
+     disposableComposite $
        DisposableEvent $
        do let plots hs exts plotLineTails =
                 do ps <-
