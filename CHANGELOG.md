@@ -1,4 +1,9 @@
 
+Version 5.1
+-----
+
+* Changed the default chart settings.
+
 Version 5.0
 -----
 
