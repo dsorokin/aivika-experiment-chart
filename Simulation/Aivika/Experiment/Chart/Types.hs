@@ -26,3 +26,9 @@ class ChartRendering r where
   -- | Generate an image file with the specified path for the given chart.
   -- The width and height are passed in the second argument to the function.
   renderChart :: r -> (Int, Int) -> FilePath -> Renderable c -> IO (PickFn c)
+
+  -- | Return the rendering layout.
+  renderingLayoutLR :: r -> LayoutLR Double Double Double -> LayoutLR Double Double Double
+
+  -- | Return the rendering layout.
+  renderingLayout :: r -> Layout Double Double -> Layout Double Double

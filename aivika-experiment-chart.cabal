@@ -1,5 +1,5 @@
 name:            aivika-experiment-chart
-version:         5.0
+version:         5.1
 synopsis:        Simulation experiments with charting for the Aivika library
 description:
     This package complements the aivika [1] and aivika-experiment [2] packages with

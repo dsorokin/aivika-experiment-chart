@@ -233,7 +233,9 @@ simulateHistogram st expdata =
                               layout_right_axis_visibility .~ v $
                               l
                 else id
-              chart = layout . updateAxes $
+              chart = layout .
+                      renderingLayout renderer .
+                      updateAxes $
                       layout_title .~ runPlotTitle' $
                       layout_plots .~ [p] $
                       def

@@ -246,7 +246,9 @@ finaliseFinalHistogram st =
                                 layout_right_axis_visibility .~ v $
                                 l
                   else id
-                chart = layout . updateAxes $
+                chart = layout .
+                        renderingLayout renderer .
+                        updateAxes $
                         layout_title .~ plotTitle' $
                         layout_plots .~ [p] $
                         def
