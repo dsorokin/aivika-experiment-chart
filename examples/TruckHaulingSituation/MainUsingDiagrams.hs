@@ -13,4 +13,4 @@ import Experiment
 main = 
   do fonts <- loadCommonFonts
      let renderer = DiagramsRenderer SVG (return fonts)
-     runExperiment experiment generators (WebPageRenderer renderer experimentFilePath) model
+     runExperimentParallel experiment generators (WebPageRenderer renderer experimentFilePath) model

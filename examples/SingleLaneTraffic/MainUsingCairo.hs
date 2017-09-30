@@ -11,6 +11,6 @@ import Model
 import Experiment
 
 main = do
-  runExperiment experiment generators (WebPageRenderer (CairoRenderer PNG) experimentFilePath) model1
-  runExperiment experiment generators (WebPageRenderer (CairoRenderer PNG) experimentFilePath) model2
-  runExperiment experiment generators (WebPageRenderer (CairoRenderer PNG) experimentFilePath) model3
+  runExperimentParallel experiment generators (WebPageRenderer (CairoRenderer PNG) experimentFilePath) model1
+  runExperimentParallel experiment generators (WebPageRenderer (CairoRenderer PNG) experimentFilePath) model2
+  runExperimentParallel experiment generators (WebPageRenderer (CairoRenderer PNG) experimentFilePath) model3

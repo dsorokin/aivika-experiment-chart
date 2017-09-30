@@ -10,4 +10,4 @@ import Graphics.Rendering.Chart.Backend.Cairo
 import Model
 import Experiment
 
-main = runExperiment experiment generators (WebPageRenderer (CairoRenderer PNG) experimentFilePath) model
+main = runExperimentParallel experiment generators (WebPageRenderer (CairoRenderer PNG) experimentFilePath) model

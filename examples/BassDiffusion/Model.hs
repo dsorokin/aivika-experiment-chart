@@ -101,6 +101,6 @@ model =
      return $ 
        results
        [resultSource 
-        "potentialAdopters" "potential adopters" potentialAdopters,
+        "potentialAdopters" "potential adopters of the product" potentialAdopters,
         resultSource 
-        "adopters" "adopters" adopters]
+        "adopters" "adopters of the product" adopters]
