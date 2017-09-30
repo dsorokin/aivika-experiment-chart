@@ -42,7 +42,7 @@ import Simulation.Aivika.Experiment.Concurrent.MVar
 import Simulation.Aivika.Experiment.Chart.Types
 import Simulation.Aivika.Experiment.Chart.Utils (colourisePlotLines, colourisePlotFillBetween)
 
--- | Defines the 'View' that plots the deviation chart.
+-- | Defines the 'View' that plots the deviation chart in time points by the specified grid.
 data DeviationChartView =
   DeviationChartView { deviationChartTitle       :: String,
                        -- ^ This is a title used in HTML.
@@ -52,6 +52,8 @@ data DeviationChartView =
                        -- ^ The width of the chart.
                        deviationChartHeight      :: Int,
                        -- ^ The height of the chart.
+                       deviationChartGridSize    :: Int,
+                       -- ^ The size of the grid, where the series data are collected.
                        deviationChartFileName    :: ExperimentFilePath,
                        -- ^ It defines the file name with optional extension for each image to be saved.
                        -- It may include special variable @$TITLE@.
@@ -111,6 +113,7 @@ defaultDeviationChartView =
                        deviationChartDescription = "It shows the Deviation chart by rule 3-sigma.",
                        deviationChartWidth       = 640,
                        deviationChartHeight      = 480,
+                       deviationChartGridSize    = 2 * 640,
                        deviationChartFileName    = UniqueFilePath "DeviationChart",
                        deviationChartTransform   = id,
                        deviationChartLeftYSeries  = mempty, 
@@ -176,11 +179,15 @@ newDeviationChart view exp renderer dir =
                                       deviationChartResults    = r }
        
 -- | Create new chart results.
-newDeviationChartResults :: [Either String String] -> Experiment -> IO DeviationChartResults
-newDeviationChartResults names exp =
-  do let specs = experimentSpecs exp
-         bnds  = integIterationBnds specs
-     times <- liftIO $ newListArray bnds (integTimes specs)
+newDeviationChartResults :: DeviationChartViewState r -> [Either String String] -> IO DeviationChartResults
+newDeviationChartResults st names =
+  do let exp   = deviationChartExperiment st
+         view  = deviationChartView st
+         size  = deviationChartGridSize view
+         specs = experimentSpecs exp
+         grid  = timeGrid specs size
+         bnds  = (0, 1 + length grid)
+     times <- liftIO $ newListArray bnds $ map snd grid
      stats <- forM names $ \_ -> 
        liftIO $ newArray bnds emptySamplingStats >>= newMVar
      return DeviationChartResults { deviationChartTimes = times,
@@ -191,7 +198,7 @@ newDeviationChartResults names exp =
 requireDeviationChartResults :: DeviationChartViewState r -> [Either String String] -> IO DeviationChartResults
 requireDeviationChartResults st names =
   maybePutMVar (deviationChartResults st)
-  (newDeviationChartResults names (deviationChartExperiment st)) $ \results ->
+  (newDeviationChartResults st names) $ \results ->
   if (names /= deviationChartNames results)
   then error "Series with different names are returned for different runs: requireDeviationChartResults"
   else return results
@@ -200,6 +207,9 @@ requireDeviationChartResults st names =
 simulateDeviationChart :: DeviationChartViewState r -> ExperimentData -> Composite ()
 simulateDeviationChart st expdata =
   do let view    = deviationChartView st
+         loc     = localisePathResultTitle $
+                   experimentLocalisation $
+                   deviationChartExperiment st
          rs1     = deviationChartLeftYSeries view $
                    deviationChartTransform view $
                    experimentResults expdata
@@ -209,14 +219,15 @@ simulateDeviationChart st expdata =
          exts1   = resultsToDoubleStatsEitherValues rs1
          exts2   = resultsToDoubleStatsEitherValues rs2
          exts    = exts1 ++ exts2
-         names1  = map resultValueName exts1
-         names2  = map resultValueName exts2
+         names1  = map (loc . resultValueIdPath) exts1
+         names2  = map (loc . resultValueIdPath) exts2
          names   = map Left names1 ++ map Right names2
-         signals = experimentPredefinedSignals expdata
-         signal  = resultSignalInIntegTimes signals
+     signal <- liftEvent $
+               newSignalInTimeGrid $
+               deviationChartGridSize view
      hs <- forM exts $ \ext ->
            newSignalHistory $
-           flip mapSignalM signal $ \t ->
+           flip mapSignalM signal $ \i ->
            resultValueData ext
      disposableComposite $
        DisposableEvent $
