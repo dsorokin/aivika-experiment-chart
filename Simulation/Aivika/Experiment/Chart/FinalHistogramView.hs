@@ -186,11 +186,14 @@ requireFinalHistogramResults st names =
 simulateFinalHistogram :: FinalHistogramViewState r -> ExperimentData -> Composite ()
 simulateFinalHistogram st expdata =
   do let view    = finalHistogramView st
+         loc     = localisePathResultTitle $
+                   experimentLocalisation $
+                   finalHistogramExperiment st
          rs      = finalHistogramSeries view $
                    finalHistogramTransform view $
                    experimentResults expdata
          exts    = resultsToDoubleListValues rs
-         names   = map resultValueName exts
+         names   = map (loc . resultValueIdPath) exts
          signals = experimentPredefinedSignals expdata
          signal  = filterSignalM (const predicate) $
                    resultSignalInStopTime signals

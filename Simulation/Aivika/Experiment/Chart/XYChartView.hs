@@ -194,6 +194,9 @@ newXYChart view exp renderer dir =
 simulateXYChart :: ChartRendering r => XYChartViewState r -> ExperimentData -> Composite ()
 simulateXYChart st expdata =
   do let view    = xyChartView st
+         loc     = localisePathResultTitle $
+                   experimentLocalisation $
+                   xyChartExperiment st
          rs0     = xyChartXSeries view $
                    xyChartTransform view $
                    experimentResults expdata
@@ -261,7 +264,7 @@ simulateXYChart st expdata =
                           toPlot $
                           plotLines $
                           plot_lines_values .~ filterPlotLinesValues (elems zs) $
-                          plot_lines_title .~ resultValueName ext $
+                          plot_lines_title .~ (loc $ resultValueIdPath ext) $
                           def
                    return (ps, drop (length hs) plotLineTails)     
           (ps1, plotLineTails) <- plots hs1 exts1 (tails plotLines)
@@ -270,7 +273,7 @@ simulateXYChart st expdata =
               ps2' = map Right ps2
               ps'  = ps1' ++ ps2'
               axis = plotBottomAxis $
-                      laxis_title .~ resultValueName ext0 $
+                      laxis_title .~ (loc $ resultValueIdPath ext0) $
                       def
               updateLeftAxis =
                 if null ps1

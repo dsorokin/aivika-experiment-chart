@@ -180,11 +180,14 @@ newHistogram view exp renderer dir =
 simulateHistogram :: ChartRendering r => HistogramViewState r -> ExperimentData -> Composite ()
 simulateHistogram st expdata =
   do let view    = histogramView st
+         loc     = localisePathResultTitle $
+                   experimentLocalisation $
+                   histogramExperiment st
          rs      = histogramSeries view $
                    histogramTransform view $
                    experimentResults expdata
          exts    = resultsToDoubleListValues rs
-         names   = map resultValueName exts
+         names   = map (loc . resultValueIdPath) exts
          signals = experimentPredefinedSignals expdata
          n = experimentRunCount $ histogramExperiment st
          build   = histogramBuild view

@@ -210,6 +210,9 @@ requireFinalXYChartResults st xname ynames =
 simulateFinalXYChart :: FinalXYChartViewState r -> ExperimentData -> Composite ()
 simulateFinalXYChart st expdata =
   do let view    = finalXYChartView st
+         loc     = localisePathResultTitle $
+                   experimentLocalisation $
+                   finalXYChartExperiment st
          rs0     = finalXYChartXSeries view $
                    finalXYChartTransform view $
                    experimentResults expdata
@@ -226,9 +229,9 @@ simulateFinalXYChart st expdata =
          exts1   = resultsToDoubleValues rs1
          exts2   = resultsToDoubleValues rs2
          exts    = exts1 ++ exts2
-         name0   = resultValueName ext0
-         names1  = map resultValueName exts1
-         names2  = map resultValueName exts2
+         name0   = loc $ resultValueIdPath ext0
+         names1  = map (loc . resultValueIdPath) exts1
+         names2  = map (loc . resultValueIdPath) exts2
          names   = map Left names1 ++ map Right names2
          signals = experimentPredefinedSignals expdata
          signal  = filterSignalM (const predicate) $

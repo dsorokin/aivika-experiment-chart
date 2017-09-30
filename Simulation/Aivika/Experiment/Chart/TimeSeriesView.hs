@@ -185,6 +185,9 @@ newTimeSeries view exp renderer dir =
 simulateTimeSeries :: ChartRendering r => TimeSeriesViewState r -> ExperimentData -> Composite ()
 simulateTimeSeries st expdata =
   do let view    = timeSeriesView st
+         loc     = localisePathResultTitle $
+                   experimentLocalisation $
+                   timeSeriesExperiment st
          rs1     = timeSeriesLeftYSeries view $
                    timeSeriesTransform view $
                    experimentResults expdata
@@ -241,7 +244,7 @@ simulateTimeSeries st expdata =
                           toPlot $
                           plotLines $
                           plot_lines_values .~ filterPlotLinesValues (zip (elems ts) (elems xs)) $
-                          plot_lines_title .~ resultValueName ext $
+                          plot_lines_title .~ (loc $ resultValueIdPath ext) $
                           def
                    return (ps, drop (length hs) plotLineTails)
           (ps1, plotLineTails) <- plots hs1 exts1 (tails plotLines)

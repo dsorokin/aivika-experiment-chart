@@ -145,8 +145,8 @@ library
                      lens >= 3.9,
                      data-default-class >= 0.0.1,
                      colour >= 2.3.3,
-                     aivika >= 5.1,
-                     aivika-experiment >= 5.0
+                     aivika >= 5.3,
+                     aivika-experiment >= 5.1
 
     extensions:      MultiParamTypeClasses
 
