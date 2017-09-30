@@ -4,6 +4,10 @@ Version 5.1
 
 * Changed the default chart settings.
 
+* Using the result source titles instead of coding names.
+
+* The Deviation chart does not depend on the integration time step anymore.
+
 Version 5.0
 -----
 
