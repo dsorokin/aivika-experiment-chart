@@ -50,6 +50,8 @@ data TimeSeriesView =
                    -- ^ The width of the chart.
                    timeSeriesHeight      :: Int,
                    -- ^ The height of the chart.
+                   timeSeriesGridSize    :: Maybe Int,
+                   -- ^ The size of the grid, where the series data are processed.
                    timeSeriesFileName    :: ExperimentFilePath,
                    -- ^ It defines the file name with optional extension for each image to be saved.
                    -- It may include special variables @$TITLE@, @$RUN_INDEX@ and @$RUN_COUNT@.
@@ -117,6 +119,7 @@ defaultTimeSeriesView =
                    timeSeriesDescription = "It shows the Time Series chart(s).",
                    timeSeriesWidth       = 640,
                    timeSeriesHeight      = 480,
+                   timeSeriesGridSize    = Just (2 * 640),
                    timeSeriesFileName    = UniqueFilePath "TimeSeries($RUN_INDEX)",
                    timeSeriesPredicate   = return True,
                    timeSeriesTransform   = id,
@@ -220,17 +223,26 @@ simulateTimeSeries st expdata =
                 replace "$RUN_COUNT" (show n) $
                 replace "$PLOT_TITLE" plotTitle'
                 runPlotTitle
+         inputSignal ext =
+           case timeSeriesGridSize view of
+             Just m ->
+               liftEvent $
+               fmap (mapSignal $ const ()) $
+               newSignalInTimeGrid m
+             Nothing ->
+               return $
+               pureResultSignal signals $
+               resultValueSignal ext
          inputHistory exts =
            forM exts $ \ext ->
-           let transform () =
-                 do x <- predicate
-                    if x
-                      then resultValueData ext
-                      else return (1/0)  -- the infinite values will be ignored then
-           in newSignalHistory $
-              mapSignalM transform $
-              pureResultSignal signals $
-              resultValueSignal ext
+           do let transform () =
+                    do x <- predicate
+                       if x
+                         then resultValueData ext
+                         else return (1/0)  -- the infinite values will be ignored then
+              s <- inputSignal ext
+              newSignalHistory $
+                mapSignalM transform s
      hs1 <- inputHistory exts1
      hs2 <- inputHistory exts2
      disposableComposite $

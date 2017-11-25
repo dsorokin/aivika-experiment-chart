@@ -1,4 +1,10 @@
 
+Version 5.3
+-----
+
+* The time series and XY chart use a fixed grid to improve
+  the performance of the Diagrams-based charting backend.
+
 Version 5.1
 -----
 

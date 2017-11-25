@@ -50,6 +50,8 @@ data XYChartView =
                 -- ^ The width of the chart.
                 xyChartHeight      :: Int,
                 -- ^ The height of the chart.
+                xyChartGridSize    :: Maybe Int,
+                -- ^ The size of the grid, where the series data are processed.
                 xyChartFileName    :: ExperimentFilePath,
                 -- ^ It defines the file name with optional extension for each image to be saved.
                 -- It may include special variables @$TITLE@, @$RUN_INDEX@ and @$RUN_COUNT@.
@@ -125,6 +127,7 @@ defaultXYChartView =
                 xyChartDescription = "It shows the XY chart(s).",
                 xyChartWidth       = 640,
                 xyChartHeight      = 480,
+                xyChartGridSize    = Just (2 * 640),
                 xyChartFileName    = UniqueFilePath "XYChart($RUN_INDEX)",
                 xyChartPredicate   = return True,
                 xyChartTransform    = id,
@@ -236,21 +239,30 @@ simulateXYChart st expdata =
                 replace "$RUN_COUNT" (show n) $
                 replace "$PLOT_TITLE" plotTitle'
                 runPlotTitle
+         inputSignal ext =
+           case xyChartGridSize view of
+             Just m ->
+               liftEvent $
+               fmap (mapSignal $ const ()) $
+               newSignalInTimeGrid m
+             Nothing ->
+               return $
+               pureResultSignal signals $
+               resultValueSignal ext
          inputHistory exts = 
            forM exts $ \ext ->
-           let x = resultValueData ext0
-               y = resultValueData ext
-               transform () =
-                 do p <- predicate
-                    if p
-                      then liftM2 (,) x y
-                      else return (1/0, 1/0)  -- such values will be ignored then
-               signalx = resultValueSignal ext0
-               signaly = resultValueSignal ext
-           in newSignalHistory $
-              mapSignalM transform $
-              pureResultSignal signals $
-              signalx <> signaly
+           do let x = resultValueData ext0
+                  y = resultValueData ext
+                  transform () =
+                    do p <- predicate
+                       if p
+                         then liftM2 (,) x y
+                         else return (1/0, 1/0)  -- such values will be ignored then
+                  signalx = resultValueSignal ext0
+                  signaly = resultValueSignal ext
+              s <- inputSignal ext
+              newSignalHistory $
+                mapSignalM transform s
      hs1 <- inputHistory exts1
      hs2 <- inputHistory exts2
      disposableComposite $
